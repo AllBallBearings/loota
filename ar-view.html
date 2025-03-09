@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Loota AR View</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      #info {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+        z-index: 100;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">Initializing AR...</div>
+
+    <!-- Import libraries in correct order -->
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+      let scene, camera, renderer, cube;
+      let userLocation = null;
+
+      // Request necessary permissions
+      async function requestPermissions() {
+        try {
+          // Request camera access
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+          stream.getTracks().forEach((track) => track.stop()); // Stop the stream as we don't need it yet
+
+          // Request location access
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+          });
+
+          userLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+
+          initAR();
+        } catch (error) {
+          document.getElementById("info").innerHTML =
+            "Error: Please grant camera and location permissions";
+          console.error("Permission error:", error);
+        }
+      }
+
+      function calculateOffsetPosition(
+        latitude,
+        longitude,
+        distanceMeters,
+        bearing
+      ) {
+        const R = 6378137; // Earth's radius in meters
+        const d = distanceMeters;
+        const brng = (bearing * Math.PI) / 180; // Convert bearing to radians
+        const lat1 = (latitude * Math.PI) / 180;
+        const lon1 = (longitude * Math.PI) / 180;
+
+        const lat2 = Math.asin(
+          Math.sin(lat1) * Math.cos(d / R) +
+            Math.cos(lat1) * Math.sin(d / R) * Math.cos(brng)
+        );
+
+        const lon2 =
+          lon1 +
+          Math.atan2(
+            Math.sin(brng) * Math.sin(d / R) * Math.cos(lat1),
+            Math.cos(d / R) - Math.sin(lat1) * Math.sin(lat2)
+          );
+
+        return {
+          latitude: (lat2 * 180) / Math.PI,
+          longitude: (lon2 * 180) / Math.PI,
+        };
+      }
+
+      function initAR() {
+        // Calculate position 7 feet (2.1336 meters) south of user
+        const cubePosition = calculateOffsetPosition(
+          userLocation.latitude,
+          userLocation.longitude,
+          2.1336, // 7 feet in meters
+          180 // South bearing
+        );
+
+        // Create A-Frame scene
+        const sceneEl = document.createElement("a-scene");
+        sceneEl.setAttribute("embedded", "");
+        sceneEl.setAttribute(
+          "arjs",
+          "sourceType: webcam; debugUIEnabled: false;"
+        );
+        document.body.appendChild(sceneEl);
+
+        // Create red cube entity
+        const cubeEl = document.createElement("a-box");
+        cubeEl.setAttribute("position", "0 0 -2");
+        cubeEl.setAttribute("rotation", "0 0 0");
+        cubeEl.setAttribute("material", "color: red");
+        cubeEl.setAttribute("scale", "0.5 0.5 0.5");
+        cubeEl.setAttribute(
+          "animation",
+          "property: rotation; dur: 6000; to: 360 360 0; loop: true; easing: linear"
+        );
+
+        // Create camera entity
+        const cameraEl = document.createElement("a-entity");
+        cameraEl.setAttribute("camera", "");
+        cameraEl.setAttribute("look-controls", "");
+
+        // Add entities to scene
+        sceneEl.appendChild(cubeEl);
+        sceneEl.appendChild(cameraEl);
+
+        document.getElementById("info").innerHTML =
+          "AR Ready - Look around to see the red cube";
+      }
+
+      // Start the AR experience
+      requestPermissions();
+    </script>
+  </body>
+</html>
