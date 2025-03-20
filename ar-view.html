@@ -55,6 +55,9 @@
       .hidden {
         display: none !important;
       }
+      .a-enter-vr {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -67,7 +70,45 @@
     <!-- Import libraries in correct order -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+    <!-- A-Frame scene -->
+    <a-scene
+      embedded
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      vr-mode-ui="enabled: false"
+    >
+      <!-- Assets -->
+      <a-assets>
+        <a-asset-item
+          id="grid"
+          src="https://cdn.aframe.io/examples/ar/models/grid.gltf"
+        ></a-asset-item>
+      </a-assets>
+
+      <!-- Red Cube -->
+      <a-box
+        position="0 1 -2"
+        rotation="0 0 0"
+        scale="0.3 0.3 0.3"
+        material="color: #ff0000; metalness: 0.5; roughness: 0.5; emissive: #ff0000; emissiveIntensity: 0.2"
+        animation="property: rotation; dur: 8000; to: 360 360 0; loop: true; easing: linear"
+      ></a-box>
+
+      <!-- Glow Effect -->
+      <a-sphere
+        position="0 0.8 -2"
+        scale="0.1 0.02 0.1"
+        material="color: #ff0000; opacity: 0.5; transparent: true"
+        animation="property: scale; dir: alternate; dur: 1000; to: 0.15 0.02 0.15; loop: true"
+      ></a-sphere>
+
+      <!-- Camera -->
+      <a-entity
+        camera
+        position="0 1.6 0"
+        look-controls="touchEnabled: true"
+      ></a-entity>
+    </a-scene>
 
     <script>
       let userLocation = null;
@@ -89,18 +130,7 @@
       // Request necessary permissions with enhanced error handling
       async function requestPermissions() {
         try {
-          // Show initial status
           updateStatus("Requesting permissions...");
-
-          // Request camera access
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "environment", // Prefer back camera
-            },
-          });
-          stream.getTracks().forEach((track) => track.stop());
-
-          updateStatus("Camera permission granted. Getting location...");
 
           // Request location access with high accuracy
           const position = await new Promise((resolve, reject) => {
@@ -123,8 +153,7 @@
             { enableHighAccuracy: true }
           );
 
-          updateStatus("Permissions granted. Initializing AR...");
-          initAR();
+          updateStatus("Permissions granted. Looking for surfaces...");
 
           // Request device orientation permission for compass
           if (
@@ -140,14 +169,16 @@
           } else {
             initCompass();
           }
+
+          // Show distance indicator
+          document
+            .getElementById("distance-indicator")
+            .classList.remove("hidden");
+          updateDistanceIndicator();
         } catch (error) {
           console.error("Permission error:", error);
           if (error.name === "NotAllowedError") {
-            updateStatus(
-              error.message.includes("camera")
-                ? ERROR_MESSAGES.CAMERA_PERMISSION
-                : ERROR_MESSAGES.LOCATION_PERMISSION
-            );
+            updateStatus(ERROR_MESSAGES.LOCATION_PERMISSION);
           } else {
             updateStatus(ERROR_MESSAGES.GENERIC);
           }
@@ -164,36 +195,6 @@
           longitude: position.coords.longitude,
         };
         updateDistanceIndicator();
-      }
-
-      function calculateOffsetPosition(
-        latitude,
-        longitude,
-        distanceMeters,
-        bearing
-      ) {
-        const R = 6378137; // Earth's radius in meters
-        const d = distanceMeters;
-        const brng = (bearing * Math.PI) / 180;
-        const lat1 = (latitude * Math.PI) / 180;
-        const lon1 = (longitude * Math.PI) / 180;
-
-        const lat2 = Math.asin(
-          Math.sin(lat1) * Math.cos(d / R) +
-            Math.cos(lat1) * Math.sin(d / R) * Math.cos(brng)
-        );
-
-        const lon2 =
-          lon1 +
-          Math.atan2(
-            Math.sin(brng) * Math.sin(d / R) * Math.cos(lat1),
-            Math.cos(d / R) - Math.sin(lat1) * Math.sin(lat2)
-          );
-
-        return {
-          latitude: (lat2 * 180) / Math.PI,
-          longitude: (lon2 * 180) / Math.PI,
-        };
       }
 
       function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -221,7 +222,6 @@
         );
 
         const distanceEl = document.getElementById("distance-indicator");
-        distanceEl.classList.remove("hidden");
         distanceEl.innerHTML = `Distance to cube: ${distance.toFixed(
           1
         )} meters`;
@@ -246,100 +246,6 @@
         );
       }
 
-      function initAR() {
-        // Calculate position 7 feet (2.1336 meters) south of user
-        cubePosition = calculateOffsetPosition(
-          userLocation.latitude,
-          userLocation.longitude,
-          2.1336,
-          180
-        );
-
-        // Create A-Frame scene with improved tracking
-        const sceneEl = document.createElement("a-scene");
-        sceneEl.setAttribute("embedded", "");
-        sceneEl.setAttribute(
-          "arjs",
-          `
-          sourceType: webcam;
-          debugUIEnabled: false;
-          sourceWidth: 1280;
-          sourceHeight: 960;
-          displayWidth: 1280;
-          displayHeight: 960;
-          trackingMethod: best;
-        `
-        );
-
-        // Add ground grid for better spatial awareness
-        const gridEl = document.createElement("a-grid");
-        gridEl.setAttribute("position", "0 0 0");
-        gridEl.setAttribute("rotation", "-90 0 0");
-        gridEl.setAttribute("scale", "2 2 2");
-
-        // Create improved cube with better visibility
-        const cubeEl = document.createElement("a-box");
-        cubeEl.setAttribute("position", "0 1 -2"); // Raised slightly for better visibility
-        cubeEl.setAttribute("rotation", "0 0 0");
-        cubeEl.setAttribute(
-          "material",
-          `
-          color: #ff0000;
-          metalness: 0.5;
-          roughness: 0.5;
-          emissive: #ff0000;
-          emissiveIntensity: 0.2;
-        `
-        );
-        cubeEl.setAttribute("scale", "0.3 0.3 0.3"); // Slightly smaller for better proportion
-        cubeEl.setAttribute(
-          "animation",
-          `
-          property: rotation;
-          dur: 8000;
-          to: 360 360 0;
-          loop: true;
-          easing: linear
-        `
-        );
-
-        // Add glow effect marker
-        const glowEl = document.createElement("a-sphere");
-        glowEl.setAttribute("position", "0 0.8 -2"); // Just below the cube
-        glowEl.setAttribute("scale", "0.1 0.02 0.1");
-        glowEl.setAttribute(
-          "material",
-          "color: #ff0000; opacity: 0.5; transparent: true"
-        );
-        glowEl.setAttribute(
-          "animation",
-          "property: scale; dir: alternate; dur: 1000; to: 0.15 0.02 0.15; loop: true"
-        );
-
-        // Create camera with improved controls
-        const cameraEl = document.createElement("a-entity");
-        cameraEl.setAttribute("camera", "");
-        cameraEl.setAttribute(
-          "look-controls",
-          "touchEnabled: true; magicWindowTrackingEnabled: true"
-        );
-        cameraEl.setAttribute("position", "0 1.6 0"); // Average human height
-
-        // Add all elements to scene
-        sceneEl.appendChild(gridEl);
-        sceneEl.appendChild(cubeEl);
-        sceneEl.appendChild(glowEl);
-        sceneEl.appendChild(cameraEl);
-        document.body.appendChild(sceneEl);
-
-        // Update status and show distance indicator
-        updateStatus("AR Ready - Look around to see the red cube");
-        document
-          .getElementById("distance-indicator")
-          .classList.remove("hidden");
-        updateDistanceIndicator();
-      }
-
       // Cleanup function
       function cleanup() {
         if (watchId !== null) {
@@ -356,8 +262,11 @@
         }
       });
 
-      // Start the AR experience
-      requestPermissions();
+      // Initialize when A-Frame is ready
+      document.querySelector("a-scene").addEventListener("loaded", function () {
+        requestPermissions();
+        updateStatus("AR Ready - Look around to see the red cube");
+      });
     </script>
   </body>
 </html>
