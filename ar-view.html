@@ -22,36 +22,93 @@
         border-radius: 5px;
         font-family: Arial, sans-serif;
         z-index: 100;
+        max-width: 80%;
+      }
+      #distance-indicator {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+        z-index: 100;
+      }
+      #compass {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: Arial, sans-serif;
+        z-index: 100;
       }
       .hidden {
-        display: none;
+        display: none !important;
       }
     </style>
   </head>
   <body>
     <div id="info">Initializing AR...</div>
+    <div id="distance-indicator" class="hidden">
+      Distance to cube: calculating...
+    </div>
+    <div id="compass" class="hidden">N</div>
 
     <!-- Import libraries in correct order -->
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 
     <script>
-      let scene, camera, renderer, cube;
       let userLocation = null;
+      let watchId = null;
+      let cubePosition = null;
 
-      // Request necessary permissions
+      // Enhanced error messages
+      const ERROR_MESSAGES = {
+        CAMERA_PERMISSION:
+          "Please grant camera access to view AR content. Refresh the page to try again.",
+        LOCATION_PERMISSION:
+          "Location access is needed to place the cube. Refresh the page to try again.",
+        GENERIC:
+          "An error occurred. Please check your device compatibility and try again.",
+        ORIENTATION:
+          "Please enable device orientation access for better AR experience.",
+      };
+
+      // Request necessary permissions with enhanced error handling
       async function requestPermissions() {
         try {
+          // Show initial status
+          updateStatus("Requesting permissions...");
+
           // Request camera access
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
+            video: {
+              facingMode: "environment", // Prefer back camera
+            },
           });
-          stream.getTracks().forEach((track) => track.stop()); // Stop the stream as we don't need it yet
+          stream.getTracks().forEach((track) => track.stop());
 
-          // Request location access
+          updateStatus("Camera permission granted. Getting location...");
+
+          // Request location access with high accuracy
           const position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject);
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0,
+            });
           });
 
           userLocation = {
@@ -59,12 +116,54 @@
             longitude: position.coords.longitude,
           };
 
+          // Start watching location for updates
+          watchId = navigator.geolocation.watchPosition(
+            updateUserLocation,
+            null,
+            { enableHighAccuracy: true }
+          );
+
+          updateStatus("Permissions granted. Initializing AR...");
           initAR();
+
+          // Request device orientation permission for compass
+          if (
+            typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function"
+          ) {
+            try {
+              await DeviceOrientationEvent.requestPermission();
+              initCompass();
+            } catch (e) {
+              console.warn("Device orientation permission denied:", e);
+            }
+          } else {
+            initCompass();
+          }
         } catch (error) {
-          document.getElementById("info").innerHTML =
-            "Error: Please grant camera and location permissions";
           console.error("Permission error:", error);
+          if (error.name === "NotAllowedError") {
+            updateStatus(
+              error.message.includes("camera")
+                ? ERROR_MESSAGES.CAMERA_PERMISSION
+                : ERROR_MESSAGES.LOCATION_PERMISSION
+            );
+          } else {
+            updateStatus(ERROR_MESSAGES.GENERIC);
+          }
         }
+      }
+
+      function updateStatus(message) {
+        document.getElementById("info").innerHTML = message;
+      }
+
+      function updateUserLocation(position) {
+        userLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        updateDistanceIndicator();
       }
 
       function calculateOffsetPosition(
@@ -75,7 +174,7 @@
       ) {
         const R = 6378137; // Earth's radius in meters
         const d = distanceMeters;
-        const brng = (bearing * Math.PI) / 180; // Convert bearing to radians
+        const brng = (bearing * Math.PI) / 180;
         const lat1 = (latitude * Math.PI) / 180;
         const lon1 = (longitude * Math.PI) / 180;
 
@@ -97,47 +196,165 @@
         };
       }
 
-      function initAR() {
-        // Calculate position 7 feet (2.1336 meters) south of user
-        const cubePosition = calculateOffsetPosition(
+      function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6378137; // Earth's radius in meters
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      function updateDistanceIndicator() {
+        if (!userLocation || !cubePosition) return;
+
+        const distance = calculateDistance(
           userLocation.latitude,
           userLocation.longitude,
-          2.1336, // 7 feet in meters
-          180 // South bearing
+          cubePosition.latitude,
+          cubePosition.longitude
         );
 
-        // Create A-Frame scene
+        const distanceEl = document.getElementById("distance-indicator");
+        distanceEl.classList.remove("hidden");
+        distanceEl.innerHTML = `Distance to cube: ${distance.toFixed(
+          1
+        )} meters`;
+      }
+
+      function initCompass() {
+        const compassEl = document.getElementById("compass");
+        compassEl.classList.remove("hidden");
+
+        window.addEventListener(
+          "deviceorientation",
+          (event) => {
+            if (event.webkitCompassHeading) {
+              // iOS compass heading
+              compassEl.style.transform = `rotate(${event.webkitCompassHeading}deg)`;
+            } else if (event.alpha) {
+              // Android compass heading
+              compassEl.style.transform = `rotate(${360 - event.alpha}deg)`;
+            }
+          },
+          true
+        );
+      }
+
+      function initAR() {
+        // Calculate position 7 feet (2.1336 meters) south of user
+        cubePosition = calculateOffsetPosition(
+          userLocation.latitude,
+          userLocation.longitude,
+          2.1336,
+          180
+        );
+
+        // Create A-Frame scene with improved tracking
         const sceneEl = document.createElement("a-scene");
         sceneEl.setAttribute("embedded", "");
         sceneEl.setAttribute(
           "arjs",
-          "sourceType: webcam; debugUIEnabled: false;"
+          `
+          sourceType: webcam;
+          debugUIEnabled: false;
+          sourceWidth: 1280;
+          sourceHeight: 960;
+          displayWidth: 1280;
+          displayHeight: 960;
+          trackingMethod: best;
+        `
         );
-        document.body.appendChild(sceneEl);
 
-        // Create red cube entity
+        // Add ground grid for better spatial awareness
+        const gridEl = document.createElement("a-grid");
+        gridEl.setAttribute("position", "0 0 0");
+        gridEl.setAttribute("rotation", "-90 0 0");
+        gridEl.setAttribute("scale", "2 2 2");
+
+        // Create improved cube with better visibility
         const cubeEl = document.createElement("a-box");
-        cubeEl.setAttribute("position", "0 0 -2");
+        cubeEl.setAttribute("position", "0 1 -2"); // Raised slightly for better visibility
         cubeEl.setAttribute("rotation", "0 0 0");
-        cubeEl.setAttribute("material", "color: red");
-        cubeEl.setAttribute("scale", "0.5 0.5 0.5");
+        cubeEl.setAttribute(
+          "material",
+          `
+          color: #ff0000;
+          metalness: 0.5;
+          roughness: 0.5;
+          emissive: #ff0000;
+          emissiveIntensity: 0.2;
+        `
+        );
+        cubeEl.setAttribute("scale", "0.3 0.3 0.3"); // Slightly smaller for better proportion
         cubeEl.setAttribute(
           "animation",
-          "property: rotation; dur: 6000; to: 360 360 0; loop: true; easing: linear"
+          `
+          property: rotation;
+          dur: 8000;
+          to: 360 360 0;
+          loop: true;
+          easing: linear
+        `
         );
 
-        // Create camera entity
+        // Add glow effect marker
+        const glowEl = document.createElement("a-sphere");
+        glowEl.setAttribute("position", "0 0.8 -2"); // Just below the cube
+        glowEl.setAttribute("scale", "0.1 0.02 0.1");
+        glowEl.setAttribute(
+          "material",
+          "color: #ff0000; opacity: 0.5; transparent: true"
+        );
+        glowEl.setAttribute(
+          "animation",
+          "property: scale; dir: alternate; dur: 1000; to: 0.15 0.02 0.15; loop: true"
+        );
+
+        // Create camera with improved controls
         const cameraEl = document.createElement("a-entity");
         cameraEl.setAttribute("camera", "");
-        cameraEl.setAttribute("look-controls", "");
+        cameraEl.setAttribute(
+          "look-controls",
+          "touchEnabled: true; magicWindowTrackingEnabled: true"
+        );
+        cameraEl.setAttribute("position", "0 1.6 0"); // Average human height
 
-        // Add entities to scene
+        // Add all elements to scene
+        sceneEl.appendChild(gridEl);
         sceneEl.appendChild(cubeEl);
+        sceneEl.appendChild(glowEl);
         sceneEl.appendChild(cameraEl);
+        document.body.appendChild(sceneEl);
 
-        document.getElementById("info").innerHTML =
-          "AR Ready - Look around to see the red cube";
+        // Update status and show distance indicator
+        updateStatus("AR Ready - Look around to see the red cube");
+        document
+          .getElementById("distance-indicator")
+          .classList.remove("hidden");
+        updateDistanceIndicator();
       }
+
+      // Cleanup function
+      function cleanup() {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+      }
+
+      // Handle page visibility changes
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          cleanup();
+        } else {
+          requestPermissions();
+        }
+      });
 
       // Start the AR experience
       requestPermissions();
