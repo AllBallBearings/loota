@@ -72,7 +72,7 @@
     <!-- A-Frame scene -->
     <a-scene
       embedded
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; trackingMethod: best;"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; trackingMethod: best; sourceWidth: 1280; sourceHeight: 960; displayWidth: window.innerWidth; displayHeight: window.innerHeight;"
       vr-mode-ui="enabled: false"
     >
       <!-- Assets -->
@@ -86,7 +86,7 @@
       <!-- Red Cube -->
       <a-box
         id="ar-cube"
-        position="0 1 -2"
+        position="0 1.6 -2"
         rotation="0 0 0"
         scale="0.3 0.3 0.3"
         material="color: #ff0000; metalness: 0.5; roughness: 0.5; emissive: #ff0000; emissiveIntensity: 0.2"
@@ -95,7 +95,7 @@
 
       <!-- Glow Effect -->
       <a-sphere
-        position="0 0.8 -2"
+        position="0 1.4 -2"
         scale="0.1 0.02 0.1"
         material="color: #ff0000; opacity: 0.5; transparent: true"
         animation="property: scale; dir: alternate; dur: 1000; to: 0.15 0.02 0.15; loop: true"
@@ -115,6 +115,7 @@
       let cubePosition = null;
       let isCubePlaced = false;
       let distanceUpdateInterval = null;
+      let userAltitude = 0;
 
       // Enhanced error messages
       const ERROR_MESSAGES = {
@@ -146,7 +147,9 @@
           userLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
+            altitude: position.coords.altitude || 0,
           };
+          userAltitude = userLocation.altitude;
 
           // Only start watching location if cube hasn't been placed yet
           if (!isCubePlaced) {
@@ -195,11 +198,14 @@
           userLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
+            altitude: position.coords.altitude || 0,
           };
+          userAltitude = userLocation.altitude;
         } else {
           userLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
+            altitude: position.coords.altitude || 0,
           };
           updateDistanceIndicator();
         }
@@ -232,6 +238,7 @@
         return {
           latitude: (lat2 * 180) / Math.PI,
           longitude: (lon2 * 180) / Math.PI,
+          altitude: userAltitude,
         };
       }
 
@@ -309,8 +316,8 @@
           // Get the cube element
           const cubeEl = document.getElementById("ar-cube");
 
-          // Set the cube's position in the AR scene
-          cubeEl.setAttribute("position", "0 1 -2");
+          // Set the cube's position in the AR scene with fixed altitude
+          cubeEl.setAttribute("position", "0 1.6 -2");
 
           // Mark cube as placed
           isCubePlaced = true;
