@@ -87,6 +87,7 @@
 
       <!-- Red Cube -->
       <a-box
+        id="ar-cube"
         position="0 1 -2"
         rotation="0 0 0"
         scale="0.3 0.3 0.3"
@@ -114,6 +115,7 @@
       let userLocation = null;
       let watchId = null;
       let cubePosition = null;
+      let isCubePlaced = false;
 
       // Enhanced error messages
       const ERROR_MESSAGES = {
@@ -133,16 +135,6 @@
           // Show initial status
           updateStatus("Requesting permissions...");
 
-          // Request camera access
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "environment", // Prefer back camera
-            },
-          });
-          stream.getTracks().forEach((track) => track.stop());
-
-          updateStatus("Camera permission granted. Getting location...");
-
           // Request location access with high accuracy
           const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -157,12 +149,14 @@
             longitude: position.coords.longitude,
           };
 
-          // Start watching location for updates
-          watchId = navigator.geolocation.watchPosition(
-            updateUserLocation,
-            null,
-            { enableHighAccuracy: true }
-          );
+          // Only start watching location if cube hasn't been placed yet
+          if (!isCubePlaced) {
+            watchId = navigator.geolocation.watchPosition(
+              updateUserLocation,
+              null,
+              { enableHighAccuracy: true }
+            );
+          }
 
           updateStatus("Permissions granted. Looking for surfaces...");
 
@@ -201,11 +195,13 @@
       }
 
       function updateUserLocation(position) {
-        userLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
-        updateDistanceIndicator();
+        if (!isCubePlaced) {
+          userLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          updateDistanceIndicator();
+        }
       }
 
       function calculateOffsetPosition(
@@ -288,98 +284,33 @@
         );
       }
 
-      function initAR() {
-        // Calculate position 7 feet (2.1336 meters) south of user
-        cubePosition = calculateOffsetPosition(
-          userLocation.latitude,
-          userLocation.longitude,
-          2.1336,
-          180
-        );
+      function placeCube() {
+        if (!isCubePlaced && userLocation) {
+          // Calculate position 7 feet (2.1336 meters) south of user
+          cubePosition = calculateOffsetPosition(
+            userLocation.latitude,
+            userLocation.longitude,
+            2.1336,
+            180
+          );
 
-        // Create A-Frame scene with improved tracking
-        const sceneEl = document.createElement("a-scene");
-        sceneEl.setAttribute("embedded", "");
-        sceneEl.setAttribute(
-          "arjs",
-          `
-          sourceType: webcam;
-          debugUIEnabled: false;
-          sourceWidth: 1280;
-          sourceHeight: 960;
-          displayWidth: 1280;
-          displayHeight: 960;
-          trackingMethod: best;
-        `
-        );
+          // Get the cube element
+          const cubeEl = document.getElementById("ar-cube");
 
-        // Add ground grid for better spatial awareness
-        const gridEl = document.createElement("a-grid");
-        gridEl.setAttribute("position", "0 0 0");
-        gridEl.setAttribute("rotation", "-90 0 0");
-        gridEl.setAttribute("scale", "2 2 2");
+          // Set the cube's position in the AR scene
+          cubeEl.setAttribute("position", "0 1 -2");
 
-        // Create improved cube with better visibility
-        const cubeEl = document.createElement("a-box");
-        cubeEl.setAttribute("position", "0 1 -2"); // Raised slightly for better visibility
-        cubeEl.setAttribute("rotation", "0 0 0");
-        cubeEl.setAttribute(
-          "material",
-          `
-          color: #ff0000;
-          metalness: 0.5;
-          roughness: 0.5;
-          emissive: #ff0000;
-          emissiveIntensity: 0.2;
-        `
-        );
-        cubeEl.setAttribute("scale", "0.3 0.3 0.3"); // Slightly smaller for better proportion
-        cubeEl.setAttribute(
-          "animation",
-          `
-          property: rotation;
-          dur: 8000;
-          to: 360 360 0;
-          loop: true;
-          easing: linear
-        `
-        );
+          // Mark cube as placed
+          isCubePlaced = true;
 
-        // Add glow effect marker
-        const glowEl = document.createElement("a-sphere");
-        glowEl.setAttribute("position", "0 0.8 -2"); // Just below the cube
-        glowEl.setAttribute("scale", "0.1 0.02 0.1");
-        glowEl.setAttribute(
-          "material",
-          "color: #ff0000; opacity: 0.5; transparent: true"
-        );
-        glowEl.setAttribute(
-          "animation",
-          "property: scale; dir: alternate; dur: 1000; to: 0.15 0.02 0.15; loop: true"
-        );
+          // Stop watching location updates
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+          }
 
-        // Create camera with improved controls
-        const cameraEl = document.createElement("a-entity");
-        cameraEl.setAttribute("camera", "");
-        cameraEl.setAttribute(
-          "look-controls",
-          "touchEnabled: true; magicWindowTrackingEnabled: true"
-        );
-        cameraEl.setAttribute("position", "0 1.6 0"); // Average human height
-
-        // Add all elements to scene
-        sceneEl.appendChild(gridEl);
-        sceneEl.appendChild(cubeEl);
-        sceneEl.appendChild(glowEl);
-        sceneEl.appendChild(cameraEl);
-        document.body.appendChild(sceneEl);
-
-        // Update status and show distance indicator
-        updateStatus("AR Ready - Look around to see the red cube");
-        document
-          .getElementById("distance-indicator")
-          .classList.remove("hidden");
-        updateDistanceIndicator();
+          updateStatus("Cube placed! You can now move around it.");
+        }
       }
 
       // Cleanup function
@@ -402,6 +333,9 @@
       document.querySelector("a-scene").addEventListener("loaded", function () {
         requestPermissions();
         updateStatus("AR Ready - Look around to see the red cube");
+
+        // Place the cube after a short delay to ensure everything is initialized
+        setTimeout(placeCube, 2000);
       });
     </script>
   </body>
