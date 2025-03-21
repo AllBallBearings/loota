@@ -22,25 +22,41 @@
         border-radius: 5px;
         font-family: Arial, sans-serif;
         z-index: 100;
+        max-width: 80%;
+      }
+      #coordinates {
+        position: fixed;
+        top: 80px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px;
+        border-radius: 5px;
+        font-family: Arial, sans-serif;
+        font-size: 0.9em;
+        z-index: 100;
       }
     </style>
   </head>
   <body>
     <div id="info">Initializing AR Money...</div>
+    <div id="coordinates">GPS: <span id="coordsText">calculating...</span></div>
 
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
-    <!-- 8th Wall-like tracking enhancements -->
-    <script src="https://cdn.jsdelivr.net/npm/argon2@latest/dist/argon2.js"></script>
 
     <a-scene
       vr-mode-ui="enabled: false"
       arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
       embedded
     >
-      <!-- Dollar Sign Entity with SLAM-optimized tracking -->
-      <!-- Enhanced Dollar Sign with Coordinates Display -->
+      <a-assets>
+        <a-asset-item
+          id="grid"
+          src="https://cdn.aframe.io/examples/ar/models/grid.gltf"
+        ></a-asset-item>
+      </a-assets>
+
       <a-entity
         id="dollar-sign"
         gps-entity-place="latitude: 0; longitude: 0"
@@ -62,491 +78,98 @@
         >
         </a-text>
       </a-entity>
-      <div id="coordinates" class="status-box">
-        GPS: <span id="coordsText">calculating...</span>
-      </div>
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Loota Money View</title>
-          <meta charset="utf-8" />
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0, user-scalable=no"
-          />
-          <style>
-            body {
-              margin: 0;
-              overflow: hidden;
-            }
-            #info {
-              position: fixed;
-              top: 10px;
-              left: 10px;
-              background: rgba(0, 0, 0, 0.7);
-              color: white;
-              padding: 10px;
-              border-radius: 5px;
-              font-family: Arial, sans-serif;
-              z-index: 100;
-            }
-          </style>
-        </head>
-        <body>
-          <div id="info">Initializing AR Money...</div>
 
-          <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-          <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
-          <!-- 8th Wall-like tracking enhancements -->
-          <script src="https://cdn.jsdelivr.net/npm/argon2@latest/dist/argon2.js"></script>
-
-          <a-scene
-            vr-mode-ui="enabled: false"
-            arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-            embedded
-          >
-            <!-- Dollar Sign Entity with SLAM-optimized tracking -->
-            <a-entity
-              id="dollar-sign"
-              gps-entity-place="latitude: 0; longitude: 0"
-              slam-tracker
-            >
-              <a-text
-                value="$"
-                color="#00FF00"
-                scale="4 4 4"
-                width="10"
-                align="center"
-                position="0 1.6 0"
-                animation="property: rotation; dur: 2000; to: 0 360 0; loop: true; easing: linear"
-              >
-              </a-text>
-            </a-entity>
-            <div id="coordinates" class="status-box">
-              Dollar coordinates: <span id="coordsText">calculating...</span>
-            </div>
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>Loota Money View</title>
-                <meta charset="utf-8" />
-                <meta
-                  name="viewport"
-                  content="width=device-width, initial-scale=1.0, user-scalable=no"
-                />
-                <style>
-                  body {
-                    margin: 0;
-                    overflow: hidden;
-                  }
-                  #info {
-                    position: fixed;
-                    top: 10px;
-                    left: 10px;
-                    background: rgba(0, 0, 0, 0.7);
-                    color: white;
-                    padding: 10px;
-                    border-radius: 5px;
-                    font-family: Arial, sans-serif;
-                    z-index: 100;
-                  }
-                </style>
-              </head>
-              <body>
-                <div id="info">Initializing AR Money...</div>
-
-                <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-                <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
-                <!-- 8th Wall-like tracking enhancements -->
-                <script src="https://cdn.jsdelivr.net/npm/argon2@latest/dist/argon2.js"></script>
-
-                <a-scene
-                  vr-mode-ui="enabled: false"
-                  arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-                  embedded
-                >
-                  <!-- Dollar Sign Entity with SLAM-optimized tracking -->
-                  <a-entity
-                    id="dollar-sign"
-                    gps-entity-place="latitude: 0; longitude: 0"
-                    slam-tracker
-                  >
-                    <a-text
-                      value="$"
-                      color="#00FF00"
-                      scale="4 4 4"
-                      width="10"
-                      align="center"
-                      position="0 1.6 0"
-                      animation="property: rotation; dur: 2000; to: 0 360 0; loop: true; easing: linear"
-                    >
-                    </a-text>
-                  </a-entity>
-                  <!DOCTYPE html>
-                  <html>
-                    <head>
-                      <title>Loota Money View</title>
-                      <meta charset="utf-8" />
-                      <meta
-                        name="viewport"
-                        content="width=device-width, initial-scale=1.0, user-scalable=no"
-                      />
-                      <style>
-                        body {
-                          margin: 0;
-                          overflow: hidden;
-                        }
-                        #info {
-                          position: fixed;
-                          top: 10px;
-                          left: 10px;
-                          background: rgba(0, 0, 0, 0.7);
-                          color: white;
-                          padding: 10px;
-                          border-radius: 5px;
-                          font-family: Arial, sans-serif;
-                          z-index: 100;
-                        }
-                      </style>
-                    </head>
-                    <body>
-                      <div id="info">Initializing AR Money...</div>
-
-                      <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-                      <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
-                      <!-- 8th Wall-like tracking enhancements -->
-                      <script src="https://cdn.jsdelivr.net/npm/argon2@latest/dist/argon2.js"></script>
-
-                      <a-scene
-                        vr-mode-ui="enabled: false"
-                        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-                        embedded
-                      >
-                        <!-- Enhanced Dollar Sign with Coordinates Display -->
-                        <a-entity
-                          id="dollar-sign"
-                          gps-entity-place="latitude: 0; longitude: 0"
-                          slam-tracker
-                        >
-                          <a-text
-                            value="$"
-                            color="#00FF00"
-                            scale="4 4 4"
-                            width="10"
-                            align="center"
-                            position="0 1.6 0"
-                            animation="property: rotation; dur: 2000; to: 0 360 0; loop: true; easing: linear"
-                          >
-                          </a-text>
-                        </a-entity>
-                        <div id="coordinates" class="status-box">
-                          Dollar coordinates:
-                          <span id="coordsText">calculating...</span>
-                        </div>
-                        <!DOCTYPE html>
-                        <html>
-                          <head>
-                            <title>Loota Money View</title>
-                            <meta charset="utf-8" />
-                            <meta
-                              name="viewport"
-                              content="width=device-width, initial-scale=1.0, user-scalable=no"
-                            />
-                            <style>
-                              body {
-                                margin: 0;
-                                overflow: hidden;
-                              }
-                              #info {
-                                position: fixed;
-                                top: 10px;
-                                left: 10px;
-                                background: rgba(0, 0, 0, 0.7);
-                                color: white;
-                                padding: 10px;
-                                border-radius: 5px;
-                                font-family: Arial, sans-serif;
-                                z-index: 100;
-                              }
-                            </style>
-                          </head>
-                          <body>
-                            <div id="info">Initializing AR Money...</div>
-
-                            <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-                            <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
-                            <!-- 8th Wall-like tracking enhancements -->
-                            <script src="https://cdn.jsdelivr.net/npm/argon2@latest/dist/argon2.js"></script>
-
-                            <a-scene
-                              vr-mode-ui="enabled: false"
-                              arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-                              embedded
-                            >
-                              <!-- Dollar Sign Entity with SLAM-optimized tracking -->
-                              <a-entity
-                                id="dollar-sign"
-                                gps-entity-place="latitude: 0; longitude: 0"
-                                slam-tracker
-                              >
-                                <a-text
-                                  value="$"
-                                  color="#00FF00"
-                                  scale="4 4 4"
-                                  width="10"
-                                  align="center"
-                                  position="0 1.6 0"
-                                  animation="property: rotation; dur: 2000; to: 0 360 0; loop: true; easing: linear"
-                                >
-                                </a-text>
-                              </a-entity>
-                              <div id="coordinates" class="status-box">
-                                Dollar coordinates:
-                                <span id="coordsText">calculating...</span>
-                              </div>
-                              <!DOCTYPE html>
-                              <html>
-                                <head>
-                                  <title>Loota Money View</title>
-                                  <meta charset="utf-8" />
-                                  <meta
-                                    name="viewport"
-                                    content="width=device-width, initial-scale=1.0, user-scalable=no"
-                                  />
-                                  <style>
-                                    body {
-                                      margin: 0;
-                                      overflow: hidden;
-                                    }
-                                    #info {
-                                      position: fixed;
-                                      top: 10px;
-                                      left: 10px;
-                                      background: rgba(0, 0, 0, 0.7);
-                                      color: white;
-                                      padding: 10px;
-                                      border-radius: 5px;
-                                      font-family: Arial, sans-serif;
-                                      z-index: 100;
-                                    }
-                                  </style>
-                                </head>
-                                <body>
-                                  <div id="info">Initializing AR Money...</div>
-
-                                  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-                                  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
-                                  <!-- 8th Wall-like tracking enhancements -->
-                                  <script src="https://cdn.jsdelivr.net/npm/argon2@latest/dist/argon2.js"></script>
-
-                                  <a-scene
-                                    vr-mode-ui="enabled: false"
-                                    arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-                                    embedded
-                                  >
-                                    <!-- Dollar Sign Entity with SLAM-optimized tracking -->
-                                    <a-entity
-                                      id="dollar-sign"
-                                      gps-entity-place="latitude: 0; longitude: 0"
-                                      slam-tracker
-                                    >
-                                      <a-text
-                                        value="$"
-                                        color="#00FF00"
-                                        scale="4 4 4"
-                                        width="10"
-                                        align="center"
-                                        position="0 1.6 0"
-                                        animation="property: rotation; dur: 2000; to: 0 360 0; loop: true; easing: linear"
-                                      >
-                                      </a-text>
-                                    </a-entity>
-                                    <!DOCTYPE html>
-                                    <html>
-                                      <head>
-                                        <title>Loota Money View</title>
-                                        <meta charset="utf-8" />
-                                        <meta
-                                          name="viewport"
-                                          content="width=device-width, initial-scale=1.0, user-scalable=no"
-                                        />
-                                        <style>
-                                          body {
-                                            margin: 0;
-                                            overflow: hidden;
-                                          }
-                                          #info {
-                                            position: fixed;
-                                            top: 10px;
-                                            left: 10px;
-                                            background: rgba(0, 0, 0, 0.7);
-                                            color: white;
-                                            padding: 10px;
-                                            border-radius: 5px;
-                                            font-family: Arial, sans-serif;
-                                            z-index: 100;
-                                          }
-                                        </style>
-                                      </head>
-                                      <body>
-                                        <div id="info">
-                                          Initializing AR Money...
-                                        </div>
-
-                                        <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-                                        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
-                                        <!-- 8th Wall-like tracking enhancements -->
-                                        <script src="https://cdn.jsdelivr.net/npm/argon2@latest/dist/argon2.js"></script>
-
-                                        <a-scene
-                                          vr-mode-ui="enabled: false"
-                                          arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-                                          embedded
-                                        >
-                                          <!-- Dollar Sign Entity with SLAM-optimized tracking -->
-                                          <a-entity
-                                            id="dollar-sign"
-                                            geometry="primitive: plane; width: 0.5; height: 0.5"
-                                            material="src: https://cdn.glitch.global/your-dollar-texture.png; transparent: true"
-                                            animation="property: rotation; dur: 2000; to: 0 360 0; loop: true; easing: linear"
-                                            gps-entity-place="latitude: 0; longitude: 0"
-                                            slam-tracker
-                                          >
-                                            <a-text
-                                              value="$"
-                                              color="#00FF00"
-                                              scale="2 2 2"
-                                              align="center"
-                                              position="0 0.1 0"
-                                            >
-                                            </a-text>
-                                          </a-entity>
-
-                                          <a-entity camera></a-entity>
-                                        </a-scene>
-
-                                        <script>
-                                          // Enhanced tracking logic similar to 8th Wall's approach
-                                          let currentLocation = null;
-                                          const MIN_MOVEMENT = 1.5; // meters
-                                          const SMOOTHING_FACTOR = 0.15;
-
-                                          // SLAM initialization
-                                          const slamSystem =
-                                            document.querySelector("a-scene")
-                                              .systems["slam"];
-
-                                          navigator.geolocation.watchPosition(
-                                            async (position) => {
-                                              if (!currentLocation) {
-                                                currentLocation = {
-                                                  lat: position.coords.latitude,
-                                                  lon: position.coords
-                                                    .longitude,
-                                                };
-                                                initDollarSign(position);
-                                                return;
-                                              }
-
-                                              // Sensor fusion calculations
-                                              const distance =
-                                                calculateDistance(
-                                                  currentLocation.lat,
-                                                  currentLocation.lon,
-                                                  position.coords.latitude,
-                                                  position.coords.longitude
-                                                );
-
-                                              if (distance > MIN_MOVEMENT) {
-                                                // Apply Kalman filter-like smoothing
-                                                currentLocation.lat =
-                                                  currentLocation.lat *
-                                                    (1 - SMOOTHING_FACTOR) +
-                                                  position.coords.latitude *
-                                                    SMOOTHING_FACTOR;
-                                                currentLocation.lon =
-                                                  currentLocation.lon *
-                                                    (1 - SMOOTHING_FACTOR) +
-                                                  position.coords.longitude *
-                                                    SMOOTHING_FACTOR;
-
-                                                updateDollarPosition();
-                                              }
-                                            },
-                                            null,
-                                            {
-                                              enableHighAccuracy: true,
-                                              maximumAge: 2000,
-                                            }
-                                          );
-
-                                          function initDollarSign(pos) {
-                                            const dollar =
-                                              document.querySelector(
-                                                "#dollar-sign"
-                                              );
-                                            dollar.setAttribute(
-                                              "gps-entity-place",
-                                              {
-                                                latitude: pos.coords.latitude,
-                                                longitude: pos.coords.longitude,
-                                              }
-                                            );
-                                            document.getElementById(
-                                              "info"
-                                            ).textContent =
-                                              "Money located! Look around";
-                                          }
-
-                                          function updateDollarPosition() {
-                                            // Combine SLAM data with GPS updates
-                                            const slamPos =
-                                              slamSystem.getPosition();
-                                            const dollar =
-                                              document.querySelector(
-                                                "#dollar-sign"
-                                              );
-
-                                            dollar.setAttribute("position", {
-                                              x: slamPos.x * 0.7, // Blend SLAM and GPS data
-                                              y: slamPos.y * 0.7,
-                                              z: slamPos.z * 0.7,
-                                            });
-                                          }
-
-                                          // Existing geospatial functions from ar-view.html
-                                          function calculateDistance(
-                                            lat1,
-                                            lon1,
-                                            lat2,
-                                            lon2
-                                          ) {
-                                            // Implementation from previous file
-                                          }
-                                        </script>
-                                      </body>
-                                    </html>
-                                  </a-scene>
-                                </body>
-                              </html>
-                            </a-scene>
-                          </body>
-                        </html>
-                      </a-scene>
-                    </body>
-                  </html></a-scene
-                >
-              </body>
-            </html></a-scene
-          >
-        </body>
-      </html>
+      <a-entity camera look-controls="touchEnabled: true"></a-entity>
     </a-scene>
+
+    <script>
+      let currentLocation = null;
+      const MIN_MOVEMENT = 1.5; // meters
+      const SMOOTHING_FACTOR = 0.15;
+      let watchId = null;
+
+      document.querySelector("a-scene").addEventListener("loaded", () => {
+        requestPermissions();
+      });
+
+      async function requestPermissions() {
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 5000,
+            });
+          });
+
+          currentLocation = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          };
+
+          initDollarSign(position);
+          watchId = navigator.geolocation.watchPosition(updateLocation, null, {
+            enableHighAccuracy: true,
+          });
+        } catch (error) {
+          document.getElementById("info").textContent =
+            "Location access required to find money. Refresh to try again.";
+        }
+      }
+
+      function initDollarSign(pos) {
+        const dollar = document.querySelector("#dollar-sign");
+        dollar.setAttribute("gps-entity-place", {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+
+        document.getElementById("info").textContent =
+          "Money located! Look around";
+        document.getElementById(
+          "coordsText"
+        ).textContent = `${pos.coords.latitude.toFixed(
+          6
+        )}, ${pos.coords.longitude.toFixed(6)}`;
+      }
+
+      function updateLocation(position) {
+        if (!currentLocation) return;
+
+        const distance = calculateDistance(
+          currentLocation.lat,
+          currentLocation.lon,
+          position.coords.latitude,
+          position.coords.longitude
+        );
+
+        if (distance > MIN_MOVEMENT) {
+          currentLocation.lat =
+            currentLocation.lat * (1 - SMOOTHING_FACTOR) +
+            position.coords.latitude * SMOOTHING_FACTOR;
+          currentLocation.lon =
+            currentLocation.lon * (1 - SMOOTHING_FACTOR) +
+            position.coords.longitude * SMOOTHING_FACTOR;
+
+          document.getElementById(
+            "coordsText"
+          ).textContent = `${currentLocation.lat.toFixed(
+            6
+          )}, ${currentLocation.lon.toFixed(6)}`;
+        }
+      }
+
+      function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6378137;
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+    </script>
   </body>
 </html>
