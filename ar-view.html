@@ -72,7 +72,7 @@
     <!-- A-Frame scene -->
     <a-scene
       embedded
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; trackingMethod: best;"
       vr-mode-ui="enabled: false"
     >
       <!-- Assets -->
@@ -315,7 +315,12 @@
           // Mark cube as placed
           isCubePlaced = true;
 
-          // Update status and distance immediately
+          // Stop watching location updates
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+          }
+
           updateStatus("Cube placed! You can now move around it.");
           updateDistanceIndicator();
         }
