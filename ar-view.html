@@ -62,9 +62,7 @@
   </head>
   <body>
     <div id="info">Initializing AR...</div>
-    <div id="distance-indicator" class="hidden">
-      Distance to cube: calculating...
-    </div>
+    <div id="distance-indicator">Distance to cube: calculating...</div>
     <div id="compass" class="hidden">N</div>
 
     <!-- Import libraries in correct order -->
@@ -116,6 +114,7 @@
       let watchId = null;
       let cubePosition = null;
       let isCubePlaced = false;
+      let distanceUpdateInterval = null;
 
       // Enhanced error messages
       const ERROR_MESSAGES = {
@@ -175,11 +174,8 @@
             initCompass();
           }
 
-          // Show distance indicator
-          document
-            .getElementById("distance-indicator")
-            .classList.remove("hidden");
-          updateDistanceIndicator();
+          // Start distance updates
+          startDistanceUpdates();
         } catch (error) {
           console.error("Permission error:", error);
           if (error.name === "NotAllowedError") {
@@ -196,6 +192,11 @@
 
       function updateUserLocation(position) {
         if (!isCubePlaced) {
+          userLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+        } else {
           userLocation = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
@@ -249,7 +250,11 @@
       }
 
       function updateDistanceIndicator() {
-        if (!userLocation || !cubePosition) return;
+        if (!userLocation || !cubePosition) {
+          document.getElementById("distance-indicator").innerHTML =
+            "Distance to cube: calculating...";
+          return;
+        }
 
         const distance = calculateDistance(
           userLocation.latitude,
@@ -258,11 +263,18 @@
           cubePosition.longitude
         );
 
-        const distanceEl = document.getElementById("distance-indicator");
-        distanceEl.classList.remove("hidden");
-        distanceEl.innerHTML = `Distance to cube: ${distance.toFixed(
-          1
-        )} meters`;
+        document.getElementById(
+          "distance-indicator"
+        ).innerHTML = `Distance to cube: ${distance.toFixed(1)} meters`;
+      }
+
+      function startDistanceUpdates() {
+        // Update distance every second
+        distanceUpdateInterval = setInterval(() => {
+          if (userLocation && cubePosition) {
+            updateDistanceIndicator();
+          }
+        }, 1000);
       }
 
       function initCompass() {
@@ -303,13 +315,9 @@
           // Mark cube as placed
           isCubePlaced = true;
 
-          // Stop watching location updates
-          if (watchId !== null) {
-            navigator.geolocation.clearWatch(watchId);
-            watchId = null;
-          }
-
+          // Update status and distance immediately
           updateStatus("Cube placed! You can now move around it.");
+          updateDistanceIndicator();
         }
       }
 
@@ -317,6 +325,9 @@
       function cleanup() {
         if (watchId !== null) {
           navigator.geolocation.clearWatch(watchId);
+        }
+        if (distanceUpdateInterval !== null) {
+          clearInterval(distanceUpdateInterval);
         }
       }
 
