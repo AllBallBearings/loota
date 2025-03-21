@@ -405,53 +405,6 @@
         }
       }
 
-      function updateDistanceIndicator() {
-        if (!userLocation || !cubePosition) {
-          document.getElementById("distance-indicator").innerHTML =
-            "Distance to cube: calculating...";
-          return;
-        }
-
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          cubePosition.latitude,
-          cubePosition.longitude
-        );
-
-        document.getElementById(
-          "distance-indicator"
-        ).innerHTML = `Distance to cube: ${distance.toFixed(1)} meters`;
-      }
-
-      function startDistanceUpdates() {
-        // Update distance every second
-        distanceUpdateInterval = setInterval(() => {
-          if (userLocation && cubePosition) {
-            updateDistanceIndicator();
-          }
-        }, 1000);
-      }
-
-      function initCompass() {
-        const compassEl = document.getElementById("compass");
-        compassEl.classList.remove("hidden");
-
-        window.addEventListener(
-          "deviceorientation",
-          (event) => {
-            if (event.webkitCompassHeading) {
-              // iOS compass heading
-              compassEl.style.transform = `rotate(${event.webkitCompassHeading}deg)`;
-            } else if (event.alpha) {
-              // Android compass heading
-              compassEl.style.transform = `rotate(${360 - event.alpha}deg)`;
-            }
-          },
-          true
-        );
-      }
-
       // Cleanup function
       function cleanup() {
         if (watchId !== null) {
