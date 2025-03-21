@@ -73,7 +73,7 @@
     <!-- A-Frame scene with GPS AR -->
     <a-scene
       embedded
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; trackingMethod: best; sourceWidth: 1280; sourceHeight: 960;"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; sourceWidth: 1280; sourceHeight: 960;"
       vr-mode-ui="enabled: false"
       gps-scene
       renderer="logarithmicDepthBuffer: true; precision: high;"
@@ -112,7 +112,7 @@
           // Get initial position
           const position = await getGeolocation();
           userLocation = position.coords;
-          
+
           // Set cube position 2 meters south
           const cubeCoords = calculateOffsetPosition(
             userLocation.latitude,
@@ -129,7 +129,7 @@
 
           // Initialize compass
           initCompass();
-          
+
           updateStatus('AR Ready - Look through your device');
           startDistanceUpdates();
         } catch (error) {
@@ -193,7 +193,7 @@
       function startDistanceUpdates() {
         setInterval(() => {
           if (!userLocation || !cubeEntity.components['gps-entity-place']) return;
-          
+
           const cubePos = cubeEntity.components['gps-entity-place'].position;
           const distance = calculateDistance(
             userLocation.latitude,
@@ -201,21 +201,49 @@
             cubePos.latitude,
             cubePos.longitude
           );
-          
-          document.getElementById('distance-indicator').textContent = 
-            `Distance: ${distance.toFixed(1)} meters`;
-        }, 1000);
+
+          // Get the cube element
+          const cubeEl = document.getElementById("ar-cube");
+
+          // Set the cube's position in the AR scene
+          cubeEl.setAttribute("position", "0 1 -2");
+
+          // Mark cube as placed
+          isCubePlaced = true;
+
+          // Update status and distance immediately
+          updateStatus("Cube placed! You can now move around it.");
+          updateDistanceIndicator();
+        }
       }
 
-      function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6378137;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = 
-          Math.sin(dLat/2) * Math.sin(dLat/2) +
-          Math.cos(lat1 * Math.PI / 180) * 
-          Math.cos(lat2 * Math.PI / 180) *
-          Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
+      // Cleanup function
+      function cleanup() {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+        if (distanceUpdateInterval !== null) {
+          clearInterval(distanceUpdateInterval);
+        }
       }
+
+      // Handle page visibility changes
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          cleanup();
+        } else {
+          requestPermissions();
+        }
+      });
+
+      // Initialize when A-Frame is ready
+      document.querySelector("a-scene").addEventListener("loaded", function () {
+        requestPermissions();
+        updateStatus("AR Ready - Look around to see the red cube");
+
+        // Place the cube after a short delay to ensure everything is initialized
+        setTimeout(placeCube, 2000);
+      });
+    </script>
+  </body>
+</html>
