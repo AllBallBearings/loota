@@ -127,6 +127,9 @@
       let cubePosition = null;
       let isCubePlaced = false;
       let distanceUpdateInterval = null;
+      let lastPosition = { lat: null, lon: null };
+      const POSITION_THRESHOLD = 0.5; // meters
+      const SMOOTHING_FACTOR = 0.2;
 
       // Enhanced error messages
       const ERROR_MESSAGES = {
@@ -203,20 +206,45 @@
       }
 
       function updateUserLocation(position) {
+        // Check position accuracy and ignore low-quality updates
+        if (position.coords.accuracy > 10) return;
+
+        const newLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
         if (!isCubePlaced) {
-          userLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
+          userLocation = newLocation;
+          return;
+        }
+
+        // Calculate distance from last accepted position
+        const distanceMoved = lastPosition.lat
+          ? calculateDistance(
+              lastPosition.lat,
+              lastPosition.lon,
+              newLocation.latitude,
+              newLocation.longitude
+            )
+          : 0;
+
+        // Apply movement threshold and smoothing
+        if (distanceMoved > POSITION_THRESHOLD) {
+          // Smooth position updates
+          userLocation.latitude =
+            userLocation.latitude * (1 - SMOOTHING_FACTOR) +
+            newLocation.latitude * SMOOTHING_FACTOR;
+          userLocation.longitude =
+            userLocation.longitude * (1 - SMOOTHING_FACTOR) +
+            newLocation.longitude * SMOOTHING_FACTOR;
+
+          lastPosition = {
+            lat: userLocation.latitude,
+            lon: userLocation.longitude,
           };
-        } else {
-          userLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
+          updateCubePosition();
           updateDistanceIndicator();
-          if (isCubePlaced) {
-            updateCubePosition();
-          }
         }
       }
 
