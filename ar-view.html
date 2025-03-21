@@ -335,9 +335,10 @@
           cubePosition.longitude
         );
 
+        const feet = distance * 3.28084;
         document.getElementById(
           "distance-indicator"
-        ).innerHTML = `Distance to cube: ${distance.toFixed(1)} meters`;
+        ).innerHTML = `Distance to cube: ${feet.toFixed(1)} feet`;
       }
 
       function startDistanceUpdates() {
