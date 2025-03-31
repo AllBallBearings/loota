@@ -1,175 +1,178 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Loota Money View</title>
     <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no"
-    />
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-      }
-      #info {
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 10px;
-        border-radius: 5px;
-        font-family: Arial, sans-serif;
-        z-index: 100;
-        max-width: 80%;
-      }
-      #coordinates {
-        position: fixed;
-        top: 80px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 8px;
-        border-radius: 5px;
-        font-family: Arial, sans-serif;
-        font-size: 0.9em;
-        z-index: 100;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="info">Initializing AR Money...</div>
-    <div id="coordinates">GPS: <span id="coordsText">calculating...</span></div>
-
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Location Based AR Dollar Sign</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- A-Frame Library -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- AR.js Library for Location Based AR -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <!-- Location Based AR Component -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/three.js/build/ar-threex-location-only.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
+    <link rel="stylesheet" href="app.css" />
+  </head>
+  <body style="margin: 0; overflow: hidden">
+    <!-- AR Scene -->
     <a-scene
       vr-mode-ui="enabled: false"
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-      embedded
+      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
+      renderer="antialias: true; alpha: true"
+      location-based-ar
     >
-      <a-assets>
-        <a-asset-item
-          id="grid"
-          src="https://cdn.aframe.io/examples/ar/models/grid.gltf"
-        ></a-asset-item>
-      </a-assets>
+      <!-- Camera setup for location-based AR -->
+      <a-camera
+        gps-new-camera="gpsMinDistance: 5; gpsTimeInterval: 1000"
+        look-controls-enabled="false"
+        arjs-look-controls="smoothingFactor: 0.1"
+      ></a-camera>
 
+      <!-- Rotating Dollar Sign - Placeholder coordinates, will be set dynamically -->
       <a-entity
         id="dollar-sign"
-        gps-entity-place="latitude: 0; longitude: 0"
-        slam-tracker
+        look-at="[gps-new-camera]"
+        scale="5 5 5"
+        gps-new-entity-place="latitude: 0; longitude: 0"
       >
-        <a-circle
-          radius="0.3"
-          color="#00FF00"
-          opacity="0.8"
-          position="0 1.6 0"
-        ></a-circle>
-        <a-text
-          value="$"
-          color="#000000"
-          scale="2 2 2"
-          align="center"
-          position="0 1.6 0"
-          animation="property: rotation; dur: 2000; to: 0 360 0; loop: true; easing: linear"
-        >
-        </a-text>
+        <a-text value="$" color="#FFD700" align="center" side="double"></a-text>
+        <a-animation
+          attribute="rotation"
+          to="0 360 0"
+          dur="5000"
+          easing="linear"
+          repeat="indefinite"
+        ></a-animation>
       </a-entity>
-
-      <a-entity camera look-controls="touchEnabled: true"></a-entity>
     </a-scene>
 
+    <!-- UI Overlay for displaying coordinates and distance -->
+    <div id="ui-overlay">
+      <div>User Lat: <span id="user-lat">...</span></div>
+      <div>User Lon: <span id="user-lon">...</span></div>
+      <div>Object Lat: <span id="obj-lat">...</span></div>
+      <div>Object Lon: <span id="obj-lon">...</span></div>
+      <div>Distance: <span id="distance">...</span> m</div>
+    </div>
+
     <script>
-      let currentLocation = null;
-      const MIN_MOVEMENT = 1.5; // meters
-      const SMOOTHING_FACTOR = 0.15;
-      let watchId = null;
+      // JavaScript for handling location, placement, and updates will go here
+      window.onload = () => {
+        const scene = document.querySelector("a-scene");
+        const camera = document.querySelector("[gps-new-camera]");
+        const dollarSign = document.getElementById("dollar-sign");
+        const userLatEl = document.getElementById("user-lat");
+        const userLonEl = document.getElementById("user-lon");
+        const objLatEl = document.getElementById("obj-lat");
+        const objLonEl = document.getElementById("obj-lon");
+        const distanceEl = document.getElementById("distance");
 
-      document.querySelector("a-scene").addEventListener("loaded", () => {
-        requestPermissions();
-      });
+        let initialPositionSet = false;
+        let objectCoords = null;
 
-      async function requestPermissions() {
-        try {
-          const position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 5000,
-            });
-          });
+        // Function to calculate distance between two GPS coordinates (Haversine formula)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+          const R = 6371e3; // Earth radius in meters
+          const φ1 = (lat1 * Math.PI) / 180;
+          const φ2 = (lat2 * Math.PI) / 180;
+          const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+          const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-          currentLocation = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-          };
+          const a =
+            Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-          initDollarSign(position);
-          watchId = navigator.geolocation.watchPosition(updateLocation, null, {
-            enableHighAccuracy: true,
-          });
-        } catch (error) {
-          document.getElementById("info").textContent =
-            "Location access required to find money. Refresh to try again.";
+          return R * c; // Distance in meters
         }
-      }
 
-      function initDollarSign(pos) {
-        const dollar = document.querySelector("#dollar-sign");
-        dollar.setAttribute("gps-entity-place", {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
+        // Function to calculate destination point given start point, bearing, and distance
+        function calculateDestination(lat1, lon1, bearing, distance) {
+          const R = 6371e3; // Earth radius in meters
+          const δ = distance / R; // Angular distance in radians
+          const θ = (bearing * Math.PI) / 180; // Bearing in radians
+
+          const φ1 = (lat1 * Math.PI) / 180;
+          const λ1 = (lon1 * Math.PI) / 180;
+
+          const φ2 = Math.asin(
+            Math.sin(φ1) * Math.cos(δ) +
+              Math.cos(φ1) * Math.sin(δ) * Math.cos(θ)
+          );
+          const λ2 =
+            λ1 +
+            Math.atan2(
+              Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+              Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2)
+            );
+
+          const lat2 = (φ2 * 180) / Math.PI;
+          const lon2 = (λ2 * 180) / Math.PI;
+
+          return { latitude: lat2, longitude: lon2 };
+        }
+
+        // Listen for camera GPS updates
+        camera.addEventListener("gps-camera-update-position", (event) => {
+          const userLat = event.detail.position.latitude;
+          const userLon = event.detail.position.longitude;
+
+          userLatEl.textContent = userLat.toFixed(6);
+          userLonEl.textContent = userLon.toFixed(6);
+
+          if (!initialPositionSet) {
+            console.log("Setting initial object position...");
+            // Calculate object position 5 feet (approx 1.524 meters) North (bearing 0)
+            const distanceMeters = 1.524;
+            const bearing = 0; // North
+            objectCoords = calculateDestination(
+              userLat,
+              userLon,
+              bearing,
+              distanceMeters
+            );
+
+            console.log(`User Coords: ${userLat}, ${userLon}`);
+            console.log(
+              `Object Coords: ${objectCoords.latitude}, ${objectCoords.longitude}`
+            );
+
+            // Set the object's GPS coordinates
+            dollarSign.setAttribute("gps-new-entity-place", {
+              latitude: objectCoords.latitude,
+              longitude: objectCoords.longitude,
+            });
+
+            objLatEl.textContent = objectCoords.latitude.toFixed(6);
+            objLonEl.textContent = objectCoords.longitude.toFixed(6);
+
+            initialPositionSet = true;
+            console.log("Object position set.");
+          }
+
+          // Update distance if object position is set
+          if (objectCoords) {
+            const dist = calculateDistance(
+              userLat,
+              userLon,
+              objectCoords.latitude,
+              objectCoords.longitude
+            );
+            distanceEl.textContent = dist.toFixed(2);
+          }
         });
 
-        document.getElementById("info").textContent =
-          "Money located! Look around";
-        document.getElementById(
-          "coordsText"
-        ).textContent = `${pos.coords.latitude.toFixed(
-          6
-        )}, ${pos.coords.longitude.toFixed(6)}`;
-      }
+        // Error handling for GPS
+        window.addEventListener("gps-error", (event) => {
+          console.error("GPS Error:", event.detail.error);
+          alert(
+            `GPS Error: ${event.detail.error.message}. Please ensure location services are enabled and permissions granted.`
+          );
+        });
 
-      function updateLocation(position) {
-        if (!currentLocation) return;
-
-        const distance = calculateDistance(
-          currentLocation.lat,
-          currentLocation.lon,
-          position.coords.latitude,
-          position.coords.longitude
-        );
-
-        if (distance > MIN_MOVEMENT) {
-          currentLocation.lat =
-            currentLocation.lat * (1 - SMOOTHING_FACTOR) +
-            position.coords.latitude * SMOOTHING_FACTOR;
-          currentLocation.lon =
-            currentLocation.lon * (1 - SMOOTHING_FACTOR) +
-            position.coords.longitude * SMOOTHING_FACTOR;
-
-          document.getElementById(
-            "coordsText"
-          ).textContent = `${currentLocation.lat.toFixed(
-            6
-          )}, ${currentLocation.lon.toFixed(6)}`;
-        }
-      }
-
-      function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6378137;
-        const dLat = ((lat2 - lat1) * Math.PI) / 180;
-        const dLon = ((lon2 - lon1) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos((lat1 * Math.PI) / 180) *
-            Math.cos((lat2 * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      }
+        console.log("AR scene loaded, waiting for GPS...");
+      };
     </script>
   </body>
 </html>
