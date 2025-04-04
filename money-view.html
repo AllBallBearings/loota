@@ -5,6 +5,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>SLAM AR Object Viewer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Prevent A-Frame from automatically loading WebVR polyfill -->
+    <script>window.AFRAME_WEBSITE_DO_NOT_LOAD_POLYFILL = true;</script>
     <!-- A-Frame Library -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <link rel="stylesheet" href="app.css" />
@@ -50,16 +52,19 @@
       id="ar-scene"
       webxr="requiredFeatures: hit-test,local-floor;
              optionalFeatures: dom-overlay;
-             overlayElement: #overlay;"
+              overlayElement: #overlay;"
       vr-mode-ui="enabled: false"
-      renderer="antialias: true; alpha: true"
+      renderer="antialias: true; alpha: true; colorManagement: true;"
+      xr-mode-ui="xrMode: xr; vrMode: false;" /* Attempt to force XR mode */
+      /* Removed polyfill-version-check attribute */
     >
       <!-- Camera - will be controlled by WebXR -->
       <a-camera></a-camera>
 
-      <!-- Lights -->
-      <a-light type="ambient" color="#BBB"></a-light>
-      <a-light type="directional" position="-1 1 1" intensity="0.8"></a-light>
+      <!-- Lights - Updated for modern Three.js -->
+      <a-entity light="type: ambient; color: #BBB"></a-entity>
+      <a-entity light="type: directional; position: -1 1 1; intensity: 0.8"></a-entity>
+
 
       <!-- Placeholder Object to place -->
       <a-box
