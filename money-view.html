@@ -82,6 +82,7 @@
 
     <script>
       window.addEventListener("DOMContentLoaded", () => {
+        console.log("DOM Content Loaded."); // Add log
         const sceneEl = document.getElementById("ar-scene");
         const arButton = document.getElementById("ar-button");
         const reticleEl = document.getElementById("reticle");
@@ -93,21 +94,34 @@
 
         // Check for WebXR support
         if (navigator.xr) {
-          navigator.xr.isSessionSupported("immersive-ar").then((supported) => {
-            if (supported) {
-              arButton.disabled = false;
-              arButton.textContent = "Start AR";
-              arButton.addEventListener("click", onButtonClicked);
-            } else {
-              arButton.textContent = "AR Not Supported";
-            }
-          });
+          console.log("navigator.xr found."); // Add log
+          navigator.xr
+            .isSessionSupported("immersive-ar")
+            .then((supported) => {
+              console.log(`immersive-ar supported: ${supported}`); // Add log
+              if (supported) {
+                arButton.disabled = false;
+                arButton.textContent = "Start AR";
+                arButton.addEventListener("click", onButtonClicked);
+              } else {
+                arButton.textContent = "AR Not Supported";
+                console.log("AR Not Supported by this browser/device."); // Add log
+              }
+            })
+            .catch((err) => {
+              // Add catch
+              console.error("Error checking session support:", err);
+              arButton.textContent = "Error checking support";
+            });
         } else {
           arButton.textContent = "WebXR Not Available";
+          console.log("navigator.xr not found."); // Add log
         }
 
         function onButtonClicked() {
+          console.log("AR button clicked."); // Add log
           if (!xrSession) {
+            console.log("Requesting immersive-ar session..."); // Add log
             navigator.xr
               .requestSession("immersive-ar", {
                 requiredFeatures: ["hit-test", "local-floor"],
@@ -116,11 +130,13 @@
               })
               .then(onSessionStarted, onRequestSessionError);
           } else {
+            console.log("Ending existing AR session."); // Add log
             xrSession.end();
           }
         }
 
         function onSessionStarted(session) {
+          console.log("AR Session Started:", session); // Add log
           xrSession = session;
           arButton.textContent = "Exit AR";
           reticleEl.style.display = "block"; // Show reticle
@@ -128,17 +144,32 @@
           session.addEventListener("end", onSessionEnded);
 
           // Get reference space
-          session.requestReferenceSpace("local-floor").then((refSpace) => {
-            xrRefSpace = refSpace;
-            // Start hit testing
-            session
-              .requestHitTestSource({ space: xrRefSpace })
-              .then((hitTestSource) => {
-                xrHitTestSource = hitTestSource;
-              });
-          });
+          console.log("Requesting reference space 'local-floor'..."); // Add log
+          session
+            .requestReferenceSpace("local-floor")
+            .then((refSpace) => {
+              console.log("Reference space obtained:", refSpace); // Add log
+              xrRefSpace = refSpace;
+              // Start hit testing
+              console.log("Requesting hit test source..."); // Add log
+              session
+                .requestHitTestSource({ space: xrRefSpace })
+                .then((hitTestSource) => {
+                  console.log("Hit test source obtained:", hitTestSource); // Add log
+                  xrHitTestSource = hitTestSource;
+                })
+                .catch((err) => {
+                  // Add catch
+                  console.error("Error getting hit test source:", err);
+                });
+            })
+            .catch((err) => {
+              // Add catch
+              console.error("Error getting reference space:", err);
+            });
 
           // Start the A-Frame render loop within the XR session
+          console.log("Setting up A-Frame renderer for XR session..."); // Add log
           sceneEl.xrSession = session;
           sceneEl.renderer.xr.setReferenceSpaceType("local-floor");
           sceneEl.renderer.xr.setSession(session);
@@ -149,7 +180,7 @@
           // Start the render loop
           session.requestAnimationFrame(onXRFrame);
 
-          console.log("AR Session Started");
+          console.log("A-Frame render loop started for XR."); // Add log
         }
 
         function onRequestSessionError(ex) {
@@ -158,6 +189,7 @@
         }
 
         function onSessionEnded() {
+          console.log("AR Session Ended event received."); // Add log
           xrSession.removeEventListener("end", onSessionEnded);
           xrSession.inputSources.removeEventListener("select", onSelect);
 
@@ -172,13 +204,15 @@
           objectToPlace.setAttribute("position", "0 -10 0"); // Reset position
 
           // Stop A-Frame's XR session handling
+          console.log("Stopping A-Frame XR session handling."); // Add log
           sceneEl.renderer.xr.setSession(null);
           sceneEl.xrSession = null;
 
-          console.log("AR Session Ended");
+          console.log("AR Session cleanup complete."); // Add log
         }
 
         function onSelect(event) {
+          console.log("Select event triggered (screen tap)."); // Add log
           if (
             objectToPlace &&
             !objectPlaced &&
@@ -193,6 +227,7 @@
               .split(" ")
               .map(Number); // Use orientation if needed
 
+            console.log("Placing object at hit position:", hitPosition); // Add log
             objectToPlace.setAttribute("position", {
               x: hitPosition[0],
               y: hitPosition[1],
@@ -204,18 +239,24 @@
             objectToPlace.setAttribute("visible", "true");
             objectPlaced = true; // Place only once per session for this demo
             reticleEl.style.display = "none"; // Hide reticle after placing
-            console.log("Object placed at:", hitPosition);
+            console.log("Object placed successfully."); // Add log
+          } else {
+            console.log(
+              "Select event ignored: object already placed or no valid hit position."
+            ); // Add log
           }
         }
 
         function onXRFrame(time, frame) {
-          if (!xrSession || !xrHitTestSource || objectPlaced) {
-            if (xrSession) xrSession.requestAnimationFrame(onXRFrame); // Keep loop running even if object placed
+          // Keep requesting frames even if hit testing isn't active or object is placed
+          if (!xrSession) return;
+          const session = frame.session;
+          session.requestAnimationFrame(onXRFrame);
+
+          // Skip hit testing if source not available or object placed
+          if (!xrHitTestSource || objectPlaced) {
             return;
           }
-
-          const session = frame.session;
-          session.requestAnimationFrame(onXRFrame); // Continue the loop
 
           const viewerPose = frame.getViewerPose(xrRefSpace);
           if (!viewerPose) return;
