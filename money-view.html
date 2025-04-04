@@ -3,176 +3,248 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Location Based AR Dollar Sign</title>
+    <title>SLAM AR Object Viewer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- A-Frame Library -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <!-- AR.js Library for Location Based AR -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
-    <!-- Location Based AR Component -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/three.js/build/ar-threex-location-only.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <link rel="stylesheet" href="app.css" />
+    <style>
+      /* Basic styling for AR button */
+      #ar-button {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 24px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 10;
+      }
+      #ar-button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+      /* Reticle styling */
+      #reticle {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 2px solid white;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 5;
+        opacity: 0.7;
+        display: none; /* Hidden until AR session starts */
+      }
+    </style>
   </head>
   <body style="margin: 0; overflow: hidden">
     <!-- AR Scene -->
     <a-scene
+      id="ar-scene"
+      webxr="requiredFeatures: hit-test,local-floor;
+             optionalFeatures: dom-overlay;
+             overlayElement: #overlay;"
       vr-mode-ui="enabled: false"
-      arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;"
       renderer="antialias: true; alpha: true"
-      location-based-ar
     >
-      <!-- Camera setup for location-based AR -->
-      <a-camera
-        gps-new-camera="gpsMinDistance: 5; gpsTimeInterval: 1000"
-        look-controls-enabled="false"
-        arjs-look-controls="smoothingFactor: 0.1"
-      ></a-camera>
+      <!-- Camera - will be controlled by WebXR -->
+      <a-camera></a-camera>
 
-      <!-- Rotating Dollar Sign - Placeholder coordinates, will be set dynamically -->
-      <a-entity
-        id="dollar-sign"
-        look-at="[gps-new-camera]"
-        scale="5 5 5"
-        gps-new-entity-place="latitude: 0; longitude: 0"
-      >
-        <a-text value="$" color="#FFD700" align="center" side="double"></a-text>
-        <a-animation
-          attribute="rotation"
-          to="0 360 0"
-          dur="5000"
-          easing="linear"
-          repeat="indefinite"
-        ></a-animation>
-      </a-entity>
+      <!-- Lights -->
+      <a-light type="ambient" color="#BBB"></a-light>
+      <a-light type="directional" position="-1 1 1" intensity="0.8"></a-light>
+
+      <!-- Placeholder Object to place -->
+      <a-box
+        id="object-to-place"
+        color="tomato"
+        scale="0.2 0.2 0.2"
+        position="0 -10 0"
+        visible="false"
+      ></a-box>
+
+      <!-- Reticle/Cursor for hit-testing feedback (visualized in DOM) -->
+      <!-- The actual hit-test logic is in JS -->
     </a-scene>
 
-    <!-- UI Overlay for displaying coordinates and distance -->
-    <div id="ui-overlay">
-      <div>User Lat: <span id="user-lat">...</span></div>
-      <div>User Lon: <span id="user-lon">...</span></div>
-      <div>Object Lat: <span id="obj-lat">...</span></div>
-      <div>Object Lon: <span id="obj-lon">...</span></div>
-      <div>Distance: <span id="distance">...</span> m</div>
+    <!-- DOM Overlay for UI -->
+    <div id="overlay">
+      <button id="ar-button" disabled>Start AR</button>
+      <div id="reticle"></div>
     </div>
 
     <script>
-      // JavaScript for handling location, placement, and updates will go here
-      window.onload = () => {
-        const scene = document.querySelector("a-scene");
-        const camera = document.querySelector("[gps-new-camera]");
-        const dollarSign = document.getElementById("dollar-sign");
-        const userLatEl = document.getElementById("user-lat");
-        const userLonEl = document.getElementById("user-lon");
-        const objLatEl = document.getElementById("obj-lat");
-        const objLonEl = document.getElementById("obj-lon");
-        const distanceEl = document.getElementById("distance");
+      window.addEventListener("DOMContentLoaded", () => {
+        const sceneEl = document.getElementById("ar-scene");
+        const arButton = document.getElementById("ar-button");
+        const reticleEl = document.getElementById("reticle");
+        const objectToPlace = document.getElementById("object-to-place");
+        let xrSession = null;
+        let xrRefSpace = null;
+        let xrHitTestSource = null;
+        let objectPlaced = false;
 
-        let initialPositionSet = false;
-        let objectCoords = null;
-
-        // Function to calculate distance between two GPS coordinates (Haversine formula)
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-          const R = 6371e3; // Earth radius in meters
-          const φ1 = (lat1 * Math.PI) / 180;
-          const φ2 = (lat2 * Math.PI) / 180;
-          const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-          const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-          const a =
-            Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-          return R * c; // Distance in meters
+        // Check for WebXR support
+        if (navigator.xr) {
+          navigator.xr.isSessionSupported("immersive-ar").then((supported) => {
+            if (supported) {
+              arButton.disabled = false;
+              arButton.textContent = "Start AR";
+              arButton.addEventListener("click", onButtonClicked);
+            } else {
+              arButton.textContent = "AR Not Supported";
+            }
+          });
+        } else {
+          arButton.textContent = "WebXR Not Available";
         }
 
-        // Function to calculate destination point given start point, bearing, and distance
-        function calculateDestination(lat1, lon1, bearing, distance) {
-          const R = 6371e3; // Earth radius in meters
-          const δ = distance / R; // Angular distance in radians
-          const θ = (bearing * Math.PI) / 180; // Bearing in radians
-
-          const φ1 = (lat1 * Math.PI) / 180;
-          const λ1 = (lon1 * Math.PI) / 180;
-
-          const φ2 = Math.asin(
-            Math.sin(φ1) * Math.cos(δ) +
-              Math.cos(φ1) * Math.sin(δ) * Math.cos(θ)
-          );
-          const λ2 =
-            λ1 +
-            Math.atan2(
-              Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
-              Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2)
-            );
-
-          const lat2 = (φ2 * 180) / Math.PI;
-          const lon2 = (λ2 * 180) / Math.PI;
-
-          return { latitude: lat2, longitude: lon2 };
+        function onButtonClicked() {
+          if (!xrSession) {
+            navigator.xr
+              .requestSession("immersive-ar", {
+                requiredFeatures: ["hit-test", "local-floor"],
+                optionalFeatures: ["dom-overlay"],
+                domOverlay: { root: document.querySelector("#overlay") },
+              })
+              .then(onSessionStarted, onRequestSessionError);
+          } else {
+            xrSession.end();
+          }
         }
 
-        // Listen for camera GPS updates
-        camera.addEventListener("gps-camera-update-position", (event) => {
-          const userLat = event.detail.position.latitude;
-          const userLon = event.detail.position.longitude;
+        function onSessionStarted(session) {
+          xrSession = session;
+          arButton.textContent = "Exit AR";
+          reticleEl.style.display = "block"; // Show reticle
 
-          userLatEl.textContent = userLat.toFixed(6);
-          userLonEl.textContent = userLon.toFixed(6);
+          session.addEventListener("end", onSessionEnded);
 
-          if (!initialPositionSet) {
-            console.log("Setting initial object position...");
-            // Calculate object position 5 feet (approx 1.524 meters) North (bearing 0)
-            const distanceMeters = 1.524;
-            const bearing = 0; // North
-            objectCoords = calculateDestination(
-              userLat,
-              userLon,
-              bearing,
-              distanceMeters
-            );
+          // Get reference space
+          session.requestReferenceSpace("local-floor").then((refSpace) => {
+            xrRefSpace = refSpace;
+            // Start hit testing
+            session
+              .requestHitTestSource({ space: xrRefSpace })
+              .then((hitTestSource) => {
+                xrHitTestSource = hitTestSource;
+              });
+          });
 
-            console.log(`User Coords: ${userLat}, ${userLon}`);
-            console.log(
-              `Object Coords: ${objectCoords.latitude}, ${objectCoords.longitude}`
-            );
+          // Start the A-Frame render loop within the XR session
+          sceneEl.xrSession = session;
+          sceneEl.renderer.xr.setReferenceSpaceType("local-floor");
+          sceneEl.renderer.xr.setSession(session);
 
-            // Set the object's GPS coordinates
-            dollarSign.setAttribute("gps-new-entity-place", {
-              latitude: objectCoords.latitude,
-              longitude: objectCoords.longitude,
+          // Add click listener for placing the object
+          session.inputSources.addEventListener("select", onSelect);
+
+          // Start the render loop
+          session.requestAnimationFrame(onXRFrame);
+
+          console.log("AR Session Started");
+        }
+
+        function onRequestSessionError(ex) {
+          console.error("Failed to start AR session.", ex);
+          arButton.textContent = "Failed to Start AR";
+        }
+
+        function onSessionEnded() {
+          xrSession.removeEventListener("end", onSessionEnded);
+          xrSession.inputSources.removeEventListener("select", onSelect);
+
+          xrSession = null;
+          xrRefSpace = null;
+          xrHitTestSource = null;
+          objectPlaced = false; // Allow placing again if session restarts
+
+          arButton.textContent = "Start AR";
+          reticleEl.style.display = "none"; // Hide reticle
+          objectToPlace.setAttribute("visible", "false"); // Hide object
+          objectToPlace.setAttribute("position", "0 -10 0"); // Reset position
+
+          // Stop A-Frame's XR session handling
+          sceneEl.renderer.xr.setSession(null);
+          sceneEl.xrSession = null;
+
+          console.log("AR Session Ended");
+        }
+
+        function onSelect(event) {
+          if (
+            objectToPlace &&
+            !objectPlaced &&
+            reticleEl.hasAttribute("data-hit-position")
+          ) {
+            const hitPosition = reticleEl
+              .getAttribute("data-hit-position")
+              .split(" ")
+              .map(Number);
+            const hitQuaternion = reticleEl
+              .getAttribute("data-hit-orientation")
+              .split(" ")
+              .map(Number); // Use orientation if needed
+
+            objectToPlace.setAttribute("position", {
+              x: hitPosition[0],
+              y: hitPosition[1],
+              z: hitPosition[2],
             });
+            // Optionally set orientation based on hitQuaternion if desired
+            // objectToPlace.setAttribute('rotation', ...)
 
-            objLatEl.textContent = objectCoords.latitude.toFixed(6);
-            objLonEl.textContent = objectCoords.longitude.toFixed(6);
+            objectToPlace.setAttribute("visible", "true");
+            objectPlaced = true; // Place only once per session for this demo
+            reticleEl.style.display = "none"; // Hide reticle after placing
+            console.log("Object placed at:", hitPosition);
+          }
+        }
 
-            initialPositionSet = true;
-            console.log("Object position set.");
+        function onXRFrame(time, frame) {
+          if (!xrSession || !xrHitTestSource || objectPlaced) {
+            if (xrSession) xrSession.requestAnimationFrame(onXRFrame); // Keep loop running even if object placed
+            return;
           }
 
-          // Update distance if object position is set
-          if (objectCoords) {
-            const dist = calculateDistance(
-              userLat,
-              userLon,
-              objectCoords.latitude,
-              objectCoords.longitude
+          const session = frame.session;
+          session.requestAnimationFrame(onXRFrame); // Continue the loop
+
+          const viewerPose = frame.getViewerPose(xrRefSpace);
+          if (!viewerPose) return;
+
+          const hitTestResults = frame.getHitTestResults(xrHitTestSource);
+
+          if (hitTestResults.length > 0) {
+            const hitPose = hitTestResults[0].getPose(xrRefSpace);
+
+            // Update reticle position and orientation in the DOM (optional, could use an A-Frame entity too)
+            // For simplicity, we store the hit data on the DOM element for the 'select' event
+            const position = hitPose.transform.position;
+            const orientation = hitPose.transform.orientation;
+            reticleEl.setAttribute(
+              "data-hit-position",
+              `${position.x} ${position.y} ${position.z}`
             );
-            distanceEl.textContent = dist.toFixed(2);
+            reticleEl.setAttribute(
+              "data-hit-orientation",
+              `${orientation.x} ${orientation.y} ${orientation.z} ${orientation.w}`
+            );
+            reticleEl.style.borderColor = "lightgreen"; // Indicate valid hit
+          } else {
+            reticleEl.removeAttribute("data-hit-position");
+            reticleEl.removeAttribute("data-hit-orientation");
+            reticleEl.style.borderColor = "white"; // Indicate no hit
           }
-        });
-
-        // Error handling for GPS
-        window.addEventListener("gps-error", (event) => {
-          console.error("GPS Error:", event.detail.error);
-          alert(
-            `GPS Error: ${event.detail.error.message}. Please ensure location services are enabled and permissions granted.`
-          );
-        });
-
-        console.log("AR scene loaded, waiting for GPS...");
-      };
+        }
+      });
     </script>
   </body>
 </html>
