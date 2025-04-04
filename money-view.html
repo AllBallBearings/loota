@@ -190,7 +190,16 @@
 
         function onRequestSessionError(ex) {
           console.error("Failed to start AR session.", ex);
-          arButton.textContent = "Failed to Start AR";
+          // Provide more specific feedback, especially for iOS
+          let message = "Failed to Start AR";
+          if (navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad")) {
+             message += ". Ensure Camera and Motion & Orientation Access are allowed in Settings > Safari > Privacy & Security.";
+             alert("AR Session Failed. Please ensure both Camera Access and Motion & Orientation Access are enabled for Safari in your device Settings."); // Add alert for iOS
+          } else {
+             alert(`Failed to start AR session: ${ex.message}`); // Generic alert for others
+          }
+          arButton.textContent = message;
+          arButton.disabled = true; // Disable button on failure
         }
 
         function onSessionEnded() {
