@@ -1,437 +1,207 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Loota AR View</title>
+    <title>SLAM AR Demo</title>
     <meta charset="utf-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, user-scalable=no"
     />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <style>
       body {
         margin: 0;
         overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       }
       #info {
         position: fixed;
-        top: 10px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.7);
+        top: 20px;
+        left: 0;
+        right: 0;
+        text-align: center;
         color: white;
         padding: 10px;
-        border-radius: 5px;
-        font-family: Arial, sans-serif;
+        background: rgba(0, 0, 0, 0.7);
         z-index: 100;
-        max-width: 80%;
       }
-      #distance-indicator {
+      #start-button {
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.7);
+        padding: 15px 30px;
+        background: #007aff;
         color: white;
-        padding: 10px;
-        border-radius: 5px;
-        font-family: Arial, sans-serif;
+        border: none;
+        border-radius: 20px;
+        font-size: 18px;
         z-index: 100;
-      }
-      #compass {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 10px;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: Arial, sans-serif;
-        z-index: 100;
+        cursor: pointer;
       }
       .hidden {
         display: none !important;
-      }
-      .a-enter-vr {
-        display: none;
       }
     </style>
   </head>
   <body>
     <div id="info">Initializing AR...</div>
-    <div id="distance-indicator">Distance to cube: calculating...</div>
-    <div id="compass" class="hidden">
-      <svg width="40" height="40" viewBox="0 0 40 40">
-        <path d="M20 5 L24 15 L16 15 L20 5" fill="#fff" />
-        <circle
-          cx="20"
-          cy="20"
-          r="8"
-          fill="none"
-          stroke="#fff"
-          stroke-width="2"
-        />
-      </svg>
-    </div>
+    <button id="start-button" class="hidden">Start AR</button>
 
-    <!-- Import libraries in correct order -->
+    <!-- Import A-Frame with WebXR support -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
 
     <!-- A-Frame scene -->
     <a-scene
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-      vr-mode-ui="enabled: false"
+      xr-mode-ui="enabled: false"
+      renderer="colorManagement: true;"
+      background="color: #FAFAFA"
     >
-      <!-- Assets -->
-      <a-assets>
-        <a-asset-item
-          id="grid"
-          src="https://cdn.aframe.io/examples/ar/models/grid.gltf"
-        ></a-asset-item>
-      </a-assets>
-
-      <!-- Red Cube -->
-      <a-box
-        id="ar-cube"
-        position="0 1 -2"
-        rotation="0 0 0"
-        scale="0.3 0.3 0.3"
-        material="color: #ff0000; metalness: 0.5; roughness: 0.5; emissive: #ff0000; emissiveIntensity: 0.2"
-        animation="property: rotation; dur: 8000; to: 360 360 0; loop: true; easing: linear"
-      ></a-box>
-
-      <!-- Glow Effect -->
-      <a-sphere
-        position="0 0.8 -2"
-        scale="0.1 0.02 0.1"
-        material="color: #ff0000; opacity: 0.5; transparent: true"
-        animation="property: scale; dir: alternate; dur: 1000; to: 0.15 0.02 0.15; loop: true"
-      ></a-sphere>
+      <!-- 3D Model (Car) -->
+      <a-entity
+        id="ar-model"
+        gltf-model="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/assets/models/car/scene.gltf"
+        scale="0.5 0.5 0.5"
+        shadow
+        visible="false"
+      ></a-entity>
 
       <!-- Camera -->
       <a-entity
         camera
         position="0 1.6 0"
-        look-controls="touchEnabled: true"
+        look-controls="enabled: false"
+      ></a-entity>
+
+      <!-- Light -->
+      <a-entity light="type: ambient; color: #FFF; intensity: 0.5"></a-entity>
+      <a-entity
+        light="type: directional; color: #FFF; intensity: 0.5"
+        position="-1 2 1"
       ></a-entity>
     </a-scene>
 
     <script>
-      let userLocation = null;
-      let watchId = null;
-      let cubePosition = null;
-      let isCubePlaced = false;
-      let distanceUpdateInterval = null;
-      let lastPosition = { lat: null, lon: null };
-      const POSITION_THRESHOLD = 0.5; // meters
-      const SMOOTHING_FACTOR = 0.2;
+      const model = document.getElementById("ar-model");
+      const startButton = document.getElementById("start-button");
+      const info = document.getElementById("info");
+      let xrSession = null;
+      let hitTestSource = null;
+      let modelPlaced = false;
 
-      // Enhanced error messages
-      const ERROR_MESSAGES = {
-        CAMERA_PERMISSION:
-          "Please grant camera access to view AR content. Refresh the page to try again.",
-        LOCATION_PERMISSION:
-          "Location access is needed to place the cube. Refresh the page to try again.",
-        GENERIC:
-          "An error occurred. Please check your device compatibility and try again.",
-        ORIENTATION:
-          "Please enable device orientation access for better AR experience.",
-      };
+      // Check for WebXR support
+      async function checkXRSupport() {
+        if (!navigator.xr) {
+          info.textContent = "WebXR not supported in this browser";
+          return false;
+        }
 
-      // Request necessary permissions with enhanced error handling
+        const supported = await navigator.xr.isSessionSupported("immersive-ar");
+        if (!supported) {
+          info.textContent = "AR not supported in this browser";
+          return false;
+        }
+
+        return true;
+      }
+
+      // Request camera permissions
       async function requestPermissions() {
         try {
-          // Show initial status
-          updateStatus("Requesting permissions...");
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+          stream.getTracks().forEach((track) => track.stop());
+          return true;
+        } catch (err) {
+          info.textContent = "Camera permission required for AR";
+          return false;
+        }
+      }
 
-          // Request location access with high accuracy
-          const position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 5000,
-              maximumAge: 0,
-            });
+      // Start AR session
+      async function startAR() {
+        try {
+          xrSession = await navigator.xr.requestSession("immersive-ar", {
+            requiredFeatures: ["hit-test", "dom-overlay"],
+            domOverlay: { root: document.body },
           });
 
-          userLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
+          info.textContent = "Move your device to detect surfaces";
+          startButton.classList.add("hidden");
 
-          // Only start watching location if cube hasn't been placed yet
-          if (!isCubePlaced) {
-            watchId = navigator.geolocation.watchPosition(
-              updateUserLocation,
-              null,
-              { enableHighAccuracy: true }
-            );
-          }
+          // Set up WebXR scene
+          const scene = document.querySelector("a-scene");
+          scene.setAttribute("xr-mode", "true");
+          scene.components.renderer.xr.enabled = true;
+          scene.components.renderer.xr.setSession(xrSession);
 
-          updateStatus("Permissions granted. Looking for surfaces...");
+          // Enable hit testing
+          const space = await xrSession.requestReferenceSpace("viewer");
+          hitTestSource = await xrSession.requestHitTestSource({ space });
 
-          // Request device orientation permission for compass
-          if (
-            typeof DeviceOrientationEvent !== "undefined" &&
-            typeof DeviceOrientationEvent.requestPermission === "function"
-          ) {
-            try {
-              await DeviceOrientationEvent.requestPermission();
-              initCompass();
-            } catch (e) {
-              console.warn("Device orientation permission denied:", e);
-            }
-          } else {
-            initCompass();
-          }
+          // Add frame loop
+          xrSession.requestAnimationFrame(onXRFrame);
 
-          // Start distance updates
-          startDistanceUpdates();
-        } catch (error) {
-          console.error("Permission error:", error);
-          if (error.name === "NotAllowedError") {
-            updateStatus(ERROR_MESSAGES.LOCATION_PERMISSION);
-          } else {
-            updateStatus(ERROR_MESSAGES.GENERIC);
-          }
+          // Handle session end
+          xrSession.addEventListener("end", onXRSessionEnded);
+        } catch (err) {
+          console.error("AR session failed:", err);
+          info.textContent = "Failed to start AR session";
         }
       }
 
-      function updateStatus(message) {
-        document.getElementById("info").innerHTML = message;
-      }
+      // XR frame loop
+      function onXRFrame(time, frame) {
+        if (!xrSession || !hitTestSource) return;
 
-      function updateUserLocation(position) {
-        // Check position accuracy and ignore low-quality updates
-        if (position.coords.accuracy > 10) return;
-
-        const newLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        };
-
-        if (!isCubePlaced) {
-          userLocation = newLocation;
-          return;
-        }
-
-        // Calculate distance from last accepted position
-        const distanceMoved = lastPosition.lat
-          ? calculateDistance(
-              lastPosition.lat,
-              lastPosition.lon,
-              newLocation.latitude,
-              newLocation.longitude
-            )
-          : 0;
-
-        // Apply movement threshold and smoothing
-        if (distanceMoved > POSITION_THRESHOLD) {
-          // Smooth position updates
-          userLocation.latitude =
-            userLocation.latitude * (1 - SMOOTHING_FACTOR) +
-            newLocation.latitude * SMOOTHING_FACTOR;
-          userLocation.longitude =
-            userLocation.longitude * (1 - SMOOTHING_FACTOR) +
-            newLocation.longitude * SMOOTHING_FACTOR;
-
-          lastPosition = {
-            lat: userLocation.latitude,
-            lon: userLocation.longitude,
-          };
-          updateCubePosition();
-          updateDistanceIndicator();
-        }
-      }
-
-      function updateCubePosition() {
-        const cubeEl = document.getElementById("ar-cube");
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          cubePosition.latitude,
-          cubePosition.longitude
-        );
-        const bearing = getBearing(
-          userLocation.latitude,
-          userLocation.longitude,
-          cubePosition.latitude,
-          cubePosition.longitude
-        );
-
-        const arX = -Math.sin((bearing * Math.PI) / 180) * distance;
-        const arZ = -Math.cos((bearing * Math.PI) / 180) * distance;
-        cubeEl.setAttribute("position", `${arX} 1 ${arZ}`);
-      }
-
-      function calculateOffsetPosition(
-        latitude,
-        longitude,
-        distanceMeters,
-        bearing
-      ) {
-        const R = 6378137; // Earth's radius in meters
-        const d = distanceMeters;
-        const brng = (bearing * Math.PI) / 180;
-        const lat1 = (latitude * Math.PI) / 180;
-        const lon1 = (longitude * Math.PI) / 180;
-
-        const lat2 = Math.asin(
-          Math.sin(lat1) * Math.cos(d / R) +
-            Math.cos(lat1) * Math.sin(d / R) * Math.cos(brng)
-        );
-
-        const lon2 =
-          lon1 +
-          Math.atan2(
-            Math.sin(brng) * Math.sin(d / R) * Math.cos(lat1),
-            Math.cos(d / R) - Math.sin(lat1) * Math.sin(lat2)
+        const hitTestResults = frame.getHitTestResults(hitTestSource);
+        if (hitTestResults.length > 0) {
+          const pose = hitTestResults[0].getPose(
+            xrSession.requestReferenceSpace("viewer")
           );
 
-        return {
-          latitude: (lat2 * 180) / Math.PI,
-          longitude: (lon2 * 180) / Math.PI,
-        };
-      }
-
-      function getBearing(fromLat, fromLon, toLat, toLon) {
-        const y = Math.sin(toLon - fromLon) * Math.cos(toLat);
-        const x =
-          Math.cos(fromLat) * Math.sin(toLat) -
-          Math.sin(fromLat) * Math.cos(toLat) * Math.cos(toLon - fromLon);
-        const bearing = Math.atan2(y, x);
-        return ((bearing * 180) / Math.PI + 360) % 360;
-      }
-
-      function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6378137; // Earth's radius in meters
-        const dLat = ((lat2 - lat1) * Math.PI) / 180;
-        const dLon = ((lon2 - lon1) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos((lat1 * Math.PI) / 180) *
-            Math.cos((lat2 * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-      }
-
-      function updateDistanceIndicator() {
-        if (!userLocation || !cubePosition) {
-          document.getElementById("distance-indicator").innerHTML =
-            "Distance to cube: calculating...";
-          return;
-        }
-
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          cubePosition.latitude,
-          cubePosition.longitude
-        );
-
-        const feet = distance * 3.28084;
-        document.getElementById(
-          "distance-indicator"
-        ).innerHTML = `Distance to cube: ${feet.toFixed(1)} feet`;
-      }
-
-      function startDistanceUpdates() {
-        // Update distance every second
-        distanceUpdateInterval = setInterval(() => {
-          if (userLocation && cubePosition) {
-            updateDistanceIndicator();
+          if (!modelPlaced) {
+            model.setAttribute("position", {
+              x: pose.transform.position.x,
+              y: pose.transform.position.y,
+              z: pose.transform.position.z - 1,
+            });
+            model.setAttribute("visible", "true");
+            modelPlaced = true;
+            info.textContent =
+              "Model placed! Walk around to view it from all angles";
           }
-        }, 1000);
+        }
+
+        xrSession.requestAnimationFrame(onXRFrame);
       }
 
-      function initCompass() {
-        const compassEl = document.getElementById("compass");
-        compassEl.classList.remove("hidden");
-
-        window.addEventListener(
-          "deviceorientation",
-          (event) => {
-            if (event.webkitCompassHeading) {
-              // iOS compass heading
-              compassEl.style.transform = `rotate(${event.webkitCompassHeading}deg)`;
-            } else if (event.alpha) {
-              // Android compass heading
-              compassEl.style.transform = `rotate(${360 - event.alpha}deg)`;
-            }
-          },
-          true
-        );
+      // Handle session end
+      function onXRSessionEnded() {
+        xrSession = null;
+        hitTestSource = null;
+        modelPlaced = false;
+        model.setAttribute("visible", "false");
+        info.textContent = "AR session ended";
+        startButton.classList.remove("hidden");
       }
 
-      function placeCube() {
-        if (!isCubePlaced && userLocation) {
-          // Calculate position 7 feet (2.1336 meters) south of user
-          cubePosition = calculateOffsetPosition(
-            userLocation.latitude,
-            userLocation.longitude,
-            2.1336,
-            180
-          );
+      // Initialize
+      async function init() {
+        const hasXR = await checkXRSupport();
+        const hasPermission = await requestPermissions();
 
-          // Get the cube element
-          const cubeEl = document.getElementById("ar-cube");
-
-          // Calculate position based on GPS coordinates
-          const distance = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            cubePosition.latitude,
-            cubePosition.longitude
-          );
-          // Convert GPS coordinates to AR scene position
-          const bearing = getBearing(
-            userLocation.latitude,
-            userLocation.longitude,
-            cubePosition.latitude,
-            cubePosition.longitude
-          );
-
-          // Set initial cube position and enable updates
-          isCubePlaced = true;
-          updateCubePosition();
-          updateStatus("Cube anchored to GPS! Move around to view it.");
-          updateDistanceIndicator();
+        if (hasXR && hasPermission) {
+          startButton.classList.remove("hidden");
+          startButton.addEventListener("click", startAR);
+          info.textContent = "Tap Start AR to begin";
         }
       }
 
-      // Cleanup function
-      function cleanup() {
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId);
-        }
-        if (distanceUpdateInterval !== null) {
-          clearInterval(distanceUpdateInterval);
-        }
-      }
-
-      // Handle page visibility changes
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          cleanup();
-        } else {
-          requestPermissions();
-        }
-      });
-
-      // Initialize when A-Frame is ready
-      document.querySelector("a-scene").addEventListener("loaded", function () {
-        requestPermissions();
-        updateStatus("AR Ready - Look around to see the red cube");
-
-        // Place the cube after a short delay to ensure everything is initialized
-        setTimeout(placeCube, 2000);
-      });
+      // Start when scene is loaded
+      document.querySelector("a-scene").addEventListener("loaded", init);
     </script>
   </body>
 </html>
