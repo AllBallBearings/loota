@@ -1,3 +1,167 @@
+/* General body styling */
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f8f9fa; /* Light background */
+    color: #333;
+}
+
+/* Header styling */
+header {
+    background-color: #ffffff; /* White header */
+    padding: 20px 40px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+header h1 {
+    margin: 0;
+    color: #007bff; /* Primary blue */
+    font-size: 2em;
+    font-weight: 600; /* Slightly bolder */
+}
+
+/* Main content area */
+main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column; /* Stack content vertically */
+    align-items: center; /* Center content horizontally */
+    padding: 30px 20px; /* Increased padding */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Introductory text section */
+.intro-text {
+    text-align: center;
+    margin-bottom: 30px; /* Increased spacing */
+    max-width: 800px;
+}
+
+.intro-text h2 {
+    color: #343a40; /* Darker heading */
+    margin-bottom: 15px; /* Increased spacing */
+    font-size: 1.8em; /* Larger heading */
+    font-weight: 500;
+}
+
+.intro-text p {
+    color: #555;
+    line-height: 1.7; /* Slightly more line spacing */
+    font-size: 1.1em; /* Slightly larger text */
+}
+
+/* Map container */
+#map-container {
+    width: 90%; /* Adjust width as needed */
+    max-width: 1000px; /* Max width for larger screens */
+    height: 500px; /* Adjust height as needed */
+    margin-bottom: 30px; /* Increased spacing */
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Slightly stronger shadow */
+    border-radius: 8px; /* Rounded corners */
+    overflow: hidden; /* Ensure map stays within bounds */
+}
+
+/* Map element itself */
+#map {
+    height: 100%;
+    width: 100%;
+}
+
+/* Controls section (button) */
+.controls {
+    text-align: center;
+    margin-bottom: 30px; /* Increased spacing */
+}
+
+#encourage-button {
+    padding: 15px 30px; /* Larger button */
+    font-size: 1.2em; /* Larger text */
+    background-color: #28a745; /* Success green */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#encourage-button:hover {
+    background-color: #218838; /* Darker green on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+#encourage-button:active {
+    transform: translateY(1px); /* Slight press effect */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Result area for the generated URL */
+#result-area {
+    margin-top: 20px;
+    padding: 20px; /* Increased padding */
+    background-color: #e9ecef; /* Light grey background */
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    width: 90%;
+    max-width: 1000px;
+    box-sizing: border-box;
+    text-align: center;
+    min-height: 60px; /* Ensure it has some height */
+    word-wrap: break-word; /* Wrap long URLs */
+    font-size: 1.1em;
+    color: #495057;
+}
+
+#result-url {
+    font-family: "Courier New", Courier, monospace;
+    font-weight: bold;
+    color: #0056b3; /* Darker blue for URL */
+    display: inline-block; /* Allow margin/padding */
+    margin-top: 10px; /* Space above URL */
+}
+
+/* Copy button styling */
+#copy-button {
+    padding: 5px 10px;
+    font-size: 0.9em;
+    background-color: #007bff; /* Primary blue */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    vertical-align: middle; /* Align with the text/link */
+}
+
+#copy-button:hover {
+    background-color: #0056b3; /* Darker blue */
+}
+
+#copy-button:active {
+    background-color: #004085; /* Even darker blue */
+}
+
+
+/* Footer styling */
+footer {
+    text-align: center;
+    padding: 20px; /* Increased padding */
+    margin-top: auto; /* Pushes footer to bottom */
+    background-color: #343a40; /* Dark footer */
+    color: #f8f9fa; /* Light text */
+    font-size: 0.9em;
+}
+
+/* Styles from original app.css (for potential AR view integration later) */
 #ui-overlay {
     position: absolute;
     bottom: 10px;
