@@ -11,7 +11,7 @@ window.initMap = function() {
     const defaultCenter = { lat: 40.7128, lng: -74.0060 }; // New York City as a fallback
 
     map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 15, // Start with a reasonable zoom level
+        zoom: 19, // Further adjusted to zoom out 3 levels for broader view
         center: defaultCenter,
         mapId: 'LOOTA_MAP_ID' // Optional: For Cloud-based map styling
     });
@@ -64,6 +64,22 @@ window.initMap = function() {
     } else {
         console.error("Encourage Looting button not found!");
     }
+
+    // Add listener for 'Delete Last Pin' button
+    const deleteLastButton = document.getElementById('delete-last-button');
+    if (deleteLastButton) {
+        deleteLastButton.addEventListener('click', deleteLastPin);
+    } else {
+        console.error("Delete Last Pin button not found!");
+    }
+
+    // Add listener for 'Clear All Pins' button
+    const clearAllButton = document.getElementById('clear-all-button');
+    if (clearAllButton) {
+        clearAllButton.addEventListener('click', clearAllPins);
+    } else {
+        console.error("Clear All Pins button not found!");
+    }
 }
 
 // Function to handle geolocation errors
@@ -91,15 +107,33 @@ function addMarker(location) {
     // Add the marker to our array
     markers.push(marker);
 
+    // Update coordinates display immediately
+    updateCoordinatesDisplay();
+
     // Optional: Add an info window to the marker or other interactions
     // marker.addListener('click', () => { /* ... */ });
 
     // Add listener for dragend to update position if marker is moved
     marker.addListener('dragend', () => {
+        // Update coordinates display when marker is dragged
+        updateCoordinatesDisplay();
         // No need to update the array directly,
         // we read positions when generating the link.
         console.log("Marker dragged to:", marker.getPosition().toJSON());
     });
+}
+
+// Function to update the coordinates display in real-time
+function updateCoordinatesDisplay(marker) {
+    const pos = marker.getPosition();
+    const coordText = `Latitude: ${pos.lat().toFixed(6)}, Longitude: ${pos.lng().toFixed(6)}`;
+    
+    const coordinatesDisplay = document.getElementById('coordinates-display');
+    if (coordinatesDisplay) {
+        coordinatesDisplay.innerHTML += `<div>${coordText}</div>`;
+    } else {
+        console.error("Coordinates display element not found!");
+    }
 }
 
 // Function to generate the Loota link
@@ -133,14 +167,17 @@ function generateLootLink() {
     const fullUrl = `${baseUrl}?pins=${encodedCoordinates}`;
 
     // 4. Display the URL
-    const resultUrlElement = document.getElementById('result-url');
-    if (resultUrlElement) {
-        resultUrlElement.textContent = fullUrl;
-        resultUrlElement.href = fullUrl; // Make it clickable (optional)
-        resultUrlElement.target = "_blank"; // Open in new tab (optional)
-    } else {
-        console.error("Result URL element not found!");
-    }
+const resultUrlElement = document.getElementById('result-url');
+if (resultUrlElement) {
+    resultUrlElement.textContent = fullUrl;
+    resultUrlElement.href = fullUrl; // Make it clickable (optional)
+    resultUrlElement.target = "_blank"; // Open in new tab (optional)
+} else {
+    console.error("Result URL element not found!");
+}
+
+    // Update coordinates display
+    updateCoordinatesDisplay();
 
     // Optional: Provide feedback
     console.log("Generated Loota URL:", fullUrl);
@@ -155,6 +192,40 @@ function generateLootLink() {
         // Add listener if it doesn't exist or re-add if needed (simple approach)
         copyButton.onclick = () => copyToClipboard(fullUrl, copyButton);
     }
+}
+
+// Function to update the coordinates display with all current markers
+function updateCoordinatesDisplay() {
+    const coordinatesDisplay = document.getElementById('coordinates-display');
+    if (coordinatesDisplay) {
+        const coordText = markers.map((marker, index) => {
+            const pos = marker.getPosition();
+            return `Pin ${index + 1}: Latitude: ${pos.lat().toFixed(6)}, Longitude: ${pos.lng().toFixed(6)}`;
+        }).join('<br>');
+        coordinatesDisplay.innerHTML = coordText;
+    } else {
+        console.error("Coordinates display element not found!");
+    }
+}
+
+// Function to handle deleting the last pin
+function deleteLastPin() {
+    if (markers.length > 0) {
+        const lastMarker = markers.pop();
+        lastMarker.setMap(null); // Remove from map
+        updateCoordinatesDisplay(); // Update display
+        console.log("Last pin deleted.");
+    } else {
+        console.log("No pins to delete.");
+    }
+}
+
+// Function to handle clearing all pins
+function clearAllPins() {
+    markers.forEach(marker => marker.setMap(null)); // Remove all from map
+    markers = []; // Clear array
+    updateCoordinatesDisplay(); // Update display
+    console.log("All pins cleared.");
 }
 
 // Function to copy text to clipboard
