@@ -1,0 +1,5 @@
+# Ignore configuration files containing sensitive information
+config.js
+
+# Add other files/directories to ignore below as needed
+# Example: node_modules/

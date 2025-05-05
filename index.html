@@ -1,97 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title>Simple Map</title>
-    <meta name="viewport" content="initial-scale=1.0">
-    <meta charset="utf-8">
-    <style>
-      /* Always set the map height explicitly to define the size of the div
-       * element that contains the map. */
-      #map {
-        height: 75%;
-        width: 75%
-      }
-      /* Optional: Makes the sample page fill the window. */
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loota - Create Your AR Treasure Hunt</title>
+    <link rel="stylesheet" href="app.css" />
   </head>
   <body>
-    <div id="title">Map Test</div>
-    <div id="Coordinates">
-    </div>
-    <div id="map"></div>
-    <script>
-      var map;
-      var coordinates = {lat: 0, lng: 0}
+    <header>
+      <h1>Loota</h1>
+    </header>
 
-      var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      var labelIndex = 0;
-      var infoWindow;
+    <main>
+      <div class="intro-text">
+        <h2>Create Your Own Augmented Reality Treasure Hunt</h2>
+        <p>
+          Welcome to Loota! Place virtual treasures anywhere in the real world
+          for your friends, fans, or community to find. Drop pins on the map
+          below to mark your treasure locations. When you're ready, click
+          "Encourage Looting" to generate a unique link for your hunt!
+        </p>
+      </div>
 
-      function initMap() {
-        var map = new google.maps.Map(document.getElementById('map'), {
-          zoom: 19,
-          center: coordinates
-        });
-        
-        // marker = new google.maps.Marker({
-        //   map: map,
-        //   draggable: true,
-        //   animation: google.maps.Animation.DROP,
-        //   position: coordinates
-        //   ,
-        //   title: "Hello"
-        // });
+      <div class="map-and-list-container">
+        <!-- New container -->
+        <div id="map-container">
+          <div id="map"></div>
+        </div>
+        <!-- Wrapper for list and its controls -->
+        <div class="list-wrapper">
+          <!-- Coordinates display section (moved here) -->
+          <div id="coordinates-display"></div>
+          <!-- Inline styles removed -->
+          <!-- Buttons moved under the list -->
+          <div class="list-controls">
+            <!-- Removed inline style, handled by CSS -->
+            <!-- New container for list buttons -->
+            <button id="delete-last-button" class="btn btn-secondary">
+              Delete Last Pin
+            </button>
+            <button id="clear-all-button" class="btn btn-danger">
+              Clear All Pins
+            </button>
+          </div>
+        </div>
+      </div>
 
-        // Try HTML5 geolocation.
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(function(position) {
-            var pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
+      <div class="controls">
+        <!-- This now only contains Encourage Looting -->
+        <button id="encourage-button" class="btn btn-primary">
+          Encourage Looting
+        </button>
+      </div>
 
-            infoWindow = new google.maps.InfoWindow;
+      <div id="result-area">
+        Your treasure hunt link will appear here:
+        <span id="result-url"></span>
+        <button id="copy-button" class="btn btn-primary" style="display: none">
+          Copy Link
+        </button>
+        <!-- Added classes, removed margin -->
+      </div>
 
-            infoWindow.setPosition(pos);
-            infoWindow.setContent('Location found.');
-            infoWindow.open(map);
-            map.setCenter(pos);
-          }, function() {
-            handleLocationError(true, infoWindow, map.getCenter());
-          });
-        } else {
-          // Browser doesn't support Geolocation
-          handleLocationError(false, infoWindow, map.getCenter());
-        }
+      <!-- Original coordinates display section removed -->
+    </main>
 
-        // This event listener calls addMarker() when the map is clicked.
-        google.maps.event.addListener(map, 'click', function(event) {
-          addMarker(event.latLng, map);
-        });
+    <footer>&copy; 2025 Loota - Spreading Joy Through Discovery</footer>
 
-      }
-
-      // Adds a marker to the map.
-      function addMarker(location, map) {
-        // Add the marker at the clicked location, and add the next-available label
-        // from the array of alphabetical characters.
-        var marker = new google.maps.Marker({
-          position: location,
-          draggable: true,
-          label: labels[labelIndex++ % labels.length],
-          map: map
-        });
-        document.getElementById('Coordinates').innerHTML = marker.position;
-      }
-
-      google.maps.event.addDomListener(window, 'load', initialize);
-    </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=	AIzaSyDijo6FcyCAzm7QUr9-iJvjBTTgaOnWeyk&callback=initMap"
-    async defer></script>
+    <!-- Placeholder for Google Maps API Key -->
+    <!-- IMPORTANT: Replace YOUR_API_KEY with your actual Google Maps API key in config.js -->
+    <script src="config.js"></script>
+    <!-- Load config first -->
+    <script src="app.js"></script>
+    <!-- Google Maps script will be loaded dynamically by app.js -->
   </body>
 </html>
