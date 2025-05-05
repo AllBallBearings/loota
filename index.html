@@ -22,21 +22,47 @@
         </p>
       </div>
 
-      <div id="map-container">
-        <div id="map"></div>
+      <div class="map-and-list-container">
+        <!-- New container -->
+        <div id="map-container">
+          <div id="map"></div>
+        </div>
+        <!-- Wrapper for list and its controls -->
+        <div class="list-wrapper">
+          <!-- Coordinates display section (moved here) -->
+          <div id="coordinates-display"></div>
+          <!-- Inline styles removed -->
+          <!-- Buttons moved under the list -->
+          <div class="list-controls">
+            <!-- Removed inline style, handled by CSS -->
+            <!-- New container for list buttons -->
+            <button id="delete-last-button" class="btn btn-secondary">
+              Delete Last Pin
+            </button>
+            <button id="clear-all-button" class="btn btn-danger">
+              Clear All Pins
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="controls">
-        <button id="encourage-button">Encourage Looting</button>
+        <!-- This now only contains Encourage Looting -->
+        <button id="encourage-button" class="btn btn-primary">
+          Encourage Looting
+        </button>
       </div>
 
       <div id="result-area">
         Your treasure hunt link will appear here:
         <span id="result-url"></span>
-        <button id="copy-button" style="display: none; margin-left: 10px">
+        <button id="copy-button" class="btn btn-primary" style="display: none">
           Copy Link
         </button>
+        <!-- Added classes, removed margin -->
       </div>
+
+      <!-- Original coordinates display section removed -->
     </main>
 
     <footer>&copy; 2025 Loota - Spreading Joy Through Discovery</footer>
