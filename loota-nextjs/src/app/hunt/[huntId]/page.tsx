@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { MapContainer } from '../../components/MapContainer'; // Assuming you'll create this
-import { ProximityContainer } from '../../components/ProximityContainer'; // Assuming you'll create this
+import { MapContainer } from '@/components/MapContainer';
+import { ProximityContainer } from '@/components/ProximityContainer';
 
-interface PinData {
+export interface PinData {
   lat?: number;
   lng?: number;
   distanceFt?: number;
@@ -79,10 +79,16 @@ export default function HuntViewerPage() {
         </div>
 
         {hunt.type === 'geolocation' && (
-          <MapContainer initialPins={hunt.pins.filter(p => p.lat !== undefined && p.lng !== undefined)} />
+          <MapContainer
+            initialPins={hunt.pins.filter((p): p is Required<Pick<PinData, 'lat' | 'lng'>> => p.lat !== undefined && p.lng !== undefined)}
+          />
         )}
         {hunt.type === 'proximity' && (
-          <ProximityContainer initialPins={hunt.pins.filter(p => p.distanceFt !== undefined && p.directionStr !== undefined)} />
+          <ProximityContainer
+            initialPins={hunt.pins.filter((p): p is Required<Pick<PinData, 'distanceFt' | 'directionStr' | 'x' | 'y'>> =>
+              p.distanceFt !== undefined && p.directionStr !== undefined && p.x !== undefined && p.y !== undefined
+            )}
+          />
         )}
       </main>
 

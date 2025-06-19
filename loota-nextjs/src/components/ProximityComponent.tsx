@@ -11,14 +11,22 @@ export interface ProximityMarkerData {
 
 export interface ProximityComponentRef {
   getMarkers: () => ProximityMarkerData[];
+  addProximityMarkers: (markers: ProximityMarkerData[]) => void; // Add this line
   deleteLastProximityMarker: () => void;
   clearAllProximityMarkers: () => void;
 }
 
+interface ProximityComponentProps {
+  initialMarkers?: ProximityMarkerData[]; // Add this prop
+}
+
 const radiusMapping = [10, 50, 100]; // Maps slider values (0,1,2) to ft
 
-const ProximityComponent = forwardRef<ProximityComponentRef, {}>((props, ref) => {
-  const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>([]);
+const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentProps>((
+  { initialMarkers = [] }, // Destructure initialMarkers with a default empty array
+  ref
+) => {
+  const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>(initialMarkers); // Initialize with initialMarkers
   const [currentProximityRadiusFt, setCurrentProximityRadiusFt] = useState<number>(radiusMapping[0]);
   
   const proximityCircleElementRef = useRef<HTMLDivElement | null>(null);
@@ -180,11 +188,15 @@ const ProximityComponent = forwardRef<ProximityComponentRef, {}>((props, ref) =>
       {
         distanceFt: parseFloat(distanceFt.toFixed(1)),
         directionStr: directionStr,
-        x: clickX, 
+        x: clickX,
         y: clickY
       }
     ]);
   }, [currentProximityRadiusFt]);
+
+  const addProximityMarkers = useCallback((markers: ProximityMarkerData[]) => {
+    setProximityMarkersData((prevData) => [...prevData, ...markers]);
+  }, []);
 
   const deleteLastProximityMarker = useCallback(() => {
     setProximityMarkersData((prevData) => {
@@ -206,6 +218,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, {}>((props, ref) =>
   // Expose functions to parent component via ref
   useImperativeHandle(ref, () => ({
     getMarkers: () => proximityMarkersData,
+    addProximityMarkers, // Expose addProximityMarkers
     deleteLastProximityMarker,
     clearAllProximityMarkers,
   }));
