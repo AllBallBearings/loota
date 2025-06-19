@@ -1,0 +1,30 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Hunt {
+  id        String   @id @default(uuid()) @db.Uuid
+  type      String   // 'geolocation' or 'proximity'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pins      Pin[]
+}
+
+model Pin {
+  id           String   @id @default(uuid()) @db.Uuid
+  huntId       String   @db.Uuid
+  hunt         Hunt     @relation(fields: [huntId], references: [id], onDelete: Cascade)
+  lat          Decimal? // For geolocation pins
+  lng          Decimal? // For geolocation pins
+  distanceFt   Decimal? // For proximity pins
+  directionStr String?  // For proximity pins (e.g., "N45E")
+  x            Decimal? // Relative X coordinate for proximity pins within the circle
+  y            Decimal? // Relative Y coordinate for proximity pins within the circle
+  createdAt    DateTime @default(now())
+}
