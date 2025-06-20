@@ -109,7 +109,7 @@ export default function Home() {
 
       <main>
         <div className="intro-text">
-          <h2>Create Your Own Augmented Reality Treasure Hunt</h2>
+          <h2>Run Your Own Augmented Reality Treasure Hunt</h2>
           <p>
             Welcome to Loota! Place virtual treasures anywhere in the real world
             for your friends, fans, or community to find. Drop pins on the map
