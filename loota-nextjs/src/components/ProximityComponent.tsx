@@ -42,7 +42,6 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     const existingSvgs = proximityCircleElement.querySelectorAll('svg.measurement-ring, div.measurement-label');
     existingSvgs.forEach(el => el.remove());
 
-    const proximityCircleRect = proximityCircleElement.getBoundingClientRect();
     const proximityCircleRadiusPx = proximityCircleElement.offsetWidth / 2;
 
     if (proximityCircleRadiusPx <= 0) {
@@ -156,7 +155,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
 
     const distanceFt = (distanceFromCenterPx / proximityCircleRadiusPx) * currentProximityRadiusFt;
 
-    let angleDeg = (Math.atan2(relativeX, -relativeY) * (180 / Math.PI) + 360) % 360;
+    const angleDeg = (Math.atan2(relativeX, -relativeY) * (180 / Math.PI) + 360) % 360;
 
     let directionStr;
     let angleFromCardinal = 0;

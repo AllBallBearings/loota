@@ -113,8 +113,8 @@ export default function Home() {
           <p>
             Welcome to Loota! Place virtual treasures anywhere in the real world
             for your friends, fans, or community to find. Drop pins on the map
-            below to mark your treasure locations. When you're ready, click
-            "Encourage Looting" to generate a unique link for your hunt!
+            below to mark your treasure locations. When you&apos;re ready, click
+            &quot;Encourage Looting&quot; to generate a unique link for your hunt!
           </p>
         </div>
 
