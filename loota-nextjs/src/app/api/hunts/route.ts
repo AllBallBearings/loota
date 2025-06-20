@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       data: {
         type: type,
         pins: {
-          create: pins.map((pin: any) => ({
+          create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string }) => ({
             lat: pin.lat !== undefined ? parseFloat(pin.lat) : null,
             lng: pin.lng !== undefined ? parseFloat(pin.lng) : null,
             distanceFt: pin.distanceFt !== undefined ? parseFloat(pin.distanceFt) : null,

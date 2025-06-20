@@ -16,20 +16,28 @@ export interface MapMarker {
 
 export interface MapComponentRef {
   getMarkers: () => MapMarker[];
+  addMarkers: (markers: MapMarker[]) => void; // Add this line
   deleteLastPin: () => void;
   clearAllPins: () => void;
 }
 
+interface MapComponentProps {
+  initialMarkers?: MapMarker[]; // Add this prop
+}
+
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "YOUR_GOOGLE_MAPS_API_KEY";
 
-const MapComponent = forwardRef<MapComponentRef, {}>((props, ref) => {
+const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
+  { initialMarkers = [] }, // Destructure initialMarkers with a default empty array
+  ref
+) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-  const [markerData, setMarkerData] = useState<MapMarker[]>([]); // Stores only marker data
-  const currentGoogleMarkers = useRef<google.maps.Marker[]>([]); // Stores actual Google Maps Marker objects
+  const [markerData, setMarkerData] = useState<MapMarker[]>(initialMarkers); // Initialize with initialMarkers
+  const currentGoogleMarkers = useRef<google.maps.Marker[]>([]);
   const coordinatesDisplayRef = useRef<HTMLDivElement | null>(null);
-  const mapDivRef = useRef<HTMLDivElement | null>(null); // Ref for the map div
-  const [mapInitialized, setMapInitialized] = useState(false); // New state to track map initialization
+  const mapDivRef = useRef<HTMLDivElement | null>(null);
+  const [mapInitialized, setMapInitialized] = useState(false);
 
   console.log("MapComponent rendering...");
 
@@ -47,6 +55,10 @@ const MapComponent = forwardRef<MapComponentRef, {}>((props, ref) => {
       ...prevData,
       { lat: location.lat(), lng: location.lng() }
     ]);
+  }, []);
+
+  const addMarkers = useCallback((markers: MapMarker[]) => {
+    setMarkerData((prevData) => [...prevData, ...markers]);
   }, []);
 
   const handleLocationError = useCallback((browserHasGeolocation: boolean, infoWindow: google.maps.InfoWindow, pos: google.maps.LatLngLiteral) => {
@@ -71,7 +83,7 @@ const MapComponent = forwardRef<MapComponentRef, {}>((props, ref) => {
       return;
     }
 
-    const defaultCenter = { lat: 40.7128, lng: -74.0060 }; // New York City as a fallback
+    const defaultCenter = { lat: 40.7128, lng: -74.0060 };
 
     mapRef.current = new window.google.maps.Map(mapDivRef.current, {
       zoom: 19,
@@ -103,23 +115,20 @@ const MapComponent = forwardRef<MapComponentRef, {}>((props, ref) => {
     }
 
     mapRef.current?.addListener('click', (event: google.maps.MapMouseEvent) => {
-      if (event.latLng) { // Ensure latLng is not null
+      if (event.latLng) {
         addMarker(event.latLng);
       }
     });
-    setMapInitialized(true); // Mark map as initialized
+    setMapInitialized(true);
     console.log("Map initialized successfully.");
   }, [addMarker, handleLocationError, mapInitialized]);
 
-  // Effect to synchronize Google Maps markers with markerData state
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Clear existing markers from the map
     currentGoogleMarkers.current.forEach(marker => marker.setMap(null));
-    currentGoogleMarkers.current = []; // Clear the ref array
+    currentGoogleMarkers.current = [];
 
-    // Add new markers based on markerData
     markerData.forEach(data => {
       const marker = new window.google.maps.Marker({
         position: data,
@@ -129,9 +138,8 @@ const MapComponent = forwardRef<MapComponentRef, {}>((props, ref) => {
       });
 
       marker.addListener('dragend', () => {
-        // Update markerData when a marker is dragged
         setMarkerData(prevData => prevData.map(m => 
-          m.lat === data.lat && m.lng === data.lng // Simple check, consider unique IDs for robust updates
+          m.lat === data.lat && m.lng === data.lng
             ? { lat: marker.getPosition()?.lat() || 0, lng: marker.getPosition()?.lng() || 0 }
             : m
         ));
@@ -139,8 +147,8 @@ const MapComponent = forwardRef<MapComponentRef, {}>((props, ref) => {
       currentGoogleMarkers.current.push(marker);
     });
 
-    updateCoordinatesDisplay(); // Update display after markers are synchronized
-  }, [markerData, updateCoordinatesDisplay]); // Re-run when markerData changes
+    updateCoordinatesDisplay();
+  }, [markerData, updateCoordinatesDisplay]);
 
   useEffect(() => {
     coordinatesDisplayRef.current = document.getElementById('coordinates-display') as HTMLDivElement;
@@ -164,7 +172,8 @@ const MapComponent = forwardRef<MapComponentRef, {}>((props, ref) => {
   }, []);
 
   useImperativeHandle(ref, () => ({
-    getMarkers: () => markerData, // Return the data, not the Google Maps objects
+    getMarkers: () => markerData,
+    addMarkers, // Expose addMarkers
     deleteLastPin,
     clearAllPins,
   }));
@@ -177,17 +186,14 @@ const MapComponent = forwardRef<MapComponentRef, {}>((props, ref) => {
         </div>
         <div className="list-wrapper">
           <div id="coordinates-display" ref={coordinatesDisplayRef}></div>
-          {/* Buttons are now handled by parent component */}
         </div>
       </div>
-      {/* Use next/script for optimized loading */}
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&mapId=LOOTA_MAP_ID`}
-        strategy="afterInteractive" // Load after the page is interactive
+        strategy="afterInteractive"
         onLoad={() => {
           console.log('Google Maps Script loaded successfully!');
-          // Trigger map initialization after script is loaded and window.google is available
-          if (window.google && mapDivRef.current) { // Ensure mapDivRef.current is also available
+          if (window.google && mapDivRef.current) {
             initializeMap();
           } else {
             console.warn("Map div ref or window.google not ready on script load.");
