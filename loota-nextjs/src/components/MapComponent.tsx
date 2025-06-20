@@ -34,7 +34,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   const mapRef = useRef<google.maps.Map | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [markerData, setMarkerData] = useState<MapMarker[]>(initialMarkers); // Initialize with initialMarkers
-  const currentGoogleMarkers = useRef<google.maps.Marker[]>([]);
+  const currentGoogleMarkers = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const coordinatesDisplayRef = useRef<HTMLDivElement | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const [mapInitialized, setMapInitialized] = useState(false);
@@ -124,25 +124,30 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   }, [addMarker, handleLocationError, mapInitialized]);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !window.google.maps.marker) return;
 
-    currentGoogleMarkers.current.forEach(marker => marker.setMap(null));
-    currentGoogleMarkers.current = [];
+    // Clear existing markers from the map
+    currentGoogleMarkers.current.forEach(marker => marker.map = null);
+    currentGoogleMarkers.current = []; // Clear the ref array
 
+    // Add new markers based on markerData
     markerData.forEach(data => {
-      const marker = new window.google.maps.Marker({
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: data,
         map: mapRef.current,
-        draggable: true,
-        animation: window.google.maps.Animation.DROP,
+        gmpDraggable: true,
       });
 
+      // Update markerData when a marker is dragged
       marker.addListener('dragend', () => {
-        setMarkerData(prevData => prevData.map(m => 
-          m.lat === data.lat && m.lng === data.lng
-            ? { lat: marker.getPosition()?.lat() || 0, lng: marker.getPosition()?.lng() || 0 }
-            : m
-        ));
+        const newPosition = marker.position as google.maps.LatLng;
+        if (newPosition) {
+          setMarkerData(prevData => prevData.map(m =>
+            m.lat === data.lat && m.lng === data.lng // Simple check, consider unique IDs for robust updates
+              ? { lat: newPosition.lat(), lng: newPosition.lng() }
+              : m
+          ));
+        }
       });
       currentGoogleMarkers.current.push(marker);
     });
@@ -189,7 +194,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         </div>
       </div>
       <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&mapId=LOOTA_MAP_ID`}
+        src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&mapId=LOOTA_MAP_ID&libraries=marker`}
         strategy="afterInteractive"
         onLoad={() => {
           console.log('Google Maps Script loaded successfully!');
