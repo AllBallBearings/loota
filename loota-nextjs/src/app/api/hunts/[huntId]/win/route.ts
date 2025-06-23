@@ -77,7 +77,7 @@ const prisma = new PrismaClient();
  *                   type: string
  *                   example: Invalid win proof
  *       500:
- *         description: Internal server error.
+ *         description: 'Internal server error.'
  *         content:
  *           application/json:
  *             schema:
