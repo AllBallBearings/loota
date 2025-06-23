@@ -88,9 +88,9 @@ const prisma = new PrismaClient();
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { huntId: string } }
+  { params }: { params: Promise<{ huntId: string }> }
 ) {
-  const { huntId } = params;
+  const { huntId } = await params;
   const { userId } = await request.json();
 
   if (!userId) {
@@ -199,9 +199,9 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { huntId: string } }
+  { params }: { params: Promise<{ huntId: string }> }
 ) {
-  const { huntId } = params;
+  const { huntId } = await params;
   const userId = request.nextUrl.searchParams.get('userId');
 
   if (!userId) {
@@ -321,9 +321,9 @@ export async function DELETE(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { huntId: string } }
+  { params }: { params: Promise<{ huntId: string }> }
 ) {
-  const { huntId } = params;
+  const { huntId } = await params;
 
   if (!huntId) {
     return NextResponse.json({ message: 'Hunt ID is required' }, { status: 400 });

@@ -100,10 +100,10 @@ const prisma = new PrismaClient();
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { huntId: string } }
+  { params }: { params: Promise<{ huntId: string }> }
 ) {
   try {
-    const { huntId } = params;
+    const { huntId } = await params;
 
     if (!huntId) {
       return NextResponse.json({ message: 'Hunt ID is required' }, { status: 400 });
@@ -187,10 +187,10 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { huntId: string } }
+  { params }: { params: Promise<{ huntId: string }> }
 ) {
   try {
-    const { huntId } = params;
+    const { huntId } = await params;
 
     if (!huntId) {
       return NextResponse.json({ message: 'Hunt ID is required' }, { status: 400 });

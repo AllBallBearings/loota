@@ -89,9 +89,9 @@ const prisma = new PrismaClient();
  */
 export async function POST(
   request: Request,
-  { params }: { params: { huntId: string } }
+  { params }: { params: Promise<{ huntId: string }> }
 ) {
-  const { huntId } = params;
+  const { huntId } = await params;
   const { userId, timestamp, proofOfWin } = await request.json();
 
   if (!userId || !timestamp || !proofOfWin) {
