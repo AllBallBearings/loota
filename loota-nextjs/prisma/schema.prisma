@@ -1,0 +1,56 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String             @id @default(uuid()) @db.Uuid
+  name            String
+  phone           String?            @unique // Optional, but useful for contact and unique identification
+  paypalId        String?            @unique // Optional, for receiving winnings
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  huntsWon        Hunt[]             @relation("Winner") // Link to hunts won by this user (one winner per hunt)
+  participations  HuntParticipation[] // Link to all hunts this user is participating in
+}
+
+model Hunt {
+  id              String             @id @default(uuid()) @db.Uuid
+  type            String   // 'geolocation' or 'proximity'
+  winnerId        String?  @db.Uuid // New field to store the ID of the winning user
+  winner          User?    @relation("Winner", fields: [winnerId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  pins            Pin[]
+  participants    HuntParticipation[] // Link to all users participating in this hunt
+}
+
+model Pin {
+  id           String   @id @default(uuid()) @db.Uuid
+  huntId       String   @db.Uuid
+  hunt         Hunt     @relation(fields: [huntId], references: [id], onDelete: Cascade)
+  lat          Decimal? // For geolocation pins
+  lng          Decimal? // For geolocation pins
+  distanceFt   Decimal? // For proximity pins
+  directionStr String?  // For proximity pins (e.g., "N45E")
+  x            Decimal? // Relative X coordinate for proximity pins within the circle
+  y            Decimal? // Relative Y coordinate for proximity pins within the circle
+  createdAt    DateTime @default(now())
+}
+
+model HuntParticipation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  huntId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  hunt      Hunt     @relation(fields: [huntId], references: [id])
+  joinedAt  DateTime @default(now()) // Timestamp when the user joined this specific hunt
+  // You could add other fields here, e.g., score, current progress, status (active, left, etc.)
+
+  @@unique([userId, huntId]) // Ensures a user can only participate in a specific hunt once
+}
