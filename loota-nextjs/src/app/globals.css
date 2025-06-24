@@ -1,3 +1,5 @@
+@import 'swagger-ui-react/swagger-ui.css';
+
 /* General body styling */
 html, body {
     height: 100%; /* Ensure html and body take full height */
