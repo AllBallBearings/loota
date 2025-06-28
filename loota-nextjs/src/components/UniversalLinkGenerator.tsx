@@ -109,7 +109,7 @@ export const UniversalLinkGenerator: React.FC<UniversalLinkGeneratorProps> = ({
       
       <div className="link-info" style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
         <p>📱 This link will open in the Loota app on iPhone when shared</p>
-        <p>🌐 Or open in the browser if the app isn't installed</p>
+        <p>🌐 Or open in the browser if the app isn&apos;t installed</p>
       </div>
     </div>
   );
