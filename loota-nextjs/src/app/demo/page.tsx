@@ -17,7 +17,7 @@ export default function DemoPage() {
         </div>
 
         <div style={{ marginBottom: '40px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-          <h3>Sample Hunt: "Treasure Hunt Downtown"</h3>
+          <h3>Sample Hunt: &quot;Treasure Hunt Downtown&quot;</h3>
           <p><strong>Hunt ID:</strong> downtown-treasure-2025</p>
           <p><strong>Type:</strong> Geolocation (Map-based)</p>
           <p><strong>Description:</strong> Find hidden treasures around the downtown area!</p>
@@ -29,7 +29,7 @@ export default function DemoPage() {
         </div>
 
         <div style={{ marginBottom: '40px', padding: '20px', backgroundColor: '#e8f5e8', borderRadius: '8px' }}>
-          <h3>Sample Hunt: "Campus Adventure"</h3>
+          <h3>Sample Hunt: &quot;Campus Adventure&quot;</h3>
           <p><strong>Hunt ID:</strong> campus-adventure-123</p>
           <p><strong>Type:</strong> Proximity (Relative to Player)</p>
           <p><strong>Description:</strong> Explore the university campus and discover hidden gems!</p>
