@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { MapContainer } from '@/components/MapContainer';
 import { ProximityContainer } from '@/components/ProximityContainer';
+import { UniversalLinkGenerator } from '@/components/UniversalLinkGenerator';
 
 export interface PinData {
   lat?: number;
@@ -76,6 +77,11 @@ export default function HuntViewerPage() {
         <div className="intro-text">
           <h2>Hunt ID: {hunt.id}</h2>
           <p>Type: {hunt.type === 'geolocation' ? 'Geolocation (Map-based)' : 'Proximity (Relative to Player)'}</p>
+        </div>
+
+        <div className="share-section" style={{ margin: '20px 0', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+          <h3>Share this Hunt</h3>
+          <UniversalLinkGenerator huntId={hunt.id} />
         </div>
 
         {hunt.type === 'geolocation' && (

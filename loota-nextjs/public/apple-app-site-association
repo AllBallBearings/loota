@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "YOUR_TEAM_ID.allballbearings.loota",
+        "appID": "8XHKTX9X49.allballbearings.loota",
         "paths": [ "/hunt/*", "*" ]
       }
     ]
