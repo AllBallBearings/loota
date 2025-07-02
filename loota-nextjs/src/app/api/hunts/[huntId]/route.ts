@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
  * /api/hunts/{huntId}:
  *   get:
  *     summary: Retrieve a specific hunt
- *     description: Returns details of a single hunt by its ID, including its pins.
+ *     description: Returns details of a single hunt by its ID, including its pins and participants.
  *     parameters:
  *       - in: path
  *         name: huntId
@@ -64,9 +64,48 @@ const prisma = new PrismaClient();
  *                       y:
  *                         type: number
  *                         format: float
+ *                       collectedByUserId:
+ *                         type: string
+ *                         format: uuid
+ *                       collectedByUser:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                       collectedAt:
+ *                         type: string
+ *                         format: date-time
  *                       createdAt:
  *                         type: string
  *                         format: date-time
+ *                 participants:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       userId:
+ *                         type: string
+ *                         format: uuid
+ *                       huntId:
+ *                         type: string
+ *                         format: uuid
+ *                       joinedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       user:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
  *       400:
  *         description: Bad request, hunt ID is missing.
  *         content:
@@ -114,7 +153,26 @@ export async function GET(
         id: huntId,
       },
       include: {
-        pins: true,
+        pins: {
+          include: {
+            collectedByUser: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
