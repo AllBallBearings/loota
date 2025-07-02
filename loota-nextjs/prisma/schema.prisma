@@ -13,6 +13,7 @@ model User {
   name            String
   phone           String?            @unique // Optional, but useful for contact and unique identification
   paypalId        String?            @unique // Optional, for receiving winnings
+  deviceId        String?            @unique // New field for iOS device ID
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   huntsWon        Hunt[]             @relation("Winner") // Link to hunts won by this user (one winner per hunt)
