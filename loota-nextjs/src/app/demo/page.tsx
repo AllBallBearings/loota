@@ -46,7 +46,7 @@ export default function DemoPage() {
             <li><strong>📱 On iPhone with Loota app:</strong> Links open directly in the app</li>
             <li><strong>🌐 On iPhone without app:</strong> Links open in Safari with option to download app</li>
             <li><strong>💻 On other devices:</strong> Links open in web browser</li>
-            <li><strong>🔗 Link format:</strong> https://loota-seven.vercel.app/hunt/[huntId]</li>
+            <li><strong>🔗 Link format:</strong> https://www.loota.fun/hunt/[huntId]</li>
           </ul>
         </div>
       </main>
