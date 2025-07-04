@@ -142,6 +142,11 @@ export async function GET(
   { params }: { params: Promise<{ huntId: string }> }
 ) {
   try {
+    const apiKey = request.headers.get('X-API-Key');
+    if (apiKey !== process.env.API_KEY_SECRET) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     const { huntId } = await params;
 
     if (!huntId) {
