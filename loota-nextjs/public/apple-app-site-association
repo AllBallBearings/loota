@@ -4,7 +4,13 @@
     "details": [
       {
         "appID": "8XHKTX9X49.allballbearings.loota",
-        "paths": [ "/hunt/*", "*" ]
+        "paths": [ "/hunt/*", "*" ],
+        "domains": ["www.loota.fun"]
+      },
+      {
+        "appID": "8XHKTX9X49.allballbearings.loota",
+        "paths": [ "/hunt/*", "*" ],
+        "domains": ["staging.loota.fun"]
       }
     ]
   }
