@@ -157,9 +157,26 @@ export async function GET(
       where: {
         id: huntId,
       },
-      include: {
+      select: {
+        id: true,
+        type: true,
+        createdAt: true,
+        updatedAt: true,
+        creatorId: true,
+        winnerId: true,
         pins: {
-          include: {
+          select: {
+            id: true,
+            huntId: true,
+            lat: true,
+            lng: true,
+            distanceFt: true,
+            directionStr: true,
+            x: true,
+            y: true,
+            collectedByUserId: true,
+            collectedAt: true,
+            createdAt: true,
             collectedByUser: {
               select: {
                 id: true,
@@ -169,7 +186,11 @@ export async function GET(
           },
         },
         participants: {
-          include: {
+          select: {
+            id: true,
+            userId: true,
+            huntId: true,
+            joinedAt: true,
             user: {
               select: {
                 id: true,
@@ -191,7 +212,20 @@ export async function GET(
       return NextResponse.json({ message: 'Hunt not found' }, { status: 404 });
     }
 
-    return NextResponse.json(hunt, { status: 200 });
+    // Manually convert Decimal fields to numbers for frontend compatibility
+    const processedHunt = {
+      ...hunt,
+      pins: hunt.pins.map(pin => ({
+        ...pin,
+        lat: pin.lat ? Number(pin.lat) : undefined,
+        lng: pin.lng ? Number(pin.lng) : undefined,
+        distanceFt: pin.distanceFt ? Number(pin.distanceFt) : undefined,
+        x: pin.x ? Number(pin.x) : undefined,
+        y: pin.y ? Number(pin.y) : undefined,
+      })),
+    };
+
+    return NextResponse.json(processedHunt, { status: 200 });
   } catch (error) {
     console.error('Error retrieving hunt:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
