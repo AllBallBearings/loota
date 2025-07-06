@@ -35,6 +35,10 @@ interface HuntParticipationData {
 interface HuntData {
   id: string;
   type: 'geolocation' | 'proximity';
+  creator?: {
+    id: string;
+    name: string;
+  };
   pins: PinData[];
   participants: HuntParticipationData[];
 }
@@ -55,7 +59,11 @@ export default function HuntViewerPage() {
 
     const fetchHunt = async () => {
       try {
-        const response = await fetch(`/api/hunts/${huntId}`);
+        const response = await fetch(`/api/hunts/${huntId}`, {
+          headers: {
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
+          },
+        });
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.message || 'Failed to fetch hunt');
@@ -98,6 +106,7 @@ export default function HuntViewerPage() {
         <div className="intro-text">
           <h2>Hunt ID: {hunt.id}</h2>
           <p>Type: {hunt.type === 'geolocation' ? 'Geolocation (Map-based)' : 'Proximity (Relative to Player)'}</p>
+          {hunt.creator && <p>Created by: {hunt.creator.name}</p>}
         </div>
 
         <div className="share-section" style={{ margin: '20px 0', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
