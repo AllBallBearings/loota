@@ -6,6 +6,7 @@ import ProximityComponent, { ProximityComponentRef, ProximityMarkerData } from '
 
 export default function Home() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const resultUrlRef = useRef<HTMLSpanElement | null>(null);
   const copyButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isLoading, setIsLoading] = useState(false); // New loading state
@@ -150,32 +151,55 @@ export default function Home() {
           </label>
         </div>
 
-        {currentHuntType === 'geolocation' && <MapComponent ref={mapComponentRef} />}
+        {currentHuntType === 'geolocation' && (
+          <div className="map-and-list-container">
+            <div style={{ flex: '2', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ textAlign: 'center', marginBottom: '15px', color: '#333', fontSize: '1.4em' }}>Place Pins on Map</h3>
+              <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
+            </div>
+            <div className="list-wrapper">
+              <h3 className="list-header">Treasure Locations</h3>
+              <div id="coordinates-display">
+                {mapMarkers.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '40px 20px' }}>
+                    Click on the map to place your first treasure pin!
+                  </div>
+                ) : (
+                  mapMarkers.map((marker, index) => (
+                    <div key={index} className="pin-item">
+                      <div className="pin-number">Treasure Pin #{index + 1}</div>
+                      <div className="pin-coordinates">
+                        <span>Lat: <span className="coordinate-value">{marker.lat.toFixed(6)}</span></span>
+                        <span>Lng: <span className="coordinate-value">{marker.lng.toFixed(6)}</span></span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="list-controls">
+                <button className="btn btn-secondary" onClick={() => mapComponentRef.current?.deleteLastPin()}>
+                  Delete Last Pin
+                </button>
+                <button className="btn btn-danger" onClick={() => mapComponentRef.current?.clearAllPins()}>
+                  Clear All Pins
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {currentHuntType === 'proximity' && <ProximityComponent ref={proximityComponentRef} />}
 
-        {/* Common controls for both hunt types */}
-        <div className="list-controls">
-          {currentHuntType === 'geolocation' && (
-            <>
-              <button id="delete-last-button" className="btn btn-secondary" onClick={() => mapComponentRef.current?.deleteLastPin()}>
-                Delete Last Pin
-              </button>
-              <button id="clear-all-button" className="btn btn-danger" onClick={() => mapComponentRef.current?.clearAllPins()}>
-                Clear All Pins
-              </button>
-            </>
-          )}
-          {currentHuntType === 'proximity' && (
-            <>
-              <button id="delete-last-proximity-button" className="btn btn-secondary" onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}>
-                Delete Last Marker
-              </button>
-              <button id="clear-all-proximity-button" className="btn btn-danger" onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}>
-                Clear All Markers
-              </button>
-            </>
-          )}
-        </div>
+        {/* Controls for proximity hunt type */}
+        {currentHuntType === 'proximity' && (
+          <div className="list-controls" style={{ justifyContent: 'center', marginTop: '20px' }}>
+            <button className="btn btn-secondary" onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}>
+              Delete Last Marker
+            </button>
+            <button className="btn btn-danger" onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}>
+              Clear All Markers
+            </button>
+          </div>
+        )}
 
         <div className="controls">
           <button id="encourage-button" className="btn btn-primary" onClick={generateLootLink} disabled={isLoading}>

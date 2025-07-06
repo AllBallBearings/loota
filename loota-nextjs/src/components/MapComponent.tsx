@@ -23,32 +23,23 @@ export interface MapComponentRef {
 
 interface MapComponentProps {
   initialMarkers?: MapMarker[]; // Add this prop
+  onMarkersChange?: (markers: MapMarker[]) => void;
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "YOUR_GOOGLE_MAPS_API_KEY";
 
 const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
-  { initialMarkers = [] }, // Destructure initialMarkers with a default empty array
+  { initialMarkers = [], onMarkersChange }, // Destructure initialMarkers with a default empty array
   ref
 ) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [markerData, setMarkerData] = useState<MapMarker[]>(initialMarkers); // Initialize with initialMarkers
   const currentGoogleMarkers = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
-  const coordinatesDisplayRef = useRef<HTMLDivElement | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const [mapInitialized, setMapInitialized] = useState(false);
 
   console.log("MapComponent rendering...");
-
-  const updateCoordinatesDisplay = useCallback(() => {
-    if (coordinatesDisplayRef.current) {
-      const coordText = markerData.map((marker, index) => {
-        return `Pin ${index + 1}: Latitude: ${marker.lat.toFixed(6)}, Longitude: ${marker.lng.toFixed(6)}`;
-      }).join('<br>');
-      coordinatesDisplayRef.current.innerHTML = coordText;
-    }
-  }, [markerData]);
 
   const addMarker = useCallback((location: google.maps.LatLng) => {
     setMarkerData((prevData) => [
@@ -152,12 +143,10 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
       currentGoogleMarkers.current.push(marker);
     });
 
-    updateCoordinatesDisplay();
-  }, [markerData, updateCoordinatesDisplay]);
-
-  useEffect(() => {
-    coordinatesDisplayRef.current = document.getElementById('coordinates-display') as HTMLDivElement;
-  }, []);
+    if (onMarkersChange) {
+      onMarkersChange(markerData);
+    }
+  }, [markerData, onMarkersChange]);
 
   const deleteLastPin = useCallback(() => {
     setMarkerData((prevData) => {
@@ -185,13 +174,8 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
   return (
     <>
-      <div className="map-and-list-container">
-        <div id="map-container" style={{ height: '500px', flex: '0 0 65%', marginRight: '20px' }}>
-          <div id="map" ref={mapDivRef} style={{ width: '100%', height: '100%' }}></div>
-        </div>
-        <div className="list-wrapper">
-          <div id="coordinates-display" ref={coordinatesDisplayRef}></div>
-        </div>
+      <div className="map-container">
+        <div id="map" ref={mapDivRef} style={{ width: '100%', height: '100%' }}></div>
       </div>
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&mapId=LOOTA_MAP_ID&libraries=marker`}
