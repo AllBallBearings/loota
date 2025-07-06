@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
  * /api/hunts:
  *   post:
  *     summary: Create a new hunt
- *     description: Creates a new hunt with specified type and associated pins.
+ *     description: Creates a new hunt with specified type, creator, and associated pins.
  *     requestBody:
  *       required: true
  *       content:
@@ -17,12 +17,17 @@ const prisma = new PrismaClient();
  *             type: object
  *             required:
  *               - type
+ *               - creatorId
  *               - pins
  *             properties:
  *               type:
  *                 type: string
  *                 description: The type of the hunt (e.g., 'geolocation' or 'proximity').
  *                 enum: [geolocation, proximity]
+ *               creatorId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: The ID of the user creating the hunt.
  *               pins:
  *                 type: array
  *                 description: An array of pin objects associated with the hunt.
@@ -138,7 +143,7 @@ export async function GET() {
  * /api/hunts:
  *   post:
  *     summary: Create a new hunt
- *     description: Creates a new hunt with specified type and associated pins.
+ *     description: Creates a new hunt with specified type, creator, and associated pins.
  *     requestBody:
  *       required: true
  *       content:
@@ -147,12 +152,17 @@ export async function GET() {
  *             type: object
  *             required:
  *               - type
+ *               - creatorId
  *               - pins
  *             properties:
  *               type:
  *                 type: string
  *                 description: The type of the hunt (e.g., 'geolocation' or 'proximity').
  *                 enum: [geolocation, proximity]
+ *               creatorId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: The ID of the user creating the hunt.
  *               pins:
  *                 type: array
  *                 description: An array of pin objects associated with the hunt.
@@ -217,15 +227,16 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const { type, pins } = await request.json();
+    const { type, creatorId, pins } = await request.json();
 
-    if (!type || !pins || !Array.isArray(pins)) {
+    if (!type || !creatorId || !pins || !Array.isArray(pins)) {
       return NextResponse.json({ message: 'Invalid request data' }, { status: 400 });
     }
 
     const newHunt = await prisma.hunt.create({
       data: {
         type: type,
+        creatorId: creatorId,
         pins: {
           create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string }) => ({
             lat: pin.lat !== undefined ? parseFloat(pin.lat) : null,

@@ -19,11 +19,14 @@ model User {
   huntsWon        Hunt[]             @relation("Winner") // Link to hunts won by this user (one winner per hunt)
   participations  HuntParticipation[] // Link to all hunts this user is participating in
   collectedPins   Pin[]               @relation("CollectedPins") // Link to pins collected by this user
+  createdHunts    Hunt[]              @relation("CreatedHunts") // Link to hunts created by this user
 }
 
 model Hunt {
   id              String             @id @default(uuid()) @db.Uuid
   type            String   // 'geolocation' or 'proximity'
+  creatorId       String?  @db.Uuid // New field to store the ID of the user who created this hunt (made optional for migration)
+  creator         User?    @relation("CreatedHunts", fields: [creatorId], references: [id])
   winnerId        String?  @db.Uuid // New field to store the ID of the winning user
   winner          User?    @relation("Winner", fields: [winnerId], references: [id])
   createdAt       DateTime @default(now())
