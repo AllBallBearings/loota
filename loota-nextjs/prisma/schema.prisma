@@ -13,10 +13,12 @@ model User {
   name            String
   phone           String?            @unique // Optional, but useful for contact and unique identification
   paypalId        String?            @unique // Optional, for receiving winnings
+  deviceId        String?            @unique // New field for iOS device ID
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   huntsWon        Hunt[]             @relation("Winner") // Link to hunts won by this user (one winner per hunt)
   participations  HuntParticipation[] // Link to all hunts this user is participating in
+  collectedPins   Pin[]               @relation("CollectedPins") // Link to pins collected by this user
 }
 
 model Hunt {
@@ -40,6 +42,9 @@ model Pin {
   directionStr String?  // For proximity pins (e.g., "N45E")
   x            Decimal? // Relative X coordinate for proximity pins within the circle
   y            Decimal? // Relative Y coordinate for proximity pins within the circle
+  collectedByUserId String?  @db.Uuid // New field to store the ID of the user who collected this pin
+  collectedByUser   User?    @relation("CollectedPins", fields: [collectedByUserId], references: [id])
+  collectedAt       DateTime? // Timestamp when the pin was collected
   createdAt    DateTime @default(now())
 }
 

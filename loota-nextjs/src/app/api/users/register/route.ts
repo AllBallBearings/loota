@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
  * /api/users/register:
  *   post:
  *     summary: Register a new user
- *     description: Creates a new user account with optional phone and PayPal ID.
+ *     description: Creates a new user account with optional phone, PayPal ID, and device ID.
  *     requestBody:
  *       required: true
  *       content:
@@ -27,6 +27,9 @@ const prisma = new PrismaClient();
  *               paypalId:
  *                 type: string
  *                 description: Optional PayPal ID for receiving winnings (must be unique if provided).
+ *               deviceId:
+ *                 type: string
+ *                 description: Optional unique device ID from the user's device.
  *     responses:
  *       201:
  *         description: User registered successfully. Returns the new user's ID.
@@ -53,7 +56,7 @@ const prisma = new PrismaClient();
  *                   type: string
  *                   example: Name is required
  *       409:
- *         description: Conflict, user with provided phone or PayPal ID already exists.
+ *         description: Conflict, user with provided phone, PayPal ID, or device ID already exists.
  *         content:
  *           application/json:
  *             schema:
@@ -74,14 +77,14 @@ const prisma = new PrismaClient();
  *                   example: Failed to register user
  */
 export async function POST(request: Request) {
-  const { name, phone, paypalId } = await request.json();
+  const { name, phone, paypalId, deviceId } = await request.json();
 
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
 
   try {
-    // Check if a user with the same phone or paypalId already exists (if provided)
+    // Check if a user with the same phone, paypalId, or deviceId already exists (if provided)
     if (phone) {
       const existingUserByPhone = await prisma.user.findUnique({
         where: { phone: phone },
@@ -100,11 +103,21 @@ export async function POST(request: Request) {
       }
     }
 
+    if (deviceId) {
+      const existingUserByDeviceId = await prisma.user.findUnique({
+        where: { deviceId: deviceId },
+      });
+      if (existingUserByDeviceId) {
+        return NextResponse.json({ error: 'User with this device ID already exists' }, { status: 409 });
+      }
+    }
+
     const newUser = await prisma.user.create({
       data: {
         name,
         phone,
         paypalId,
+        deviceId,
       },
     });
 
