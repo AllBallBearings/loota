@@ -233,10 +233,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Invalid request data' }, { status: 400 });
     }
 
+    // Ensure the creator user exists. If not, create a placeholder user.
+    // In a real application, creatorId would come from an authenticated session.
+    let creatorUser = await prisma.user.findUnique({
+      where: { id: creatorId },
+    });
+
+    if (!creatorUser) {
+      console.warn(`Creator user with ID ${creatorId} not found. Creating a placeholder user.`);
+      creatorUser = await prisma.user.create({
+        data: {
+          id: creatorId,
+          name: "Hunt Creator (Placeholder)",
+          // Other fields can be null or default as per schema
+        },
+      });
+    }
+
     const newHunt = await prisma.hunt.create({
       data: {
         type: type,
-        creatorId: creatorId,
+        creator: {
+          connect: {
+            id: creatorUser.id, // Connect using the ID of the found or created creator user
+          },
+        },
         pins: {
           create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string }) => ({
             lat: pin.lat !== undefined ? parseFloat(pin.lat) : null,

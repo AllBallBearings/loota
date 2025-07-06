@@ -61,6 +61,10 @@ export default function Home() {
       return;
     }
 
+    // For demonstration, using a placeholder creatorId.
+    // In a real application, this would come from user authentication/session.
+    const creatorId = "a1b2c3d4-e5f6-7890-1234-000000000001"; // Placeholder UUID for creator
+
     try {
       const response = await fetch('/api/hunts', {
         method: 'POST',
@@ -69,6 +73,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           type: currentHuntType,
+          creatorId: creatorId, // Include the creatorId
           pins: huntData,
         }),
       });
