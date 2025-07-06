@@ -104,7 +104,7 @@ export default function HuntViewerPage() {
     return (
       <div className="error-container">
         <h2>🔍 Hunt Not Found</h2>
-        <p>The hunt you're looking for doesn't exist or has been removed.</p>
+        <p>The hunt you&apos;re looking for doesn&apos;t exist or has been removed.</p>
         <button className="btn btn-primary" onClick={() => window.location.href = '/'}>Go Home</button>
       </div>
     );
