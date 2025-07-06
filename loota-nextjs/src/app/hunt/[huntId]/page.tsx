@@ -82,15 +82,32 @@ export default function HuntViewerPage() {
   }, [huntId]);
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '50px' }}>Loading hunt...</div>;
+    return (
+      <div className="loading-container">
+        <div className="spinner" style={{ width: '40px', height: '40px', margin: '0 auto 20px' }}></div>
+        <p>Loading hunt...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>Error: {error}</div>;
+    return (
+      <div className="error-container">
+        <h2>🚫 Error</h2>
+        <p>{error}</p>
+        <button className="btn btn-primary" onClick={() => window.location.reload()}>Try Again</button>
+      </div>
+    );
   }
 
   if (!hunt) {
-    return <div style={{ textAlign: 'center', padding: '50px' }}>Hunt not found.</div>;
+    return (
+      <div className="error-container">
+        <h2>🔍 Hunt Not Found</h2>
+        <p>The hunt you&apos;re looking for doesn&apos;t exist or has been removed.</p>
+        <button className="btn btn-primary" onClick={() => window.location.href = '/'}>Go Home</button>
+      </div>
+    );
   }
 
   const uncollectedPins = hunt.pins.filter(pin => !pin.collectedByUserId);
@@ -109,37 +126,50 @@ export default function HuntViewerPage() {
           {hunt.creator && <p>Created by: {hunt.creator.name}</p>}
         </div>
 
-        <div className="share-section" style={{ margin: '20px 0', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-          <h3>Share this Hunt</h3>
-          <UniversalLinkGenerator huntId={hunt.id} />
-        </div>
+        <div className="hunt-stats-container">
+          <div className="stats-card">
+            <h3>📤 Share Hunt</h3>
+            <UniversalLinkGenerator huntId={hunt.id} />
+          </div>
+          
+          <div className="stats-card">
+            <h3>👥 Participants ({hunt.participants.length})</h3>
+            {hunt.participants.length > 0 ? (
+              <div className="participants-list">
+                {hunt.participants.map(p => (
+                  <div key={p.id} className="participant-item">
+                    <span className="participant-name">{p.user.name}</span>
+                    <span className="participant-joined">Joined: {new Date(p.joinedAt).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state">No participants yet.</p>
+            )}
+          </div>
 
-        <div className="participants-section" style={{ margin: '20px 0', padding: '20px', backgroundColor: '#e9ecef', borderRadius: '8px' }}>
-          <h3>Participants ({hunt.participants.length})</h3>
-          {hunt.participants.length > 0 ? (
-            <ul>
-              {hunt.participants.map(p => (
-                <li key={p.id}>{p.user.name} (Joined: {new Date(p.joinedAt).toLocaleString()})</li>
-              ))}
-            </ul>
-          ) : (
-            <p>No participants yet.</p>
-          )}
-        </div>
-
-        <div className="collected-pins-section" style={{ margin: '20px 0', padding: '20px', backgroundColor: '#e9ecef', borderRadius: '8px' }}>
-          <h3>Collected Markers ({collectedPins.length})</h3>
-          {collectedPins.length > 0 ? (
-            <ul>
-              {collectedPins.map(pin => (
-                <li key={pin.id}>
-                  Marker {pin.lat && pin.lng ? `at (${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)})` : `(Proximity Pin)`} collected by {pin.collectedByUser?.name} at {pin.collectedAt ? new Date(pin.collectedAt).toLocaleString() : 'N/A'}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No markers collected yet.</p>
-          )}
+          <div className="stats-card">
+            <h3>✅ Collected Markers ({collectedPins.length})</h3>
+            {collectedPins.length > 0 ? (
+              <div className="collected-list">
+                {collectedPins.map(pin => (
+                  <div key={pin.id} className="collected-item">
+                    <div className="collected-marker">
+                      📍 {pin.lat && pin.lng ? `(${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)})` : 'Proximity Pin'}
+                    </div>
+                    <div className="collected-by">
+                      Collected by <strong>{pin.collectedByUser?.name}</strong>
+                    </div>
+                    <div className="collected-time">
+                      {pin.collectedAt ? new Date(pin.collectedAt).toLocaleString() : 'N/A'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state">No markers collected yet.</p>
+            )}
+          </div>
         </div>
 
         {hunt.type === 'geolocation' && (
