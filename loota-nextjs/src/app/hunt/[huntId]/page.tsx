@@ -224,7 +224,6 @@ export default function HuntViewerPage() {
   }
 
   const uncollectedPins = hunt.pins.filter(pin => !pin.collectedByUserId);
-  const collectedPins = hunt.pins.filter(pin => pin.collectedByUserId);
   const isHuntCreator = hunt.creator?.id === currentUserId;
 
   return (
@@ -367,28 +366,6 @@ export default function HuntViewerPage() {
             )}
           </div>
 
-          <div className="stats-card">
-            <h3>✅ Collected Markers ({collectedPins.length})</h3>
-            {collectedPins.length > 0 ? (
-              <div className="collected-list">
-                {collectedPins.map(pin => (
-                  <div key={pin.id} className="collected-item">
-                    <div className="collected-marker">
-                      📍 {pin.lat && pin.lng ? `(${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)})` : 'Proximity Pin'}
-                    </div>
-                    <div className="collected-by">
-                      Collected by <strong>{pin.collectedByUser?.name}</strong>
-                    </div>
-                    <div className="collected-time">
-                      {pin.collectedAt ? new Date(pin.collectedAt).toLocaleString() : 'N/A'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="empty-state">No markers collected yet.</p>
-            )}
-          </div>
         </div>
       </main>
 

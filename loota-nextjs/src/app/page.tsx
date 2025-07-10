@@ -202,26 +202,52 @@ export default function Home() {
           <div className="map-and-list-container" style={{ marginBottom: '15px' }}>
             <div style={{ flex: '2', display: 'flex', flexDirection: 'column' }}>
               <h3 style={{ textAlign: 'center', margin: '0 0 10px 0', color: '#333', fontSize: '16px', fontWeight: '600' }}>
-                Place Pins on Map
+                Place Loot on Map
               </h3>
               <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
             </div>
             <div className="list-wrapper">
               <h3 className="list-header" style={{ fontSize: '16px', margin: '0 0 10px 0', fontWeight: '600' }}>
-                Treasure Locations
+                🎯 Loot Locations
               </h3>
               <div id="coordinates-display" style={{ minHeight: '120px' }}>
                 {mapMarkers.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '20px 15px', fontSize: '13px' }}>
-                    Click on the map to place your first treasure pin!
+                    Click on the map to place your first loot pin!
                   </div>
                 ) : (
                   mapMarkers.map((marker, index) => (
-                    <div key={index} className="pin-item" style={{ marginBottom: '8px', fontSize: '12px' }}>
-                      <div className="pin-number" style={{ fontSize: '13px', fontWeight: '600' }}>Pin #{index + 1}</div>
-                      <div className="pin-coordinates" style={{ fontSize: '11px', color: '#666' }}>
-                        <span>Lat: <span className="coordinate-value">{marker.lat.toFixed(4)}</span></span>
-                        <span> Lng: <span className="coordinate-value">{marker.lng.toFixed(4)}</span></span>
+                    <div 
+                      key={index} 
+                      className="loot-item"
+                      style={{
+                        padding: '12px',
+                        marginBottom: '8px',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '6px',
+                        backgroundColor: '#fff'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                        <div className="loot-number" style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
+                          📍 Loot #{index + 1}
+                        </div>
+                        <div className="loot-status">
+                          <span style={{ 
+                            backgroundColor: '#dc3545', 
+                            color: 'white', 
+                            padding: '2px 8px', 
+                            borderRadius: '12px', 
+                            fontSize: '11px',
+                            fontWeight: '600'
+                          }}>
+                            🎯 AVAILABLE
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="loot-coordinates" style={{ fontSize: '12px', color: '#666' }}>
+                        <span>📍 Lat: {marker.lat.toFixed(4)}, Lng: {marker.lng.toFixed(4)}</span>
                       </div>
                     </div>
                   ))
