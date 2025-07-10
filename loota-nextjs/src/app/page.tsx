@@ -8,6 +8,7 @@ export default function Home() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [huntName, setHuntName] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
   const resultUrlRef = useRef<HTMLSpanElement | null>(null);
   const copyButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isLoading, setIsLoading] = useState(false); // New loading state
@@ -77,6 +78,7 @@ export default function Home() {
           name: huntName.trim() || null,
           type: currentHuntType,
           creatorId: creatorId, // Include the creatorId
+          creatorName: userName.trim() || 'Anonymous Creator',
           pins: huntData,
         }),
       });
@@ -107,145 +109,198 @@ export default function Home() {
     } finally {
       setIsLoading(false); // Stop loading regardless of success or failure
     }
-  }, [currentHuntType, huntName, copyToClipboard]);
+  }, [currentHuntType, huntName, userName, copyToClipboard]);
 
   return (
     <>
-      <header>
-        <h1>Loota</h1>
+      <header style={{ padding: '10px 0', textAlign: 'center' }}>
+        <h1 style={{ margin: '0', fontSize: '28px', fontWeight: '700' }}>Loota</h1>
       </header>
 
-      <main>
-        <div className="intro-text">
-          <h2>Run Your Own Augmented Reality Treasure Hunt</h2>
-          <p>
-            Welcome to Loota! Place virtual treasures anywhere in the real world
-            for your friends, fans, or community to find. Drop pins on the map
-            below to mark your treasure locations. When you&apos;re ready, click
-            &quot;Encourage Looting&quot; to generate a unique link for your hunt!
+      <main style={{ padding: '10px 20px' }}>
+        <div className="intro-text" style={{ textAlign: 'center', marginBottom: '15px' }}>
+          <h2 style={{ fontSize: '24px', margin: '0 0 8px 0', fontWeight: '600' }}>
+            Run Your Own AR Treasure Hunt
+          </h2>
+          <p style={{ fontSize: '14px', margin: '0', color: '#666', lineHeight: '1.4' }}>
+            Place virtual treasures anywhere in the real world. Drop pins, generate a link, and let the hunt begin!
           </p>
         </div>
 
-        <div
-          className="hunt-type-selector"
-          style={{ textAlign: 'center', marginBottom: '20px' }}
-        >
-          <h3>Choose Your Hunt Type:</h3>
-          <label>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '12px', 
+          maxWidth: '600px', 
+          margin: '0 auto 15px auto',
+          backgroundColor: '#f8f9fa',
+          padding: '15px',
+          borderRadius: '8px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600' }}>Hunt Type:</div>
+            <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <input
+                type="radio"
+                name="huntType"
+                value="geolocation"
+                checked={currentHuntType === 'geolocation'}
+                onChange={handleHuntTypeChange}
+              />
+              Map-based
+            </label>
+            <label style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <input
+                type="radio"
+                name="huntType"
+                value="proximity"
+                checked={currentHuntType === 'proximity'}
+                onChange={handleHuntTypeChange}
+              />
+              Proximity
+            </label>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '14px', fontWeight: '600' }}>Hunt Name:</label>
             <input
-              type="radio"
-              name="huntType"
-              value="geolocation"
-              checked={currentHuntType === 'geolocation'}
-              onChange={handleHuntTypeChange}
+              type="text"
+              value={huntName}
+              onChange={(e) => setHuntName(e.target.value)}
+              placeholder="Enter hunt name..."
+              style={{
+                padding: '6px 12px',
+                fontSize: '14px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                width: '180px'
+              }}
+              maxLength={100}
             />
-            Geolocation (Map-based)
-          </label>
-          <label style={{ marginLeft: '20px' }}>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '14px', fontWeight: '600' }}>Your Name:</label>
             <input
-              type="radio"
-              name="huntType"
-              value="proximity"
-              checked={currentHuntType === 'proximity'}
-              onChange={handleHuntTypeChange}
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Enter your name..."
+              style={{
+                padding: '6px 12px',
+                fontSize: '14px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                width: '180px'
+              }}
+              maxLength={100}
             />
-            Proximity (Relative to Player)
-          </label>
-        </div>
-
-        <div 
-          className="hunt-name-input"
-          style={{ textAlign: 'center', marginBottom: '30px' }}
-        >
-          <h3>Name Your Hunt (Optional):</h3>
-          <input
-            type="text"
-            value={huntName}
-            onChange={(e) => setHuntName(e.target.value)}
-            placeholder="Enter a name for your treasure hunt..."
-            style={{
-              padding: '10px 15px',
-              fontSize: '16px',
-              border: '2px solid #ddd',
-              borderRadius: '8px',
-              width: '300px',
-              maxWidth: '90%',
-              textAlign: 'center'
-            }}
-            maxLength={100}
-          />
-          <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-            Leave blank for &quot;Untitled Hunt&quot;
-          </p>
+          </div>
         </div>
 
         {currentHuntType === 'geolocation' && (
-          <div className="map-and-list-container">
+          <div className="map-and-list-container" style={{ marginBottom: '15px' }}>
             <div style={{ flex: '2', display: 'flex', flexDirection: 'column' }}>
-              <h3 style={{ textAlign: 'center', marginBottom: '15px', color: '#333', fontSize: '1.4em' }}>Place Pins on Map</h3>
+              <h3 style={{ textAlign: 'center', margin: '0 0 10px 0', color: '#333', fontSize: '16px', fontWeight: '600' }}>
+                Place Pins on Map
+              </h3>
               <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
             </div>
             <div className="list-wrapper">
-              <h3 className="list-header">Treasure Locations</h3>
-              <div id="coordinates-display">
+              <h3 className="list-header" style={{ fontSize: '16px', margin: '0 0 10px 0', fontWeight: '600' }}>
+                Treasure Locations
+              </h3>
+              <div id="coordinates-display" style={{ minHeight: '120px' }}>
                 {mapMarkers.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '40px 20px' }}>
+                  <div style={{ textAlign: 'center', color: '#666', fontStyle: 'italic', padding: '20px 15px', fontSize: '13px' }}>
                     Click on the map to place your first treasure pin!
                   </div>
                 ) : (
                   mapMarkers.map((marker, index) => (
-                    <div key={index} className="pin-item">
-                      <div className="pin-number">Treasure Pin #{index + 1}</div>
-                      <div className="pin-coordinates">
-                        <span>Lat: <span className="coordinate-value">{marker.lat.toFixed(6)}</span></span>
-                        <span>Lng: <span className="coordinate-value">{marker.lng.toFixed(6)}</span></span>
+                    <div key={index} className="pin-item" style={{ marginBottom: '8px', fontSize: '12px' }}>
+                      <div className="pin-number" style={{ fontSize: '13px', fontWeight: '600' }}>Pin #{index + 1}</div>
+                      <div className="pin-coordinates" style={{ fontSize: '11px', color: '#666' }}>
+                        <span>Lat: <span className="coordinate-value">{marker.lat.toFixed(4)}</span></span>
+                        <span> Lng: <span className="coordinate-value">{marker.lng.toFixed(4)}</span></span>
                       </div>
                     </div>
                   ))
                 )}
               </div>
-              <div className="list-controls">
-                <button className="btn btn-secondary" onClick={() => mapComponentRef.current?.deleteLastPin()}>
-                  Delete Last Pin
+              <div className="list-controls" style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => mapComponentRef.current?.deleteLastPin()}
+                  style={{ fontSize: '12px', padding: '6px 12px' }}
+                >
+                  Delete Last
                 </button>
-                <button className="btn btn-danger" onClick={() => mapComponentRef.current?.clearAllPins()}>
-                  Clear All Pins
+                <button 
+                  className="btn btn-danger" 
+                  onClick={() => mapComponentRef.current?.clearAllPins()}
+                  style={{ fontSize: '12px', padding: '6px 12px' }}
+                >
+                  Clear All
                 </button>
               </div>
             </div>
           </div>
         )}
-        {currentHuntType === 'proximity' && <ProximityComponent ref={proximityComponentRef} />}
-
-        {/* Controls for proximity hunt type */}
+        
         {currentHuntType === 'proximity' && (
-          <div className="list-controls" style={{ justifyContent: 'center', marginTop: '20px' }}>
-            <button className="btn btn-secondary" onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}>
-              Delete Last Marker
-            </button>
-            <button className="btn btn-danger" onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}>
-              Clear All Markers
-            </button>
+          <div style={{ marginBottom: '15px' }}>
+            <ProximityComponent ref={proximityComponentRef} />
+            <div className="list-controls" style={{ justifyContent: 'center', marginTop: '15px', display: 'flex', gap: '10px' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}
+                style={{ fontSize: '12px', padding: '6px 12px' }}
+              >
+                Delete Last
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}
+                style={{ fontSize: '12px', padding: '6px 12px' }}
+              >
+                Clear All
+              </button>
+            </div>
           </div>
         )}
 
-        <div className="controls">
-          <button id="encourage-button" className="btn btn-primary" onClick={generateLootLink} disabled={isLoading}>
+        <div className="controls" style={{ textAlign: 'center', marginBottom: '15px' }}>
+          <button 
+            id="encourage-button" 
+            className="btn btn-primary" 
+            onClick={generateLootLink} 
+            disabled={isLoading}
+            style={{ fontSize: '16px', padding: '10px 20px', fontWeight: '600' }}
+          >
             {isLoading ? 'Generating...' : 'Encourage Looting'}
             {isLoading && <span className="spinner"></span>}
           </button>
         </div>
 
-        <div id="result-area">
-          Your treasure hunt link will appear here:
-          <span id="result-url" ref={resultUrlRef}></span>
-          <button id="copy-button" className="btn btn-primary" style={{ display: 'none' }} ref={copyButtonRef}>
-            Copy Link
-          </button>
+        <div id="result-area" style={{ textAlign: 'center', fontSize: '14px', color: '#666', lineHeight: '1.4' }}>
+          <div style={{ marginBottom: '8px' }}>Your treasure hunt link will appear here:</div>
+          <div>
+            <span id="result-url" ref={resultUrlRef} style={{ fontSize: '13px', color: '#0066cc' }}></span>
+            <button 
+              id="copy-button" 
+              className="btn btn-primary" 
+              style={{ display: 'none', marginLeft: '10px', fontSize: '12px', padding: '4px 8px' }} 
+              ref={copyButtonRef}
+            >
+              Copy Link
+            </button>
+          </div>
         </div>
       </main>
 
-      <footer>&copy; 2025 Loota</footer>
+      <footer style={{ textAlign: 'center', padding: '10px', fontSize: '12px', color: '#888' }}>
+        &copy; 2025 Loota
+      </footer>
     </>
   );
 }

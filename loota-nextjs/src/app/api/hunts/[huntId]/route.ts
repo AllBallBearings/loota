@@ -28,6 +28,9 @@ const prisma = new PrismaClient();
  *                 id:
  *                   type: string
  *                   format: uuid
+ *                 name:
+ *                   type: string
+ *                   description: Optional name for the hunt
  *                 type:
  *                   type: string
  *                 createdAt:
@@ -159,6 +162,7 @@ export async function GET(
       },
       select: {
         id: true,
+        name: true,
         type: true,
         createdAt: true,
         updatedAt: true,

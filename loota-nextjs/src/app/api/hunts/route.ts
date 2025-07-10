@@ -31,6 +31,9 @@ const prisma = new PrismaClient();
  *                 type: string
  *                 format: uuid
  *                 description: The ID of the user creating the hunt.
+ *               creatorName:
+ *                 type: string
+ *                 description: The name of the user creating the hunt.
  *               pins:
  *                 type: array
  *                 description: An array of pin objects associated with the hunt.
@@ -169,6 +172,9 @@ export async function GET() {
  *                 type: string
  *                 format: uuid
  *                 description: The ID of the user creating the hunt.
+ *               creatorName:
+ *                 type: string
+ *                 description: The name of the user creating the hunt.
  *               pins:
  *                 type: array
  *                 description: An array of pin objects associated with the hunt.
@@ -233,27 +239,37 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const { name, type, creatorId, pins } = await request.json();
+    const { name, type, creatorId, creatorName, pins } = await request.json();
 
     if (!type || !creatorId || !pins || !Array.isArray(pins)) {
       return NextResponse.json({ message: 'Invalid request data' }, { status: 400 });
     }
 
-    // Ensure the creator user exists. If not, create a placeholder user.
+    // Ensure the creator user exists. If not, create a user with the provided name.
     // In a real application, creatorId would come from an authenticated session.
     let creatorUser = await prisma.user.findUnique({
       where: { id: creatorId },
     });
 
+    const finalCreatorName = creatorName || "Anonymous Creator";
+
     if (!creatorUser) {
-      console.warn(`Creator user with ID ${creatorId} not found. Creating a placeholder user.`);
+      console.log(`Creator user with ID ${creatorId} not found. Creating user: ${finalCreatorName}`);
       creatorUser = await prisma.user.create({
         data: {
           id: creatorId,
-          name: "Hunt Creator (Placeholder)",
+          name: finalCreatorName,
           // Other fields can be null or default as per schema
         },
       });
+    } else {
+      // Update existing user's name if a new name is provided
+      if (creatorName && creatorUser.name !== finalCreatorName) {
+        creatorUser = await prisma.user.update({
+          where: { id: creatorId },
+          data: { name: finalCreatorName },
+        });
+      }
     }
 
     const newHunt = await prisma.hunt.create({
