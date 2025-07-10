@@ -7,6 +7,7 @@ import ProximityComponent, { ProximityComponentRef, ProximityMarkerData } from '
 export default function Home() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
+  const [huntName, setHuntName] = useState<string>('');
   const resultUrlRef = useRef<HTMLSpanElement | null>(null);
   const copyButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isLoading, setIsLoading] = useState(false); // New loading state
@@ -73,6 +74,7 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          name: huntName.trim() || null,
           type: currentHuntType,
           creatorId: creatorId, // Include the creatorId
           pins: huntData,
@@ -105,7 +107,7 @@ export default function Home() {
     } finally {
       setIsLoading(false); // Stop loading regardless of success or failure
     }
-  }, [currentHuntType, copyToClipboard]);
+  }, [currentHuntType, huntName, copyToClipboard]);
 
   return (
     <>
@@ -149,6 +151,32 @@ export default function Home() {
             />
             Proximity (Relative to Player)
           </label>
+        </div>
+
+        <div 
+          className="hunt-name-input"
+          style={{ textAlign: 'center', marginBottom: '30px' }}
+        >
+          <h3>Name Your Hunt (Optional):</h3>
+          <input
+            type="text"
+            value={huntName}
+            onChange={(e) => setHuntName(e.target.value)}
+            placeholder="Enter a name for your treasure hunt..."
+            style={{
+              padding: '10px 15px',
+              fontSize: '16px',
+              border: '2px solid #ddd',
+              borderRadius: '8px',
+              width: '300px',
+              maxWidth: '90%',
+              textAlign: 'center'
+            }}
+            maxLength={100}
+          />
+          <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+            Leave blank for &quot;Untitled Hunt&quot;
+          </p>
         </div>
 
         {currentHuntType === 'geolocation' && (
@@ -217,7 +245,7 @@ export default function Home() {
         </div>
       </main>
 
-      <footer>&copy; 2025 Loota - Spreading Joy Through Discovery</footer>
+      <footer>&copy; 2025 Loota</footer>
     </>
   );
 }

@@ -52,7 +52,7 @@ export default function DemoPage() {
       </main>
 
       <footer style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6', marginTop: '40px' }}>
-        <p>&copy; 2025 Loota - Spreading Joy Through Discovery</p>
+        <p>&copy; 2025 Loota</p>
       </footer>
     </>
   );

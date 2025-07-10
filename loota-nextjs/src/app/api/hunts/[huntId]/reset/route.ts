@@ -24,6 +24,10 @@ const prisma = new PrismaClient();
  *           schema:
  *             type: object
  *             properties:
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: The ID of the user requesting the reset (must be the hunt creator).
  *               resetPins:
  *                 type: boolean
  *                 description: Whether to reset all collected pins for the hunt.
@@ -51,6 +55,16 @@ const prisma = new PrismaClient();
  *                 message:
  *                   type: string
  *                   example: Hunt ID is required
+ *       403:
+ *         description: Forbidden - Only the hunt creator can reset the hunt.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Only the hunt creator can reset this hunt
  *       404:
  *         description: Hunt not found.
  *         content:
@@ -78,10 +92,14 @@ export async function POST(
 ) {
   try {
     const { huntId } = await params;
-    const { resetPins, clearParticipants } = await request.json();
+    const { resetPins, clearParticipants, userId } = await request.json();
 
     if (!huntId) {
       return NextResponse.json({ message: 'Hunt ID is required' }, { status: 400 });
+    }
+
+    if (!userId) {
+      return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
     }
 
     if (typeof resetPins !== 'boolean' || typeof clearParticipants !== 'boolean') {
@@ -90,10 +108,16 @@ export async function POST(
 
     const existingHunt = await prisma.hunt.findUnique({
       where: { id: huntId },
+      include: { creator: true },
     });
 
     if (!existingHunt) {
       return NextResponse.json({ message: 'Hunt not found' }, { status: 404 });
+    }
+
+    // Only allow the hunt creator to reset the hunt
+    if (existingHunt.creatorId !== userId) {
+      return NextResponse.json({ message: 'Only the hunt creator can reset this hunt' }, { status: 403 });
     }
 
     await prisma.$transaction(async (prisma) => {
@@ -114,7 +138,16 @@ export async function POST(
       }
     });
 
-    return NextResponse.json({ message: 'Hunt reset successfully' }, { status: 200 });
+    let message = 'Hunt reset successfully';
+    if (resetPins && clearParticipants) {
+      message = 'Hunt reset successfully - loot and looters cleared';
+    } else if (resetPins) {
+      message = 'Loot reset successfully';
+    } else if (clearParticipants) {
+      message = 'Looters cleared successfully';
+    }
+
+    return NextResponse.json({ message }, { status: 200 });
   } catch (error) {
     console.error('Error resetting hunt:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

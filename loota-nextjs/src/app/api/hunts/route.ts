@@ -20,6 +20,9 @@ const prisma = new PrismaClient();
  *               - creatorId
  *               - pins
  *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Optional name for the hunt.
  *               type:
  *                 type: string
  *                 description: The type of the hunt (e.g., 'geolocation' or 'proximity').
@@ -155,6 +158,9 @@ export async function GET() {
  *               - creatorId
  *               - pins
  *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Optional name for the hunt.
  *               type:
  *                 type: string
  *                 description: The type of the hunt (e.g., 'geolocation' or 'proximity').
@@ -227,7 +233,7 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const { type, creatorId, pins } = await request.json();
+    const { name, type, creatorId, pins } = await request.json();
 
     if (!type || !creatorId || !pins || !Array.isArray(pins)) {
       return NextResponse.json({ message: 'Invalid request data' }, { status: 400 });
@@ -252,6 +258,7 @@ export async function POST(request: Request) {
 
     const newHunt = await prisma.hunt.create({
       data: {
+        name: name || null,
         type: type,
         creator: {
           connect: {
