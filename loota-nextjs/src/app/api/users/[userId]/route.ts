@@ -221,10 +221,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     const { name } = await request.json();
 
     if (!userId || !name) {
@@ -239,7 +239,7 @@ export async function PUT(
     return NextResponse.json(updatedUser, { status: 200 });
   } catch (error) {
     console.error('Error updating user:', error);
-    if (error.code === 'P2025') {
+    if ((error as { code?: string }).code === 'P2025') {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
