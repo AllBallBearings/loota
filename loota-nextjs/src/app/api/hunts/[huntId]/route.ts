@@ -178,6 +178,7 @@ export async function GET(
             directionStr: true,
             x: true,
             y: true,
+            order: true,
             collectedByUserId: true,
             collectedAt: true,
             createdAt: true,
