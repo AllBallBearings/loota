@@ -282,13 +282,14 @@ export async function POST(request: Request) {
           },
         },
         pins: {
-          create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string }) => ({
+          create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string }, index: number) => ({
             lat: pin.lat !== undefined ? parseFloat(pin.lat) : null,
             lng: pin.lng !== undefined ? parseFloat(pin.lng) : null,
             distanceFt: pin.distanceFt !== undefined ? parseFloat(pin.distanceFt) : null,
             directionStr: pin.directionStr || null,
             x: pin.x !== undefined ? parseFloat(pin.x) : null,
             y: pin.y !== undefined ? parseFloat(pin.y) : null,
+            order: index,
           })),
         },
       },

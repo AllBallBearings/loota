@@ -46,6 +46,7 @@ model Pin {
   directionStr String?  // For proximity pins (e.g., "N45E")
   x            Decimal? // Relative X coordinate for proximity pins within the circle
   y            Decimal? // Relative Y coordinate for proximity pins within the circle
+  order        Int      @default(0) // Order of pin creation to maintain sequence
   collectedByUserId String?  @db.Uuid // New field to store the ID of the user who collected this pin
   collectedByUser   User?    @relation("CollectedPins", fields: [collectedByUserId], references: [id])
   collectedAt       DateTime? // Timestamp when the pin was collected

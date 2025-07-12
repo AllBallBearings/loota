@@ -20,11 +20,14 @@ const MapContainer: React.FC<MapContainerProps> = ({ initialPins }) => {
     }
   }, [initialPins]);
 
+  // Filter uncollected pins for the map display (gameplay)
+  const uncollectedPins = initialPins.filter(pin => !pin.collectedByUserId);
+
   return (
     <div className="map-and-list-container">
       <div style={{ flex: '2', display: 'flex', flexDirection: 'column' }}>
         <h3 style={{ textAlign: 'center', marginBottom: '15px', color: '#333', fontSize: '1.4em' }}>Hunt Map</h3>
-        <MapComponent ref={mapComponentRef} initialMarkers={initialPins.filter(pin => pin.lat !== undefined && pin.lng !== undefined).map(pin => ({ lat: pin.lat!, lng: pin.lng! }))} />
+        <MapComponent ref={mapComponentRef} initialMarkers={uncollectedPins.filter(pin => pin.lat !== undefined && pin.lng !== undefined).map(pin => ({ lat: pin.lat!, lng: pin.lng! }))} />
       </div>
       <div className="list-wrapper">
         <h3 className="list-header" style={{ fontSize: '16px', margin: '0 0 10px 0', fontWeight: '600' }}>

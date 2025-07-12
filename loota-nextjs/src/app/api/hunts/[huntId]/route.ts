@@ -188,6 +188,9 @@ export async function GET(
               },
             },
           },
+          orderBy: {
+            order: 'asc',
+          },
         },
         participants: {
           select: {

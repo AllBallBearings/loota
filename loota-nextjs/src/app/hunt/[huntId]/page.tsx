@@ -76,6 +76,7 @@ export default function HuntViewerPage() {
         }
         const data: HuntData = await response.json();
         setHunt(data);
+        setError(null); // Clear any previous errors
       } catch (err) {
         console.error('Error fetching hunt:', err);
         setError((err as Error).message || 'An unknown error occurred.');
@@ -84,7 +85,16 @@ export default function HuntViewerPage() {
       }
     };
 
+    // Initial fetch
     fetchHunt();
+
+    // Set up polling to refresh hunt data every 5 seconds
+    const pollInterval = setInterval(() => {
+      fetchHunt();
+    }, 5000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(pollInterval);
   }, [huntId]);
 
   const handleResetLoot = async () => {
@@ -119,16 +129,21 @@ export default function HuntViewerPage() {
         throw new Error(errorData.message || 'Failed to reset loot');
       }
 
-      // Refresh hunt data after successful reset
-      const huntResponse = await fetch(`/api/hunts/${huntId}`, {
-        headers: {
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
-        },
-      });
-      
-      if (huntResponse.ok) {
-        const updatedHunt: HuntData = await huntResponse.json();
-        setHunt(updatedHunt);
+      // Refresh hunt data immediately after successful reset
+      try {
+        const huntResponse = await fetch(`/api/hunts/${huntId}`, {
+          headers: {
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
+          },
+        });
+        
+        if (huntResponse.ok) {
+          const updatedHunt: HuntData = await huntResponse.json();
+          setHunt(updatedHunt);
+        }
+      } catch (refreshErr) {
+        console.error('Error refreshing hunt data:', refreshErr);
+        // Don't throw here, reset was successful even if refresh failed
       }
 
       alert('Loot has been successfully reset!');
@@ -173,16 +188,21 @@ export default function HuntViewerPage() {
         throw new Error(errorData.message || 'Failed to clear looters');
       }
 
-      // Refresh hunt data after successful reset
-      const huntResponse = await fetch(`/api/hunts/${huntId}`, {
-        headers: {
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
-        },
-      });
-      
-      if (huntResponse.ok) {
-        const updatedHunt: HuntData = await huntResponse.json();
-        setHunt(updatedHunt);
+      // Refresh hunt data immediately after successful reset
+      try {
+        const huntResponse = await fetch(`/api/hunts/${huntId}`, {
+          headers: {
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
+          },
+        });
+        
+        if (huntResponse.ok) {
+          const updatedHunt: HuntData = await huntResponse.json();
+          setHunt(updatedHunt);
+        }
+      } catch (refreshErr) {
+        console.error('Error refreshing hunt data:', refreshErr);
+        // Don't throw here, reset was successful even if refresh failed
       }
 
       alert('Looters have been successfully cleared!');
@@ -223,7 +243,6 @@ export default function HuntViewerPage() {
     );
   }
 
-  const uncollectedPins = hunt.pins.filter(pin => !pin.collectedByUserId);
   const isHuntCreator = hunt.creator?.id === currentUserId;
 
   return (
@@ -293,12 +312,12 @@ export default function HuntViewerPage() {
 
         {hunt.type === 'geolocation' && (
           <MapContainer
-            initialPins={uncollectedPins.filter((p): p is Required<Pick<PinData, 'id' | 'lat' | 'lng'>> => p.lat !== undefined && p.lng !== undefined)}
+            initialPins={hunt.pins.filter((p): p is Required<Pick<PinData, 'id' | 'lat' | 'lng'>> => p.lat !== undefined && p.lng !== undefined)}
           />
         )}
         {hunt.type === 'proximity' && (
           <ProximityContainer
-            initialPins={uncollectedPins.filter((p): p is Required<Pick<PinData, 'id' | 'distanceFt' | 'directionStr' | 'x' | 'y'>> =>
+            initialPins={hunt.pins.filter((p): p is Required<Pick<PinData, 'id' | 'distanceFt' | 'directionStr' | 'x' | 'y'>> =>
               p.distanceFt !== undefined && p.directionStr !== undefined && p.x !== undefined && p.y !== undefined
             )}
           />
