@@ -32,12 +32,18 @@ npx prisma studio   # Open database browser
 
 **Core Application Type**: Next.js 15 App Router with TypeScript, Tailwind CSS, and Prisma ORM
 
+### Code Commits
+
+- Don't co-author with Claude or Claude-Code
+
 **Database**: PostgreSQL with Prisma ORM
+
 - User management with device ID tracking
 - Hunt creation and participation
 - Pin collection system with geolocation and proximity modes
 
 **Main Features**:
+
 - **Geolocation Hunt**: Map-based treasure hunts using Google Maps API
 - **Proximity Hunt**: Relative positioning treasure hunts
 - **Universal Links**: iOS app integration via `apple-app-site-association`
@@ -46,18 +52,21 @@ npx prisma studio   # Open database browser
 ## Key Components
 
 ### Database Models (Prisma)
+
 - `User`: Stores user data including phone, PayPal ID, and iOS device ID
 - `Hunt`: Main hunt entity with type ('geolocation' or 'proximity'), creator, and winner
 - `Pin`: Treasure locations with different data based on hunt type
 - `HuntParticipation`: Many-to-many relationship between users and hunts
 
 ### Frontend Components
+
 - `MapComponent`: Google Maps integration for geolocation hunts
 - `ProximityComponent`: Relative positioning interface for proximity hunts
 - `MapContainer`/`ProximityContainer`: Hunt viewing containers
 - `UniversalLinkGenerator`: iOS deep linking functionality
 
 ### API Routes
+
 - `/api/hunts`: CRUD operations for hunts
 - `/api/hunts/[huntId]`: Individual hunt management
 - `/api/hunts/[huntId]/participants`: User participation
@@ -68,6 +77,7 @@ npx prisma studio   # Open database browser
 ## Environment Variables
 
 Required environment variables:
+
 - `DATABASE_URL`: PostgreSQL connection string
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Google Maps API key
 - `API_KEY_SECRET`: API authentication secret
