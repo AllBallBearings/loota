@@ -58,21 +58,34 @@ export const UniversalLinkGenerator: React.FC<UniversalLinkGeneratorProps> = ({
   return (
     <div className={`universal-link-generator ${className}`}>
       <div className="link-display">
-        <input 
-          type="text" 
-          value={universalLink} 
-          readOnly 
-          className="link-input"
+        <a 
+          href={universalLink}
+          target="_blank"
+          rel="noopener noreferrer"
           style={{
+            display: 'block',
             width: '100%',
             padding: '8px 12px',
-            border: '1px solid #ccc',
+            border: '1px solid #007bff',
             borderRadius: '4px',
-            backgroundColor: '#f9f9f9',
+            backgroundColor: '#f8f9fa',
             fontSize: '14px',
-            fontFamily: 'monospace'
+            fontFamily: 'monospace',
+            textDecoration: 'none',
+            color: '#007bff',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s',
+            wordBreak: 'break-all'
           }}
-        />
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#e9ecef';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#f8f9fa';
+          }}
+        >
+          {universalLink}
+        </a>
       </div>
       
       <div className="link-actions" style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
@@ -108,6 +121,7 @@ export const UniversalLinkGenerator: React.FC<UniversalLinkGeneratorProps> = ({
       </div>
       
       <div className="link-info" style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+        <p>🔗 Click the link above to open in a new tab, or use the buttons to copy/share</p>
         <p>📱 This link will open in the Loota app on iPhone when shared</p>
         <p>🌐 Or open in the browser if the app isn&apos;t installed</p>
       </div>
