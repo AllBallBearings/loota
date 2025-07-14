@@ -244,6 +244,24 @@ export default function HuntViewerPage() {
   }
 
   const isHuntCreator = hunt.creator?.id === currentUserId;
+  
+  // Check if all loot has been collected
+  const allLootCollected = hunt.pins.length > 0 && hunt.pins.every(pin => pin.collectedByUserId);
+  
+  // Get unique collectors with their collected pins
+  const collectors = hunt.pins
+    .filter(pin => pin.collectedByUserId && pin.collectedByUser)
+    .reduce((acc, pin) => {
+      const userId = pin.collectedByUserId!;
+      if (!acc[userId]) {
+        acc[userId] = {
+          user: pin.collectedByUser!,
+          pins: []
+        };
+      }
+      acc[userId].pins.push(pin);
+      return acc;
+    }, {} as Record<string, { user: { id: string; name: string }, pins: PinData[] }>);
 
   return (
     <>
@@ -252,6 +270,119 @@ export default function HuntViewerPage() {
       </header>
 
       <main>
+        {allLootCollected && (
+          <div style={{
+            backgroundColor: '#d4edda',
+            borderLeft: '4px solid #155724',
+            color: '#155724',
+            padding: '20px',
+            margin: '0 0 20px 0',
+            borderRadius: '8px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            textAlign: 'center',
+            position: 'relative',
+            overflow: 'hidden',
+            zIndex: 10
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(45deg, rgba(255,215,0,0.1) 0%, rgba(255,193,7,0.1) 100%)',
+              pointerEvents: 'none'
+            }}></div>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <h2 style={{ 
+                fontSize: '28px', 
+                fontWeight: '700', 
+                margin: '0 0 8px 0',
+                textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+              }}>
+                🎉 Everything&apos;s Looted!!! 🎉
+              </h2>
+              <p style={{ 
+                fontSize: '16px', 
+                fontWeight: '500', 
+                margin: '0 0 20px 0',
+                opacity: 0.9
+              }}>
+                The hunt is complete
+              </p>
+              
+              <div style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                borderRadius: '8px',
+                padding: '16px',
+                margin: '0 auto',
+                maxWidth: '600px'
+              }}>
+                <h3 style={{ 
+                  fontSize: '18px', 
+                  fontWeight: '600', 
+                  margin: '0 0 12px 0',
+                  color: '#0f5132'
+                }}>
+                  🏆 Winners & Their Loot
+                </h3>
+                
+                {Object.values(collectors).map((collector, index) => (
+                  <div key={collector.user.id} style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #b3d3c6',
+                    borderRadius: '6px',
+                    padding: '12px',
+                    marginBottom: index < Object.values(collectors).length - 1 ? '8px' : '0',
+                    textAlign: 'left'
+                  }}>
+                    <div style={{ 
+                      fontSize: '16px', 
+                      fontWeight: '600', 
+                      color: '#0f5132',
+                      marginBottom: '6px'
+                    }}>
+                      👤 {collector.user.name}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#6c757d' }}>
+                      Collected {collector.pins.length} pin{collector.pins.length === 1 ? '' : 's'}:
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: '4px', 
+                      marginTop: '4px' 
+                    }}>
+                      {collector.pins.map((pin, pinIndex) => (
+                        <span key={pin.id} style={{
+                          backgroundColor: '#ffd700',
+                          color: '#856404',
+                          padding: '2px 6px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}>
+                          🎯 Pin #{pinIndex + 1}
+                        </span>
+                      ))}
+                    </div>
+                    {collector.pins[0]?.collectedAt && (
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: '#6c757d', 
+                        marginTop: '6px' 
+                      }}>
+                        Last collected: {new Date(collector.pins[collector.pins.length - 1].collectedAt!).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="hunt-header" style={{
           backgroundColor: '#f8f9fa',
           border: '1px solid #e9ecef',

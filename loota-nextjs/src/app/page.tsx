@@ -9,7 +9,7 @@ export default function Home() {
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [huntName, setHuntName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
-  const resultUrlRef = useRef<HTMLSpanElement | null>(null);
+  const resultUrlRef = useRef<HTMLAnchorElement | null>(null);
   const copyButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isLoading, setIsLoading] = useState(false); // New loading state
 
@@ -93,8 +93,10 @@ export default function Home() {
       
       if (resultUrlRef.current) {
         resultUrlRef.current.textContent = fullUrl;
-        resultUrlRef.current.setAttribute('href', fullUrl);
-        resultUrlRef.current.setAttribute('target', "_blank");
+        resultUrlRef.current.href = fullUrl;
+        resultUrlRef.current.target = '_blank';
+        resultUrlRef.current.rel = 'noopener noreferrer';
+        resultUrlRef.current.style.display = 'inline-block';
       }
 
       if (copyButtonRef.current) {
@@ -311,7 +313,24 @@ export default function Home() {
         <div id="result-area" style={{ textAlign: 'center', fontSize: '14px', color: '#666', lineHeight: '1.4' }}>
           <div style={{ marginBottom: '8px' }}>Your treasure hunt link will appear here:</div>
           <div>
-            <span id="result-url" ref={resultUrlRef} style={{ fontSize: '13px', color: '#0066cc' }}></span>
+            <a 
+              id="result-url" 
+              ref={resultUrlRef} 
+              style={{ 
+                fontSize: '13px', 
+                color: '#0066cc', 
+                textDecoration: 'underline', 
+                display: 'none',
+                cursor: 'pointer',
+                wordBreak: 'break-all'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f0f8ff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            ></a>
             <button 
               id="copy-button" 
               className="btn btn-primary" 
