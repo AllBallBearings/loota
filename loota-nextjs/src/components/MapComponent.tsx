@@ -37,7 +37,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   const [markerData, setMarkerData] = useState<MapMarker[]>(initialMarkers); // Initialize with initialMarkers
   const currentGoogleMarkers = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
-  const [mapInitialized, setMapInitialized] = useState(false);
 
   console.log("MapComponent rendering...");
 
@@ -114,7 +113,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         addMarker(event.latLng);
       }
     });
-    setMapInitialized(true);
     console.log("Map initialized successfully.");
   }, [addMarker, handleLocationError]);
 
@@ -181,7 +179,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     const timer = setTimeout(() => {
       if (window.google && mapDivRef.current && !mapRef.current) {
         console.log("Reinitializing map after component switch...");
-        setMapInitialized(false);
         initializeMap();
       }
     }, 100);
@@ -197,7 +194,6 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         currentGoogleMarkers.current.forEach(marker => marker.map = null);
         currentGoogleMarkers.current = [];
         mapRef.current = null;
-        setMapInitialized(false);
       }
     };
   }, []);
