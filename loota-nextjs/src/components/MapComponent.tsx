@@ -64,20 +64,24 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
   const initializeMap = useCallback(() => {
     console.log("Attempting to initialize map...");
-    if (mapInitialized) {
-      console.log("Map already initialized, skipping.");
-      return;
-    }
-
+    
     if (!mapDivRef.current || !window.google) {
       console.warn("Map div ref or Google Maps API not ready for initialization.");
       return;
     }
 
+    // Always reinitialize to handle component remounting
+    if (mapRef.current) {
+      console.log("Cleaning up existing map instance...");
+      mapRef.current = null;
+      currentGoogleMarkers.current.forEach(marker => marker.map = null);
+      currentGoogleMarkers.current = [];
+    }
+
     const defaultCenter = { lat: 40.7128, lng: -74.0060 };
 
     mapRef.current = new window.google.maps.Map(mapDivRef.current, {
-      zoom: 19,
+      zoom: 18,
       center: defaultCenter,
       mapId: 'LOOTA_MAP_ID'
     });
@@ -112,7 +116,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     });
     setMapInitialized(true);
     console.log("Map initialized successfully.");
-  }, [addMarker, handleLocationError, mapInitialized]);
+  }, [addMarker, handleLocationError]);
 
   useEffect(() => {
     if (!mapRef.current || !window.google.maps.marker) return;
@@ -172,11 +176,35 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     clearAllPins,
   }));
 
+  // Effect to reinitialize map when component becomes visible again
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (window.google && mapDivRef.current && !mapRef.current) {
+        console.log("Reinitializing map after component switch...");
+        setMapInitialized(false);
+        initializeMap();
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [initializeMap]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        console.log("Cleaning up map on unmount...");
+        currentGoogleMarkers.current.forEach(marker => marker.map = null);
+        currentGoogleMarkers.current = [];
+        mapRef.current = null;
+        setMapInitialized(false);
+      }
+    };
+  }, []);
+
   return (
     <>
-      <div className="map-container">
-        <div id="map" ref={mapDivRef} style={{ width: '100%', height: '100%' }}></div>
-      </div>
+      <div id="map" ref={mapDivRef} style={{ width: '100%', height: '100%' }}></div>
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&mapId=LOOTA_MAP_ID&libraries=marker`}
         strategy="afterInteractive"
