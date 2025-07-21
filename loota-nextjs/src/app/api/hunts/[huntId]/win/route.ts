@@ -107,20 +107,49 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid win proof' }, { status: 403 });
     }
 
-    // 2. Update the Hunt model to mark the winner
+    // 2. Update the Hunt model to mark the winner and completion
     const updatedHunt = await prisma.hunt.update({
       where: { id: huntId },
       data: {
         winnerId: userId,
-        updatedAt: new Date(), // Ensure updatedAt is updated
+        isCompleted: true,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      },
+      include: {
+        creator: true,
+        participants: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
 
-    // 3. Optionally, update HuntParticipation or other related models
-    // For example, mark the user's participation as 'completed' or 'won'
-    // This depends on whether you add a 'status' field to HuntParticipation
+    // 3. Mark all participants as notified of completion (placeholder for future notification system)
+    await prisma.huntParticipation.updateMany({
+      where: { huntId: huntId },
+      data: { notifiedOfCompletion: true },
+    });
 
-    return NextResponse.json({ message: 'Win recorded successfully', hunt: updatedHunt }, { status: 200 });
+    // 4. Prepare response with contact information for the creator to reach the winner
+    const winnerParticipation = updatedHunt.participants.find(p => p.userId === userId);
+    const creatorContactInfo = {
+      preferred: updatedHunt.preferredContactMethod,
+      phone: updatedHunt.creatorPhone,
+      email: updatedHunt.creatorEmail,
+    };
+    const winnerContactInfo = {
+      phone: winnerParticipation?.participantPhone,
+      name: winnerParticipation?.user.name,
+    };
+
+    return NextResponse.json({ 
+      message: 'Hunt completed successfully', 
+      hunt: updatedHunt,
+      creatorContactInfo,
+      winnerContactInfo
+    }, { status: 200 });
   } catch (error) {
     console.error('Error recording win:', error);
     return NextResponse.json({ error: 'Failed to record win' }, { status: 500 });

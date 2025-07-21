@@ -151,6 +151,7 @@ export async function GET(
     }
 
     const { huntId } = await params;
+    const requesterId = request.nextUrl.searchParams.get('userId');
 
     if (!huntId) {
       return NextResponse.json({ message: 'Hunt ID is required' }, { status: 400 });
@@ -168,6 +169,11 @@ export async function GET(
         updatedAt: true,
         creatorId: true,
         winnerId: true,
+        isCompleted: true,
+        completedAt: true,
+        creatorPhone: true,
+        creatorEmail: true,
+        preferredContactMethod: true,
         pins: {
           select: {
             id: true,
@@ -199,6 +205,7 @@ export async function GET(
             userId: true,
             huntId: true,
             joinedAt: true,
+            participantPhone: true,
             user: {
               select: {
                 id: true,
@@ -213,12 +220,23 @@ export async function GET(
             name: true,
           },
         },
+        winner: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
     if (!hunt) {
       return NextResponse.json({ message: 'Hunt not found' }, { status: 404 });
     }
+
+    // Determine if requester should see contact information
+    const isCreator = requesterId === hunt.creatorId;
+    const isWinner = requesterId === hunt.winnerId;
+    const isCompleted = hunt.isCompleted;
 
     // Manually convert Decimal fields to numbers for frontend compatibility
     const processedHunt = {
@@ -231,7 +249,42 @@ export async function GET(
         x: pin.x ? Number(pin.x) : undefined,
         y: pin.y ? Number(pin.y) : undefined,
       })),
+      winnerContact: undefined as { name?: string; phone?: string } | undefined,
+      creatorContact: undefined as { name?: string; preferred?: string; phone?: string; email?: string } | undefined,
     };
+
+    // Add contact information based on authorization and hunt completion
+    if (isCompleted && isCreator && hunt.winnerId) {
+      // Creator can see winner's contact info for completed hunts
+      const winnerParticipation = hunt.participants.find(p => p.userId === hunt.winnerId);
+      processedHunt.winnerContact = {
+        name: hunt.winner?.name,
+        phone: winnerParticipation?.participantPhone || undefined,
+      };
+    }
+
+    if (isCompleted && isWinner) {
+      // Winner can see creator's preferred contact info for completed hunts
+      processedHunt.creatorContact = {
+        name: hunt.creator?.name,
+        preferred: hunt.preferredContactMethod || undefined,
+        phone: hunt.preferredContactMethod === 'phone' ? (hunt.creatorPhone || undefined) : undefined,
+        email: hunt.preferredContactMethod === 'email' ? (hunt.creatorEmail || undefined) : undefined,
+      };
+    }
+
+    // Remove sensitive contact fields from the main response
+    delete (processedHunt as Record<string, unknown>).creatorPhone;
+    delete (processedHunt as Record<string, unknown>).creatorEmail;
+    delete (processedHunt as Record<string, unknown>).preferredContactMethod;
+    
+    // Remove participant phone numbers unless authorized
+    if (!isCreator || !isCompleted) {
+      processedHunt.participants = hunt.participants.map(p => ({
+        ...p,
+        participantPhone: null,
+      }));
+    }
 
     return NextResponse.json(processedHunt, { status: 200 });
   } catch (error) {

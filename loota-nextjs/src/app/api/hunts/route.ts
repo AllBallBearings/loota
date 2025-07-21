@@ -239,10 +239,10 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const { name, type, creatorId, creatorName, pins } = await request.json();
+    const { name, type, creatorId, creatorName, creatorPhone, creatorEmail, preferredContactMethod, pins } = await request.json();
 
-    if (!type || !creatorId || !pins || !Array.isArray(pins)) {
-      return NextResponse.json({ message: 'Invalid request data' }, { status: 400 });
+    if (!type || !creatorId || !pins || !Array.isArray(pins) || !creatorPhone || !creatorEmail) {
+      return NextResponse.json({ message: 'Invalid request data. Phone and email are required.' }, { status: 400 });
     }
 
     // Ensure the creator user exists. If not, create a user with the provided name.
@@ -259,15 +259,27 @@ export async function POST(request: Request) {
         data: {
           id: creatorId,
           name: finalCreatorName,
-          // Other fields can be null or default as per schema
+          phone: creatorPhone,
+          email: creatorEmail,
         },
       });
     } else {
-      // Update existing user's name if a new name is provided
+      // Update existing user's name and contact info if provided
+      const updateData: { name?: string; phone?: string; email?: string } = {};
       if (creatorName && creatorUser.name !== finalCreatorName) {
+        updateData.name = finalCreatorName;
+      }
+      if (creatorPhone && creatorUser.phone !== creatorPhone) {
+        updateData.phone = creatorPhone;
+      }
+      if (creatorEmail && creatorUser.email !== creatorEmail) {
+        updateData.email = creatorEmail;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
         creatorUser = await prisma.user.update({
           where: { id: creatorId },
-          data: { name: finalCreatorName },
+          data: updateData,
         });
       }
     }
@@ -276,6 +288,9 @@ export async function POST(request: Request) {
       data: {
         name: name || null,
         type: type,
+        creatorPhone: creatorPhone,
+        creatorEmail: creatorEmail,
+        preferredContactMethod: preferredContactMethod || 'phone',
         creator: {
           connect: {
             id: creatorUser.id, // Connect using the ID of the found or created creator user
