@@ -91,10 +91,14 @@ export async function POST(
   { params }: { params: Promise<{ huntId: string }> }
 ) {
   const { huntId } = await params;
-  const { userId } = await request.json();
+  const { userId, participantPhone } = await request.json();
 
   if (!userId) {
     return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  }
+
+  if (!participantPhone) {
+    return NextResponse.json({ error: 'Participant phone number is required' }, { status: 400 });
   }
 
   try {
@@ -124,6 +128,7 @@ export async function POST(
       data: {
         userId: userId,
         huntId: huntId,
+        participantPhone: participantPhone,
       },
     });
 

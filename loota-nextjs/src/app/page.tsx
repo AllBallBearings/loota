@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import MapComponent, { MapComponentRef, MapMarker } from '../components/MapComponent';
 import ProximityComponent, { ProximityComponentRef, ProximityMarkerData } from '../components/ProximityComponent';
 
@@ -26,12 +26,64 @@ export default function ModernHome() {
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [huntName, setHuntName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
+  const [creatorPhone, setCreatorPhone] = useState<string>('');
+  const [creatorEmail, setCreatorEmail] = useState<string>('');
+  const [preferredContactMethod, setPreferredContactMethod] = useState<'phone' | 'email'>('phone');
+  const [existingUserData, setExistingUserData] = useState<{phone?: string; email?: string} | null>(null);
+  const [useExistingContact, setUseExistingContact] = useState<boolean>(true);
   const [generatedUrl, setGeneratedUrl] = useState<string>('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isLoading, setIsLoading] = useState(false);
 
   const mapComponentRef = useRef<MapComponentRef>(null);
   const proximityComponentRef = useRef<ProximityComponentRef>(null);
+
+  // Check for existing user data on component mount
+  useEffect(() => {
+    const checkExistingUser = async () => {
+      const creatorId = "a1b2c3d4-e5f6-7890-1234-000000000001"; // Same ID used in generateLootLink
+      
+      try {
+        const response = await fetch(`/api/users/${creatorId}`, {
+          headers: {
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
+          },
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          if (userData.phone || userData.email) {
+            setExistingUserData({
+              phone: userData.phone,
+              email: userData.email,
+            });
+            
+            // Pre-populate form with existing data if user chooses to use it
+            if (userData.phone) setCreatorPhone(userData.phone);
+            if (userData.email) setCreatorEmail(userData.email);
+          }
+        }
+      } catch (error) {
+        console.log('No existing user data found or error fetching:', error);
+      }
+    };
+
+    checkExistingUser();
+  }, []);
+
+  const handleContactMethodToggle = (useExisting: boolean) => {
+    setUseExistingContact(useExisting);
+    
+    if (useExisting && existingUserData) {
+      // Use existing contact information
+      if (existingUserData.phone) setCreatorPhone(existingUserData.phone);
+      if (existingUserData.email) setCreatorEmail(existingUserData.email);
+    } else {
+      // Clear form for new contact information
+      setCreatorPhone('');
+      setCreatorEmail('');
+    }
+  };
 
   const handleHuntTypeChange = (type: 'geolocation' | 'proximity') => {
     setCurrentHuntType(type);
@@ -55,6 +107,13 @@ export default function ModernHome() {
   const generateLootLink = useCallback(async () => {
     setIsLoading(true);
     setGeneratedUrl('');
+
+    // Validate required contact information
+    if (!creatorPhone.trim() || !creatorEmail.trim()) {
+      alert("Please provide both phone number and email address.");
+      setIsLoading(false);
+      return;
+    }
 
     let huntData: MapMarker[] | ProximityMarkerData[] | null = null;
 
@@ -93,6 +152,9 @@ export default function ModernHome() {
           type: currentHuntType,
           creatorId: creatorId,
           creatorName: userName.trim() || 'Anonymous Creator',
+          creatorPhone: creatorPhone.trim(),
+          creatorEmail: creatorEmail.trim(),
+          preferredContactMethod: preferredContactMethod,
           pins: huntData,
         }),
       });
@@ -113,7 +175,7 @@ export default function ModernHome() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentHuntType, huntName, userName]);
+  }, [currentHuntType, huntName, userName, creatorPhone, creatorEmail, preferredContactMethod]);
 
   return (
     <div className="main-layout bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-dark-950 dark:via-dark-900 dark:to-dark-800">
@@ -198,7 +260,7 @@ export default function ModernHome() {
             </div>
 
             {/* Hunt Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Hunt Name
@@ -225,6 +287,126 @@ export default function ModernHome() {
                   className="input"
                   maxLength={100}
                 />
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="border-t border-slate-200 dark:border-dark-700 pt-6">
+              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <ModernIcons.User />
+                Contact Information (Required)
+              </h4>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                Your preferred contact method will be shared with winners so they can reach you to collect their prize.
+              </p>
+
+              {/* Existing Contact Information Toggle */}
+              {existingUserData && (existingUserData.phone || existingUserData.email) && (
+                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                    We found your saved contact information
+                  </h5>
+                  <div className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                    {existingUserData.phone && <div>Phone: {existingUserData.phone}</div>}
+                    {existingUserData.email && <div>Email: {existingUserData.email}</div>}
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleContactMethodToggle(true)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        useExistingContact
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white dark:bg-dark-800 text-blue-600 border border-blue-300'
+                      }`}
+                    >
+                      Use Saved Info
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleContactMethodToggle(false)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        !useExistingContact
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white dark:bg-dark-800 text-blue-600 border border-blue-300'
+                      }`}
+                    >
+                      Enter New Info
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    value={creatorPhone}
+                    onChange={(e) => setCreatorPhone(e.target.value)}
+                    placeholder="(555) 123-4567"
+                    className="input"
+                    disabled={useExistingContact && Boolean(existingUserData?.phone)}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    value={creatorEmail}
+                    onChange={(e) => setCreatorEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="input"
+                    disabled={useExistingContact && Boolean(existingUserData?.email)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                  Preferred Contact Method
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setPreferredContactMethod('phone')}
+                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                      preferredContactMethod === 'phone'
+                        ? 'border-adventure-500 bg-adventure-50 dark:bg-adventure-900/20'
+                        : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-lg mb-1">📱</div>
+                      <div className="font-medium">Phone</div>
+                      <div className="text-xs text-slate-500">Text/Call</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setPreferredContactMethod('email')}
+                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                      preferredContactMethod === 'email'
+                        ? 'border-adventure-500 bg-adventure-50 dark:bg-adventure-900/20'
+                        : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-lg mb-1">📧</div>
+                      <div className="font-medium">Email</div>
+                      <div className="text-xs text-slate-500">Messages</div>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
