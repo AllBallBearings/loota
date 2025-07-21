@@ -374,38 +374,42 @@ export default function ModernHome() {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                   Preferred Contact Method
                 </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setPreferredContactMethod('phone')}
-                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                      preferredContactMethod === 'phone'
-                        ? 'border-adventure-500 bg-adventure-50 dark:bg-adventure-900/20'
-                        : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg mb-1">📱</div>
-                      <div className="font-medium">Phone</div>
-                      <div className="text-xs text-slate-500">Text/Call</div>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-dark-700 hover:bg-slate-50 dark:hover:bg-dark-800 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="preferredContactMethod"
+                      value="phone"
+                      checked={preferredContactMethod === 'phone'}
+                      onChange={(e) => setPreferredContactMethod(e.target.value as 'phone')}
+                      className="w-4 h-4 text-adventure-600 focus:ring-adventure-500"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">📱</span>
+                      <div>
+                        <div className="font-medium">Phone</div>
+                        <div className="text-xs text-slate-500">Text/Call</div>
+                      </div>
                     </div>
-                  </button>
+                  </label>
                   
-                  <button
-                    type="button"
-                    onClick={() => setPreferredContactMethod('email')}
-                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                      preferredContactMethod === 'email'
-                        ? 'border-adventure-500 bg-adventure-50 dark:bg-adventure-900/20'
-                        : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg mb-1">📧</div>
-                      <div className="font-medium">Email</div>
-                      <div className="text-xs text-slate-500">Messages</div>
+                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-dark-700 hover:bg-slate-50 dark:hover:bg-dark-800 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="preferredContactMethod"
+                      value="email"
+                      checked={preferredContactMethod === 'email'}
+                      onChange={(e) => setPreferredContactMethod(e.target.value as 'email')}
+                      className="w-4 h-4 text-adventure-600 focus:ring-adventure-500"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">📧</span>
+                      <div>
+                        <div className="font-medium">Email</div>
+                        <div className="text-xs text-slate-500">Messages</div>
+                      </div>
                     </div>
-                  </button>
+                  </label>
                 </div>
               </div>
             </div>
