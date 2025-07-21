@@ -28,6 +28,9 @@ const prisma = new PrismaClient();
  *                 id:
  *                   type: string
  *                   format: uuid
+ *                 name:
+ *                   type: string
+ *                   description: Optional name for the hunt
  *                 type:
  *                   type: string
  *                 createdAt:
@@ -148,6 +151,7 @@ export async function GET(
     }
 
     const { huntId } = await params;
+    const requesterId = request.nextUrl.searchParams.get('userId');
 
     if (!huntId) {
       return NextResponse.json({ message: 'Hunt ID is required' }, { status: 400 });
@@ -157,9 +161,33 @@ export async function GET(
       where: {
         id: huntId,
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        createdAt: true,
+        updatedAt: true,
+        creatorId: true,
+        winnerId: true,
+        isCompleted: true,
+        completedAt: true,
+        creatorPhone: true,
+        creatorEmail: true,
+        preferredContactMethod: true,
         pins: {
-          include: {
+          select: {
+            id: true,
+            huntId: true,
+            lat: true,
+            lng: true,
+            distanceFt: true,
+            directionStr: true,
+            x: true,
+            y: true,
+            order: true,
+            collectedByUserId: true,
+            collectedAt: true,
+            createdAt: true,
             collectedByUser: {
               select: {
                 id: true,
@@ -167,9 +195,17 @@ export async function GET(
               },
             },
           },
+          orderBy: {
+            order: 'asc',
+          },
         },
         participants: {
-          include: {
+          select: {
+            id: true,
+            userId: true,
+            huntId: true,
+            joinedAt: true,
+            participantPhone: true,
             user: {
               select: {
                 id: true,
@@ -184,6 +220,12 @@ export async function GET(
             name: true,
           },
         },
+        winner: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -191,7 +233,60 @@ export async function GET(
       return NextResponse.json({ message: 'Hunt not found' }, { status: 404 });
     }
 
-    return NextResponse.json(hunt, { status: 200 });
+    // Determine if requester should see contact information
+    const isCreator = requesterId === hunt.creatorId;
+    const isWinner = requesterId === hunt.winnerId;
+    const isCompleted = hunt.isCompleted;
+
+    // Manually convert Decimal fields to numbers for frontend compatibility
+    const processedHunt = {
+      ...hunt,
+      pins: hunt.pins.map(pin => ({
+        ...pin,
+        lat: pin.lat ? Number(pin.lat) : undefined,
+        lng: pin.lng ? Number(pin.lng) : undefined,
+        distanceFt: pin.distanceFt ? Number(pin.distanceFt) : undefined,
+        x: pin.x ? Number(pin.x) : undefined,
+        y: pin.y ? Number(pin.y) : undefined,
+      })),
+      winnerContact: undefined as { name?: string; phone?: string } | undefined,
+      creatorContact: undefined as { name?: string; preferred?: string; phone?: string; email?: string } | undefined,
+    };
+
+    // Add contact information based on authorization and hunt completion
+    if (isCompleted && isCreator && hunt.winnerId) {
+      // Creator can see winner's contact info for completed hunts
+      const winnerParticipation = hunt.participants.find(p => p.userId === hunt.winnerId);
+      processedHunt.winnerContact = {
+        name: hunt.winner?.name,
+        phone: winnerParticipation?.participantPhone || undefined,
+      };
+    }
+
+    if (isCompleted && isWinner) {
+      // Winner can see creator's preferred contact info for completed hunts
+      processedHunt.creatorContact = {
+        name: hunt.creator?.name,
+        preferred: hunt.preferredContactMethod || undefined,
+        phone: hunt.preferredContactMethod === 'phone' ? (hunt.creatorPhone || undefined) : undefined,
+        email: hunt.preferredContactMethod === 'email' ? (hunt.creatorEmail || undefined) : undefined,
+      };
+    }
+
+    // Remove sensitive contact fields from the main response
+    delete (processedHunt as Record<string, unknown>).creatorPhone;
+    delete (processedHunt as Record<string, unknown>).creatorEmail;
+    delete (processedHunt as Record<string, unknown>).preferredContactMethod;
+    
+    // Remove participant phone numbers unless authorized
+    if (!isCreator || !isCompleted) {
+      processedHunt.participants = hunt.participants.map(p => ({
+        ...p,
+        participantPhone: null,
+      }));
+    }
+
+    return NextResponse.json(processedHunt, { status: 200 });
   } catch (error) {
     console.error('Error retrieving hunt:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

@@ -157,6 +157,95 @@ export async function GET(
  *                   type: string
  *                   example: Internal Server Error
  */
+/**
+ * @swagger
+ * /api/users/{userId}:
+ *   put:
+ *     summary: Update a user's name
+ *     description: Updates the name of a specific user by their ID.
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The ID of the user to update.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The new name of the user.
+ *     responses:
+ *       200:
+ *         description: User updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Bad request, user ID or name is missing.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User ID and name are required
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Internal Server Error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal Server Error
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  try {
+    const { userId } = await params;
+    const { name } = await request.json();
+
+    if (!userId || !name) {
+      return NextResponse.json({ message: 'User ID and name are required' }, { status: 400 });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { name },
+    });
+
+    return NextResponse.json(updatedUser, { status: 200 });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    if ((error as { code?: string }).code === 'P2025') {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    }
+    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }

@@ -31,6 +31,34 @@ const prisma = new PrismaClient();
  *                 type: string
  *                 description: Optional unique device ID from the user's device.
  *     responses:
+ *       200:
+ *         description: Existing user found with the provided device ID.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User found with this device ID
+ *                 userId:
+ *                   type: string
+ *                   format: uuid
+ *                   example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+ *                 existingUser:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     name:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                       nullable: true
+ *                     paypalId:
+ *                       type: string
+ *                       nullable: true
  *       201:
  *         description: User registered successfully. Returns the new user's ID.
  *         content:
@@ -56,7 +84,7 @@ const prisma = new PrismaClient();
  *                   type: string
  *                   example: Name is required
  *       409:
- *         description: Conflict, user with provided phone, PayPal ID, or device ID already exists.
+ *         description: Conflict, user with provided phone or PayPal ID already exists.
  *         content:
  *           application/json:
  *             schema:
@@ -108,7 +136,16 @@ export async function POST(request: Request) {
         where: { deviceId: deviceId },
       });
       if (existingUserByDeviceId) {
-        return NextResponse.json({ error: 'User with this device ID already exists' }, { status: 409 });
+        return NextResponse.json({ 
+          message: 'User found with this device ID', 
+          userId: existingUserByDeviceId.id,
+          existingUser: {
+            id: existingUserByDeviceId.id,
+            name: existingUserByDeviceId.name,
+            phone: existingUserByDeviceId.phone,
+            paypalId: existingUserByDeviceId.paypalId
+          }
+        }, { status: 200 });
       }
     }
 

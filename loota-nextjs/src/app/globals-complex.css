@@ -1,0 +1,400 @@
+@import 'swagger-ui-react/swagger-ui.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Modern CSS Custom Properties */
+:root {
+  /* Enhanced color system */
+  --treasure-primary: #ffc107;
+  --treasure-secondary: #ff8f00;
+  --adventure-primary: #2196f3;
+  --adventure-secondary: #1976d2;
+  --mystery-primary: #e91e63;
+  --success-primary: #4caf50;
+  
+  /* Modern spacing scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  
+  /* Enhanced shadows */
+  --shadow-soft: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+  --shadow-moderate: 0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 20px rgba(33, 150, 243, 0.3);
+  --shadow-treasure: 0 0 30px rgba(255, 193, 7, 0.3);
+  
+  /* Border radius scale */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+/* Base layer - Modern reset and fundamentals */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #eff6ff 100%);
+    color: #0f172a;
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    min-height: 100vh;
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Enhanced typography scale */
+  h1 {
+    @apply text-4xl md:text-5xl font-bold tracking-tight;
+    @apply bg-gradient-to-r from-adventure-600 to-treasure-600 bg-clip-text text-transparent;
+  }
+  
+  h2 {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight;
+    @apply text-slate-800 dark:text-slate-200;
+  }
+  
+  h3 {
+    @apply text-xl md:text-2xl font-semibold;
+    @apply text-slate-700 dark:text-slate-300;
+  }
+  
+  p {
+    @apply text-base leading-relaxed;
+    @apply text-slate-600 dark:text-slate-400;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100 dark:bg-dark-800;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-adventure-300 dark:bg-adventure-600 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-adventure-400 dark:bg-adventure-500;
+  }
+}
+
+/* Component layer - Reusable design system components */
+@layer components {
+  /* Modern card system */
+  .card {
+    @apply bg-white/80 dark:bg-dark-800/80 backdrop-blur-sm;
+    @apply border border-slate-200/50 dark:border-dark-700/50;
+    @apply rounded-2xl shadow-soft;
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-moderate hover:-translate-y-1;
+    @apply hover:bg-white/90 dark:hover:bg-dark-800/90;
+  }
+  
+  .card-glow {
+    @apply shadow-glow;
+  }
+  
+  .card-treasure {
+    @apply shadow-treasure border-treasure-200 dark:border-treasure-700;
+  }
+  
+  /* Modern button system */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply px-6 py-3 rounded-xl font-semibold;
+    @apply transition-all duration-200 ease-out;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply active:scale-95;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-adventure-500 to-adventure-600;
+    @apply hover:from-adventure-600 hover:to-adventure-700;
+    @apply text-white shadow-soft hover:shadow-moderate;
+    @apply focus:ring-adventure-500;
+  }
+  
+  .btn-treasure {
+    @apply bg-gradient-to-r from-treasure-500 to-treasure-600;
+    @apply hover:from-treasure-600 hover:to-treasure-700;
+    @apply text-white shadow-soft hover:shadow-treasure;
+    @apply focus:ring-treasure-500;
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-success-500 to-success-600;
+    @apply hover:from-success-600 hover:to-success-700;
+    @apply text-white shadow-soft hover:shadow-moderate;
+    @apply focus:ring-success-500;
+  }
+  
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-500 to-red-600;
+    @apply hover:from-red-600 hover:to-red-700;
+    @apply text-white shadow-soft hover:shadow-moderate;
+    @apply focus:ring-red-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-slate-100 dark:bg-dark-700;
+    @apply hover:bg-slate-200 dark:hover:bg-dark-600;
+    @apply text-slate-900 dark:text-slate-100;
+    @apply border border-slate-300 dark:border-dark-600;
+    @apply focus:ring-slate-500;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent hover:bg-slate-100 dark:hover:bg-dark-800;
+    @apply text-slate-700 dark:text-slate-300;
+    @apply focus:ring-slate-500;
+  }
+  
+  /* Modern form elements */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl;
+    @apply bg-white/80 dark:bg-dark-800/80 backdrop-blur-sm;
+    @apply border border-slate-300 dark:border-dark-600;
+    @apply text-slate-900 dark:text-slate-100;
+    @apply placeholder:text-slate-500 dark:placeholder:text-slate-400;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-adventure-500 focus:border-adventure-500;
+  }
+  
+  /* Navigation components */
+  .nav-header {
+    @apply bg-white/90 dark:bg-dark-900/90 backdrop-blur-md;
+    @apply border-b border-slate-200/50 dark:border-dark-700/50;
+    @apply sticky top-0 z-50;
+  }
+  
+  /* Container system */
+  .container-modern {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .container-tight {
+    @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Layout components */
+  .main-layout {
+    @apply min-h-screen flex flex-col;
+  }
+  
+  .content-area {
+    @apply flex-1 py-8 lg:py-12;
+  }
+  
+  /* Status indicators */
+  .status-indicator {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .status-success {
+    @apply bg-success-100 text-success-800 dark:bg-success-900/30 dark:text-success-300;
+  }
+  
+  .status-warning {
+    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300;
+  }
+  
+  .status-error {
+    @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300;
+  }
+  
+  .status-info {
+    @apply bg-adventure-100 text-adventure-800 dark:bg-adventure-900/30 dark:text-adventure-300;
+  }
+  
+  /* Loading states */
+  .loading-spinner {
+    @apply animate-spin h-6 w-6 border-2 border-slate-300 border-t-adventure-600 rounded-full;
+  }
+  
+  .loading-pulse {
+    @apply animate-pulse bg-slate-200 dark:bg-dark-700 rounded;
+  }
+  
+  /* Map and proximity components */
+  .map-container-modern {
+    @apply rounded-2xl overflow-hidden shadow-moderate;
+    @apply border-2 border-adventure-200 dark:border-adventure-700;
+    @apply bg-white dark:bg-dark-800;
+    @apply relative;
+  }
+  
+  .map-container-modern::before {
+    content: '';
+    @apply absolute inset-0 rounded-2xl;
+    @apply bg-gradient-to-r from-adventure-500/20 to-treasure-500/20;
+    @apply pointer-events-none z-10;
+  }
+  
+  .proximity-interface {
+    @apply relative bg-gradient-to-br from-slate-50 to-slate-100;
+    @apply dark:from-dark-800 dark:to-dark-900;
+    @apply rounded-2xl border border-slate-200 dark:border-dark-700;
+    @apply overflow-hidden;
+  }
+  
+  /* Treasure hunt specific components */
+  .treasure-indicator {
+    @apply animate-treasure-sparkle;
+    @apply bg-gradient-to-r from-treasure-400 to-treasure-600;
+    @apply text-white rounded-full;
+    @apply shadow-treasure;
+  }
+  
+  .pin-marker {
+    @apply bg-gradient-to-r from-mystery-500 to-mystery-600;
+    @apply text-white rounded-full;
+    @apply shadow-moderate hover:shadow-strong;
+    @apply transition-all duration-200;
+    @apply transform hover:scale-110;
+  }
+  
+  /* Stats and progress components */
+  .stats-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+  
+  .stat-card {
+    @apply card card-hover;
+    @apply p-6 text-center;
+  }
+  
+  .stat-value {
+    @apply text-3xl font-bold;
+    @apply bg-gradient-to-r from-adventure-600 to-treasure-600 bg-clip-text text-transparent;
+  }
+  
+  .stat-label {
+    @apply text-sm font-medium text-slate-600 dark:text-slate-400;
+    @apply uppercase tracking-wide;
+  }
+  
+  /* Participant and collection lists */
+  .participant-list {
+    @apply space-y-3;
+  }
+  
+  .participant-item {
+    @apply card p-4;
+    @apply flex items-center justify-between;
+    @apply hover:bg-slate-50 dark:hover:bg-dark-700/50;
+  }
+  
+  .collection-item {
+    @apply card p-4;
+    @apply border-l-4 border-success-500;
+    @apply bg-success-50/50 dark:bg-success-900/20;
+  }
+  
+  /* Utility classes */
+  .glass-effect {
+    @apply bg-white/10 dark:bg-black/10 backdrop-blur-md;
+    @apply border border-white/20 dark:border-white/10;
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-adventure-600 to-treasure-600 bg-clip-text text-transparent;
+  }
+  
+  .glow-border {
+    @apply relative;
+  }
+  
+  .glow-border::before {
+    content: '';
+    @apply absolute inset-0 rounded-inherit;
+    @apply bg-gradient-to-r from-adventure-500 to-treasure-500;
+    @apply p-[2px] -z-10;
+  }
+  
+  /* Animation utilities */
+  .animate-fade-in {
+    @apply animate-fade-in;
+  }
+  
+  .animate-slide-up {
+    @apply animate-slide-up;
+  }
+  
+  .animate-float {
+    @apply animate-float;
+  }
+}
+
+/* Utilities layer - Custom utility classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  
+  /* Enhanced focus styles */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-adventure-500;
+  }
+  
+  /* Scroll margin for anchors */
+  .scroll-mt-header {
+    scroll-margin-top: 5rem;
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Legacy compatibility - Maintain existing functionality while transitioning */
+.legacy-support {
+  /* Map specific legacy styles that need to be maintained */
+  #map {
+    @apply h-full w-full;
+  }
+  
+  /* Proximity marker compatibility */
+  .proximity-marker-dot {
+    @apply absolute w-3 h-3 bg-mystery-500 border border-mystery-600 rounded-full;
+    @apply transform -translate-x-1/2 -translate-y-1/2;
+    @apply shadow-moderate;
+  }
+  
+  /* Ensure backward compatibility with existing components */
+  .btn-primary.legacy {
+    @apply bg-success-500 hover:bg-success-600 text-white;
+  }
+  
+  .btn-secondary.legacy {
+    @apply bg-adventure-500 hover:bg-adventure-600 text-white;
+  }
+  
+  .btn-danger.legacy {
+    @apply bg-red-500 hover:bg-red-600 text-white;
+  }
+}

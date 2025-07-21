@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Pin" ADD COLUMN "order" INTEGER NOT NULL DEFAULT 0;

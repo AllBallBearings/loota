@@ -12,6 +12,7 @@ model User {
   id              String             @id @default(uuid()) @db.Uuid
   name            String
   phone           String?            @unique // Optional, but useful for contact and unique identification
+  email           String?            @unique // Email address for contact
   paypalId        String?            @unique // Optional, for receiving winnings
   deviceId        String?            @unique // New field for iOS device ID
   createdAt       DateTime           @default(now())
@@ -24,11 +25,17 @@ model User {
 
 model Hunt {
   id              String             @id @default(uuid()) @db.Uuid
+  name            String?            // Optional name for the hunt
   type            String   // 'geolocation' or 'proximity'
   creatorId       String?  @db.Uuid // New field to store the ID of the user who created this hunt (made optional for migration)
   creator         User?    @relation("CreatedHunts", fields: [creatorId], references: [id])
+  creatorPhone    String?  // Creator's phone number for winner contact
+  creatorEmail    String?  // Creator's email for winner contact
+  preferredContactMethod String? // 'phone' or 'email' - creator's preferred contact method
   winnerId        String?  @db.Uuid // New field to store the ID of the winning user
   winner          User?    @relation("Winner", fields: [winnerId], references: [id])
+  isCompleted     Boolean  @default(false) // Track if hunt is completed
+  completedAt     DateTime? // When the hunt was completed
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   pins            Pin[]
@@ -45,6 +52,7 @@ model Pin {
   directionStr String?  // For proximity pins (e.g., "N45E")
   x            Decimal? // Relative X coordinate for proximity pins within the circle
   y            Decimal? // Relative Y coordinate for proximity pins within the circle
+  order        Int      @default(0) // Order of pin creation to maintain sequence
   collectedByUserId String?  @db.Uuid // New field to store the ID of the user who collected this pin
   collectedByUser   User?    @relation("CollectedPins", fields: [collectedByUserId], references: [id])
   collectedAt       DateTime? // Timestamp when the pin was collected
@@ -57,7 +65,9 @@ model HuntParticipation {
   huntId    String   @db.Uuid
   user      User     @relation(fields: [userId], references: [id])
   hunt      Hunt     @relation(fields: [huntId], references: [id])
+  participantPhone String? // Participant's phone number for winner contact (required for joining)
   joinedAt  DateTime @default(now()) // Timestamp when the user joined this specific hunt
+  notifiedOfCompletion Boolean @default(false) // Track if user was notified of hunt completion
   // You could add other fields here, e.g., score, current progress, status (active, left, etc.)
 
   @@unique([userId, huntId]) // Ensures a user can only participate in a specific hunt once

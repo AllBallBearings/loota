@@ -23,32 +23,22 @@ export interface MapComponentRef {
 
 interface MapComponentProps {
   initialMarkers?: MapMarker[]; // Add this prop
+  onMarkersChange?: (markers: MapMarker[]) => void;
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "YOUR_GOOGLE_MAPS_API_KEY";
 
 const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
-  { initialMarkers = [] }, // Destructure initialMarkers with a default empty array
+  { initialMarkers = [], onMarkersChange }, // Destructure initialMarkers with a default empty array
   ref
 ) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [markerData, setMarkerData] = useState<MapMarker[]>(initialMarkers); // Initialize with initialMarkers
   const currentGoogleMarkers = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
-  const coordinatesDisplayRef = useRef<HTMLDivElement | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
-  const [mapInitialized, setMapInitialized] = useState(false);
 
   console.log("MapComponent rendering...");
-
-  const updateCoordinatesDisplay = useCallback(() => {
-    if (coordinatesDisplayRef.current) {
-      const coordText = markerData.map((marker, index) => {
-        return `Pin ${index + 1}: Latitude: ${marker.lat.toFixed(6)}, Longitude: ${marker.lng.toFixed(6)}`;
-      }).join('<br>');
-      coordinatesDisplayRef.current.innerHTML = coordText;
-    }
-  }, [markerData]);
 
   const addMarker = useCallback((location: google.maps.LatLng) => {
     setMarkerData((prevData) => [
@@ -73,20 +63,24 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
   const initializeMap = useCallback(() => {
     console.log("Attempting to initialize map...");
-    if (mapInitialized) {
-      console.log("Map already initialized, skipping.");
-      return;
-    }
-
+    
     if (!mapDivRef.current || !window.google) {
       console.warn("Map div ref or Google Maps API not ready for initialization.");
       return;
     }
 
+    // Always reinitialize to handle component remounting
+    if (mapRef.current) {
+      console.log("Cleaning up existing map instance...");
+      mapRef.current = null;
+      currentGoogleMarkers.current.forEach(marker => marker.map = null);
+      currentGoogleMarkers.current = [];
+    }
+
     const defaultCenter = { lat: 40.7128, lng: -74.0060 };
 
     mapRef.current = new window.google.maps.Map(mapDivRef.current, {
-      zoom: 19,
+      zoom: 18,
       center: defaultCenter,
       mapId: 'LOOTA_MAP_ID'
     });
@@ -119,9 +113,8 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         addMarker(event.latLng);
       }
     });
-    setMapInitialized(true);
     console.log("Map initialized successfully.");
-  }, [addMarker, handleLocationError, mapInitialized]);
+  }, [addMarker, handleLocationError]);
 
   useEffect(() => {
     if (!mapRef.current || !window.google.maps.marker) return;
@@ -152,12 +145,10 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
       currentGoogleMarkers.current.push(marker);
     });
 
-    updateCoordinatesDisplay();
-  }, [markerData, updateCoordinatesDisplay]);
-
-  useEffect(() => {
-    coordinatesDisplayRef.current = document.getElementById('coordinates-display') as HTMLDivElement;
-  }, []);
+    if (onMarkersChange) {
+      onMarkersChange(markerData);
+    }
+  }, [markerData, onMarkersChange]);
 
   const deleteLastPin = useCallback(() => {
     setMarkerData((prevData) => {
@@ -183,16 +174,33 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     clearAllPins,
   }));
 
+  // Effect to reinitialize map when component becomes visible again
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (window.google && mapDivRef.current && !mapRef.current) {
+        console.log("Reinitializing map after component switch...");
+        initializeMap();
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [initializeMap]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        console.log("Cleaning up map on unmount...");
+        currentGoogleMarkers.current.forEach(marker => marker.map = null);
+        currentGoogleMarkers.current = [];
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <>
-      <div className="map-and-list-container">
-        <div id="map-container" style={{ height: '500px', flex: '0 0 65%', marginRight: '20px' }}>
-          <div id="map" ref={mapDivRef} style={{ width: '100%', height: '100%' }}></div>
-        </div>
-        <div className="list-wrapper">
-          <div id="coordinates-display" ref={coordinatesDisplayRef}></div>
-        </div>
-      </div>
+      <div id="map" ref={mapDivRef} style={{ width: '100%', height: '100%' }}></div>
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&mapId=LOOTA_MAP_ID&libraries=marker`}
         strategy="afterInteractive"

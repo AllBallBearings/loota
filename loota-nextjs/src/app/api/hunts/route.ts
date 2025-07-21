@@ -20,6 +20,9 @@ const prisma = new PrismaClient();
  *               - creatorId
  *               - pins
  *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Optional name for the hunt.
  *               type:
  *                 type: string
  *                 description: The type of the hunt (e.g., 'geolocation' or 'proximity').
@@ -28,6 +31,9 @@ const prisma = new PrismaClient();
  *                 type: string
  *                 format: uuid
  *                 description: The ID of the user creating the hunt.
+ *               creatorName:
+ *                 type: string
+ *                 description: The name of the user creating the hunt.
  *               pins:
  *                 type: array
  *                 description: An array of pin objects associated with the hunt.
@@ -155,6 +161,9 @@ export async function GET() {
  *               - creatorId
  *               - pins
  *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Optional name for the hunt.
  *               type:
  *                 type: string
  *                 description: The type of the hunt (e.g., 'geolocation' or 'proximity').
@@ -163,6 +172,9 @@ export async function GET() {
  *                 type: string
  *                 format: uuid
  *                 description: The ID of the user creating the hunt.
+ *               creatorName:
+ *                 type: string
+ *                 description: The name of the user creating the hunt.
  *               pins:
  *                 type: array
  *                 description: An array of pin objects associated with the hunt.
@@ -227,24 +239,72 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const { type, creatorId, pins } = await request.json();
+    const { name, type, creatorId, creatorName, creatorPhone, creatorEmail, preferredContactMethod, pins } = await request.json();
 
-    if (!type || !creatorId || !pins || !Array.isArray(pins)) {
-      return NextResponse.json({ message: 'Invalid request data' }, { status: 400 });
+    if (!type || !creatorId || !pins || !Array.isArray(pins) || !creatorPhone || !creatorEmail) {
+      return NextResponse.json({ message: 'Invalid request data. Phone and email are required.' }, { status: 400 });
+    }
+
+    // Ensure the creator user exists. If not, create a user with the provided name.
+    // In a real application, creatorId would come from an authenticated session.
+    let creatorUser = await prisma.user.findUnique({
+      where: { id: creatorId },
+    });
+
+    const finalCreatorName = creatorName || "Anonymous Creator";
+
+    if (!creatorUser) {
+      console.log(`Creator user with ID ${creatorId} not found. Creating user: ${finalCreatorName}`);
+      creatorUser = await prisma.user.create({
+        data: {
+          id: creatorId,
+          name: finalCreatorName,
+          phone: creatorPhone,
+          email: creatorEmail,
+        },
+      });
+    } else {
+      // Update existing user's name and contact info if provided
+      const updateData: { name?: string; phone?: string; email?: string } = {};
+      if (creatorName && creatorUser.name !== finalCreatorName) {
+        updateData.name = finalCreatorName;
+      }
+      if (creatorPhone && creatorUser.phone !== creatorPhone) {
+        updateData.phone = creatorPhone;
+      }
+      if (creatorEmail && creatorUser.email !== creatorEmail) {
+        updateData.email = creatorEmail;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        creatorUser = await prisma.user.update({
+          where: { id: creatorId },
+          data: updateData,
+        });
+      }
     }
 
     const newHunt = await prisma.hunt.create({
       data: {
+        name: name || null,
         type: type,
-        creatorId: creatorId,
+        creatorPhone: creatorPhone,
+        creatorEmail: creatorEmail,
+        preferredContactMethod: preferredContactMethod || 'phone',
+        creator: {
+          connect: {
+            id: creatorUser.id, // Connect using the ID of the found or created creator user
+          },
+        },
         pins: {
-          create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string }) => ({
+          create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string }, index: number) => ({
             lat: pin.lat !== undefined ? parseFloat(pin.lat) : null,
             lng: pin.lng !== undefined ? parseFloat(pin.lng) : null,
             distanceFt: pin.distanceFt !== undefined ? parseFloat(pin.distanceFt) : null,
             directionStr: pin.directionStr || null,
             x: pin.x !== undefined ? parseFloat(pin.x) : null,
             y: pin.y !== undefined ? parseFloat(pin.y) : null,
+            order: index,
           })),
         },
       },

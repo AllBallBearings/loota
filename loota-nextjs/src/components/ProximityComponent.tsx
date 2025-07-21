@@ -399,32 +399,28 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         </div>
       </div>
 
-      <div className="list-wrapper">
+      <div style={{ 
+        flex: '0 0 35%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        background: 'rgba(255, 255, 255, 0.8)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '1rem',
+        boxShadow: 'var(--shadow)'
+      }}>
+        <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>📍 Proximity Markers</h4>
         <div
           id="proximity-coordinates-display"
           style={{
-            height: '450px',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            padding: '15px',
-            backgroundColor: '#fff',
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+            flex: 1,
             overflowY: 'auto',
-            marginBottom: '10px',
             fontSize: '0.9em',
             lineHeight: '1.6',
           }}
           ref={proximityCoordinatesDisplayElementRef}
         >
           {/* Proximity marker data will appear here */}
-        </div>
-        <div className="list-controls">
-          <button id="delete-last-proximity-button" className="btn btn-secondary" onClick={deleteLastProximityMarker}>
-            Delete Last Marker
-          </button>
-          <button id="clear-all-proximity-button" className="btn btn-danger" onClick={clearAllProximityMarkers}>
-            Clear All Markers
-          </button>
         </div>
       </div>
     </div>
