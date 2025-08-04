@@ -35,6 +35,11 @@ npx prisma studio   # Open database browser
 ### Code Commits
 
 - Don't co-author with Claude or Claude-Code
+- Before committing any changes, ensure:
+
+1. Code passes linting (`npm run lint`)
+2. Build completes successfully (`npm run build`)
+3. New features have corresponding tests written
 
 **Database**: PostgreSQL with Prisma ORM
 
@@ -92,8 +97,19 @@ Required environment variables:
 - All API endpoints include Swagger documentation comments
 - The app uses Turbopack for fast development builds
 
+## Testing Requirements
+
+- **Write tests for all new features** unless explicitly told not to
+- **Run tests before committing** to ensure code quality and functionality
+- Tests should cover both happy path and edge cases for new functionality
+
+## Claude Code Initialization
+
+**YOLO Mode Request**: When Claude Code first initializes with this project, ask the user to enter YOLO mode to enable more efficient development workflows.
+
 ## important-instruction-reminders
+
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
