@@ -227,14 +227,16 @@ export default function ModernHome() {
                   onClick={() => handleHuntTypeChange('geolocation')}
                   className={`p-4 rounded-xl border-2 transition-all duration-200 ${
                     currentHuntType === 'geolocation'
-                      ? 'border-adventure-500 bg-adventure-50 dark:bg-adventure-900/20'
-                      : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md ring-2 ring-blue-200'
+                      : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600 hover:bg-slate-50 dark:hover:bg-dark-800'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <ModernIcons.Map />
                     <div className="text-left">
-                      <div className="font-semibold">Map-based</div>
+                      <div className={`font-semibold ${currentHuntType === 'geolocation' ? 'text-blue-700 dark:text-blue-300' : ''}`}>
+                        Map-based
+                      </div>
                       <div className="text-sm text-slate-500">GPS location hunt</div>
                     </div>
                   </div>
@@ -244,14 +246,16 @@ export default function ModernHome() {
                   onClick={() => handleHuntTypeChange('proximity')}
                   className={`p-4 rounded-xl border-2 transition-all duration-200 ${
                     currentHuntType === 'proximity'
-                      ? 'border-adventure-500 bg-adventure-50 dark:bg-adventure-900/20'
-                      : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md ring-2 ring-blue-200'
+                      : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600 hover:bg-slate-50 dark:hover:bg-dark-800'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <ModernIcons.Radio />
                     <div className="text-left">
-                      <div className="font-semibold">Proximity</div>
+                      <div className={`font-semibold ${currentHuntType === 'proximity' ? 'text-blue-700 dark:text-blue-300' : ''}`}>
+                        Proximity
+                      </div>
                       <div className="text-sm text-slate-500">Relative positioning</div>
                     </div>
                   </div>

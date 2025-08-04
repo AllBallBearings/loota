@@ -1,0 +1,52 @@
+
+> loota-nextjs@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.3.4 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.180:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 860ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1287ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+MapComponent rendering...
+ GET / 200 in 1468ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/server/app/page/app-build-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/server/app/page/app-build-manifest.json'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 834ms
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/static/development/_buildManifest.js.tmp.5fmm6fk48kr'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/static/development/_buildManifest.js.tmp.5fmm6fk48kr'
+}
+[Error: ENOENT: no such file or directory, open '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/server/app/page/app-build-manifest.json'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/server/app/page/app-build-manifest.json'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/static/development/_buildManifest.js.tmp.82qdhn9ykrv'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/static/development/_buildManifest.js.tmp.82qdhn9ykrv'
+}
+[Error: ENOENT: no such file or directory, open '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/static/development/_buildManifest.js.tmp.mktl8n437b'] {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/Users/jaredgoolsby/Documents/Github/loota/loota-nextjs/.next/static/development/_buildManifest.js.tmp.mktl8n437b'
+}
+[?25h

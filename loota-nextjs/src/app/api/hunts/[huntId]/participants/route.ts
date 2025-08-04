@@ -90,15 +90,33 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ huntId: string }> }
 ) {
+  // API Key validation
+  const apiKey = request.headers.get('X-API-Key');
+  if (apiKey !== process.env.API_KEY_SECRET) {
+    console.error('Unauthorized participant join attempt:', {
+      providedKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'none',
+      timestamp: new Date().toISOString()
+    });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { huntId } = await params;
   const { userId, participantPhone } = await request.json();
+
+  console.log('Participant join request:', {
+    huntId,
+    userId,
+    participantPhone: participantPhone ? `${participantPhone.substring(0, 3)}***` : 'none',
+    timestamp: new Date().toISOString()
+  });
 
   if (!userId) {
     return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
   }
 
-  if (!participantPhone) {
-    return NextResponse.json({ error: 'Participant phone number is required' }, { status: 400 });
+  // participantPhone is optional - for contact purposes only
+  if (participantPhone && participantPhone.length > 0 && participantPhone.length < 5) {
+    return NextResponse.json({ error: 'Invalid phone number format' }, { status: 400 });
   }
 
   try {
@@ -106,8 +124,14 @@ export async function POST(
     const huntExists = await prisma.hunt.findUnique({ where: { id: huntId } });
     const userExists = await prisma.user.findUnique({ where: { id: userId } });
 
-    if (!huntExists || !userExists) {
-      return NextResponse.json({ error: 'Hunt or User not found' }, { status: 404 });
+    if (!huntExists) {
+      console.error('Hunt not found:', { huntId, timestamp: new Date().toISOString() });
+      return NextResponse.json({ error: 'Hunt not found' }, { status: 404 });
+    }
+
+    if (!userExists) {
+      console.error('User not found:', { userId, timestamp: new Date().toISOString() });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Check if user is already participating in this hunt
@@ -121,6 +145,7 @@ export async function POST(
     });
 
     if (existingParticipation) {
+      console.log('User already participating:', { userId, huntId, timestamp: new Date().toISOString() });
       return NextResponse.json({ error: 'User is already participating in this hunt' }, { status: 409 });
     }
 
@@ -130,6 +155,13 @@ export async function POST(
         huntId: huntId,
         participantPhone: participantPhone,
       },
+    });
+
+    console.log('User successfully joined hunt:', { 
+      userId, 
+      huntId, 
+      participationId: newParticipation.id,
+      timestamp: new Date().toISOString() 
     });
 
     return NextResponse.json({ message: 'User successfully joined the hunt', participationId: newParticipation.id }, { status: 201 });
@@ -206,8 +238,24 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ huntId: string }> }
 ) {
+  // API Key validation
+  const apiKey = request.headers.get('X-API-Key');
+  if (apiKey !== process.env.API_KEY_SECRET) {
+    console.error('Unauthorized participant leave attempt:', {
+      providedKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'none',
+      timestamp: new Date().toISOString()
+    });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { huntId } = await params;
   const userId = request.nextUrl.searchParams.get('userId');
+
+  console.log('Participant leave request:', {
+    huntId,
+    userId,
+    timestamp: new Date().toISOString()
+  });
 
   if (!userId) {
     return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -328,6 +376,16 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ huntId: string }> }
 ) {
+  // API Key validation
+  const apiKey = request.headers.get('X-API-Key');
+  if (apiKey !== process.env.API_KEY_SECRET) {
+    console.error('Unauthorized participant list attempt:', {
+      providedKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'none',
+      timestamp: new Date().toISOString()
+    });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { huntId } = await params;
 
   if (!huntId) {
