@@ -97,8 +97,25 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ huntId: string; pinId: string }> }
 ) {
+  // API Key validation
+  const apiKey = request.headers.get('X-API-Key');
+  if (apiKey !== process.env.API_KEY_SECRET) {
+    console.error('Unauthorized pin collection attempt:', {
+      providedKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'none',
+      timestamp: new Date().toISOString()
+    });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { huntId, pinId } = await params;
   const { collectedByUserId } = await request.json();
+
+  console.log('Pin collection request:', {
+    huntId,
+    pinId,
+    collectedByUserId,
+    timestamp: new Date().toISOString()
+  });
 
   if (!collectedByUserId) {
     return NextResponse.json({ error: 'collectedByUserId is required' }, { status: 400 });
@@ -108,11 +125,13 @@ export async function POST(
     // Verify hunt, pin, and user existence
     const huntExists = await prisma.hunt.findUnique({ where: { id: huntId } });
     if (!huntExists) {
+      console.error('Hunt not found for pin collection:', { huntId, timestamp: new Date().toISOString() });
       return NextResponse.json({ error: 'Hunt not found' }, { status: 404 });
     }
 
     const userExists = await prisma.user.findUnique({ where: { id: collectedByUserId } });
     if (!userExists) {
+      console.error('User not found for pin collection:', { collectedByUserId, timestamp: new Date().toISOString() });
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
@@ -121,10 +140,18 @@ export async function POST(
     });
 
     if (!pin) {
+      console.error('Pin not found in hunt:', { pinId, huntId, timestamp: new Date().toISOString() });
       return NextResponse.json({ error: 'Pin not found in this hunt' }, { status: 404 });
     }
 
     if (pin.collectedByUserId) {
+      console.log('Pin already collected:', { 
+        pinId, 
+        huntId, 
+        collectedBy: pin.collectedByUserId, 
+        newCollector: collectedByUserId,
+        timestamp: new Date().toISOString() 
+      });
       return NextResponse.json({ error: 'Pin already collected' }, { status: 409 });
     }
 
@@ -134,6 +161,14 @@ export async function POST(
         collectedByUserId: collectedByUserId,
         collectedAt: new Date(),
       },
+    });
+
+    console.log('Pin collected successfully:', { 
+      pinId, 
+      huntId, 
+      collectedByUserId,
+      collectedAt: updatedPin.collectedAt,
+      timestamp: new Date().toISOString() 
     });
 
     return NextResponse.json({ message: 'Pin collected successfully', pinId: updatedPin.id }, { status: 200 });

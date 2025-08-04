@@ -1131,6 +1131,157 @@ export const getApiDocs = async () => {
           },
         },
       },
+      '/api/users': {
+        get: {
+          summary: 'Get users',
+          description: 'Retrieve users by deviceId or get all users',
+          parameters: [
+            {
+              in: 'query',
+              name: 'deviceId',
+              schema: {
+                type: 'string',
+              },
+              description: 'iOS device ID to filter by',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Users retrieved successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      users: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: {
+                              type: 'string',
+                              format: 'uuid',
+                            },
+                            name: {
+                              type: 'string',
+                            },
+                            phone: {
+                              type: 'string',
+                              nullable: true,
+                            },
+                            paypalId: {
+                              type: 'string',
+                              nullable: true,
+                            },
+                            deviceId: {
+                              type: 'string',
+                              nullable: true,
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time',
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            '400': {
+              description: 'Bad request',
+            },
+            '500': {
+              description: 'Internal server error',
+            },
+          },
+        },
+        put: {
+          summary: 'Update user',
+          description: 'Update user information by deviceId',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['deviceId'],
+                  properties: {
+                    deviceId: {
+                      type: 'string',
+                      description: 'iOS device ID to identify user',
+                    },
+                    phone: {
+                      type: 'string',
+                      description: 'Phone number',
+                    },
+                    paypalId: {
+                      type: 'string',
+                      description: 'PayPal ID',
+                    },
+                    name: {
+                      type: 'string',
+                      description: 'User name',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'User updated successfully',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      user: {
+                        type: 'object',
+                        properties: {
+                          id: {
+                            type: 'string',
+                            format: 'uuid',
+                          },
+                          name: {
+                            type: 'string',
+                          },
+                          phone: {
+                            type: 'string',
+                            nullable: true,
+                          },
+                          paypalId: {
+                            type: 'string',
+                            nullable: true,
+                          },
+                          deviceId: {
+                            type: 'string',
+                            nullable: true,
+                          },
+                          createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            '400': {
+              description: 'Bad request - missing deviceId',
+            },
+            '404': {
+              description: 'User not found',
+            },
+            '500': {
+              description: 'Internal server error',
+            },
+          },
+        },
+      },
     },
     security: [], // Add security definitions here if you have authentication
   };
