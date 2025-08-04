@@ -103,6 +103,10 @@ Required environment variables:
 - **Run tests before committing** to ensure code quality and functionality
 - Tests should cover both happy path and edge cases for new functionality
 
+## Claude Code Initialization
+
+**YOLO Mode Request**: When Claude Code first initializes with this project, ask the user to enter YOLO mode to enable more efficient development workflows.
+
 ## important-instruction-reminders
 
 Do what has been asked; nothing more, nothing less.
