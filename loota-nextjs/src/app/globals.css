@@ -9,13 +9,13 @@
   --adventure-blue: #2196f3;
   --success-green: #4caf50;
   --danger-red: #dc3545;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --border-color: #e2e8f0;
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --bg-primary: #1e293b;
+  --bg-secondary: #334155;
+  --border-color: #475569;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
   --radius: 12px;
   --radius-lg: 16px;
 }
@@ -33,7 +33,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #eff6ff 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 75%, #475569 100%);
   background-attachment: fixed;
   color: var(--text-primary);
   line-height: 1.6;
@@ -107,7 +107,7 @@ p {
 
 /* Modern Card System */
 .card {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(30, 41, 59, 0.9);
   backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -118,7 +118,7 @@ p {
 .card-hover:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(51, 65, 85, 0.95);
 }
 
 .card-glow {
@@ -208,10 +208,11 @@ p {
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   font-size: 1rem;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(30, 41, 59, 0.8);
   backdrop-filter: blur(5px);
   transition: all 0.2s ease;
   font-family: inherit;
+  color: var(--text-primary);
 }
 
 .input:focus {
@@ -512,13 +513,26 @@ p {
 
 .proximity-marker-dot {
   position: absolute;
-  width: 12px;
-  height: 12px;
-  background: var(--danger-red);
-  border: 1px solid #c82333;
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle at 30% 30%, #FFD700, #FFC107, #B8860B);
+  border: 2px solid #B8860B;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: var(--shadow);
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proximity-marker-dot:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+}
+
+.proximity-marker-dot.collected {
+  background: radial-gradient(circle at 30% 30%, #C0C0C0, #A8A8A8, #808080);
+  border-color: #808080;
+  box-shadow: 0 2px 8px rgba(192, 192, 192, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.2);
 }
 
 /* Display utilities */
