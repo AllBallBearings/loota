@@ -1,0 +1,119 @@
+name: E2E Tests (Multi-Browser)
+
+on:
+  schedule:
+    - cron: '0 2 * * 1-5' # Run at 2 AM Monday-Friday
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to test'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - chromium
+        - firefox
+        - webkit
+
+jobs:
+  e2e-tests:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+        exclude:
+          - browser: ${{ github.event.inputs.browser != 'all' && github.event.inputs.browser != matrix.browser && 'exclude' || 'include' }}
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: loota_test_${{ matrix.browser }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps ${{ matrix.browser }}
+
+    - name: Setup environment variables
+      run: |
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loota_test_${{ matrix.browser }}?schema=public" >> $GITHUB_ENV
+        echo "API_KEY_SECRET=test-api-key-${{ matrix.browser }}" >> $GITHUB_ENV
+        echo "NEXT_PUBLIC_API_KEY_SECRET=test-api-key-${{ matrix.browser }}" >> $GITHUB_ENV
+        echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY || 'test-maps-api-key' }}" >> $GITHUB_ENV
+
+    - name: Generate Prisma Client
+      run: npx prisma generate
+
+    - name: Run database migrations
+      run: npx prisma migrate deploy
+
+    - name: Build application
+      run: npm run build
+
+    - name: Run E2E tests
+      run: npx playwright test --project=${{ matrix.browser }}
+      env:
+        CI: true
+
+    - name: Upload Playwright Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report-${{ matrix.browser }}
+        path: playwright-report/
+        retention-days: 30
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.browser }}
+        path: test-results/
+        retention-days: 30
+
+  test-summary:
+    needs: e2e-tests
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Create Test Summary
+      run: |
+        echo "# E2E Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Browser | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.e2e-tests.result }}" == "success" ]; then
+          echo "| All Browsers | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| Some Browsers | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Check the artifacts for detailed test reports." >> $GITHUB_STEP_SUMMARY
