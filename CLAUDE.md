@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## TODOs
+
+[] - make the background a nice deep green and the whole site less bright white
+[] - Change "Treasure Locations" to "Loota Locations"
+[] - Make the same Loot Locations list scrollable instead of extending down the page. the bottom of that list component should be even with the bottom of the map component both on the creator and hunt pages
+[] -
+
 ## Project Structure
 
 This is a **Loota** - an augmented reality treasure hunt application with two main components:
