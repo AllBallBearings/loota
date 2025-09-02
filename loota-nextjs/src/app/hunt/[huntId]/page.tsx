@@ -284,7 +284,7 @@ export default function HuntViewerPage() {
             </div>
             <div className="hidden md:flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <span className="text-xl">🔮</span>
-              <span>AR Treasure Hunt</span>
+              <span>AR Loota Hunt</span>
             </div>
           </div>
         </div>
@@ -427,48 +427,47 @@ export default function HuntViewerPage() {
                 </div>
               </div>
 
-              {/* Loot Locations - 1/3 width */}
-              <div className="w-1/3">
-                <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} />
+              {/* Sidebar with Loot Locations and Hunt Configuration - 1/3 width */}
+              <div className="w-1/3 space-y-6">
+                <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} fixedHeight={false} />
+                
+                {/* Hunt Management */}
+                {isHuntCreator && (
+                  <div className="card">
+                    <div className="p-6 border-b border-slate-200 dark:border-dark-700">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        🔄 Hunt Management
+                      </h3>
+                    </div>
+                    <div className="p-6">
+                      <div className="space-y-3">
+                        <button 
+                          className="btn btn-warning w-full"
+                          onClick={handleResetLoot}
+                          disabled={resetting}
+                        >
+                          {resetting ? 'Processing...' : '🎯 Reset Loot'}
+                        </button>
+                        <button 
+                          className="btn btn-danger w-full"
+                          onClick={handleClearLooters}
+                          disabled={resetting}
+                        >
+                          {resetting ? 'Processing...' : '👥 Clear Looters'}
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-3">
+                        Reset collected pins or clear participants independently
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Hunt Management and Participants - Below main interface */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Hunt Management */}
-            {isHuntCreator && (
-              <div className="card">
-                <div className="p-6 border-b border-slate-200 dark:border-dark-700">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    🔄 Hunt Management
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    <button 
-                      className="btn btn-warning w-full"
-                      onClick={handleResetLoot}
-                      disabled={resetting}
-                    >
-                      {resetting ? 'Processing...' : '🎯 Reset Loot'}
-                    </button>
-                    <button 
-                      className="btn btn-danger w-full"
-                      onClick={handleClearLooters}
-                      disabled={resetting}
-                    >
-                      {resetting ? 'Processing...' : '👥 Clear Looters'}
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-3">
-                    Reset collected pins or clear participants independently
-                  </p>
-                </div>
-              </div>
-            )}
-            
-            {/* Participants */}
+          {/* Participants - Below main interface */}
+          <div className="mb-8">
             <div className="card">
               <div className="p-6 border-b border-slate-200 dark:border-dark-700">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
