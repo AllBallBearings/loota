@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PinData } from '../app/hunt/[huntId]/page';
+import { PinData } from '../types/hunt';
 
 interface LootLocationsListProps {
   pins: PinData[];
@@ -74,13 +74,13 @@ const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick,
   }
 
   return (
-    <div className={`card ${fixedHeight ? 'h-[672px] flex flex-col' : ''}`}>
-      <div className="p-6 border-b border-slate-200 dark:border-dark-700 flex-shrink-0">
+    <div className={`card ${fixedHeight ? 'flex flex-col flex-1' : ''}`} style={fixedHeight ? { maxHeight: 'calc(60vh - 2rem)' } : {}}>
+      <div className="p-4 border-b border-slate-200 dark:border-dark-700 flex-shrink-0">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           🎯 Loota Locations
         </h3>
       </div>
-      <div className={`p-6 ${fixedHeight ? 'flex-1 overflow-y-auto' : ''}`}>{content}</div>
+      <div className={`p-4 ${fixedHeight ? 'flex-1 overflow-y-auto min-h-0' : ''}`}>{content}</div>
     </div>
   );
 };
