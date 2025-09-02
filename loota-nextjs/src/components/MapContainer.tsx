@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import MapComponent, { MapMarker, MapComponentRef } from './MapComponent';
-import { PinData } from '../app/hunt/[huntId]/page'; // Import PinData
+import { PinData } from '../types/hunt';
 
 interface MapContainerProps {
   initialPins: PinData[];

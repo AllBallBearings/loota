@@ -7,43 +7,10 @@ import { ProximityContainer } from '@/components/ProximityContainer';
 import { LootLocationsList } from '@/components/LootLocationsList';
 import { UniversalLinkGenerator } from '@/components/UniversalLinkGenerator';
 
-export interface PinData {
-  id: string;
-  lat?: number;
-  lng?: number;
-  distanceFt?: number;
-  directionStr?: string;
-  x?: number;
-  y?: number;
-  collectedByUserId?: string;
-  collectedByUser?: {
-    id: string;
-    name: string;
-  };
-  collectedAt?: string;
-}
+import { PinData, HuntData } from '@/types/hunt';
 
-interface HuntParticipationData {
-  id: string;
-  userId: string;
-  user: {
-    id: string;
-    name: string;
-  };
-  joinedAt: string;
-}
-
-interface HuntData {
-  id: string;
-  name?: string;
-  type: 'geolocation' | 'proximity';
-  creator?: {
-    id: string;
-    name: string;
-  };
-  pins: PinData[];
-  participants: HuntParticipationData[];
-}
+// Re-export PinData for backward compatibility
+export type { PinData };
 
 export default function HuntViewerPage() {
   const params = useParams();
@@ -290,8 +257,9 @@ export default function HuntViewerPage() {
         </div>
       </header>
 
-      <main className="content-area">
-        <div className="container-modern">
+      {/* Two-Panel Layout */}
+      <main className="flex-1 flex">
+        <div className="container-modern flex-1 py-4 px-6 overflow-y-auto max-h-full flex flex-col min-h-0">
           {allLootCollected && (
             <div className="card card-glow p-6 mb-8 bg-green-50 border-l-4 border-l-green-500 animate-slide-up">
               <div className="text-center">
@@ -335,7 +303,7 @@ export default function HuntViewerPage() {
           )}
 
           {/* Hunt Header */}
-          <div className="card mb-8 p-6">
+          <div className="card mb-6 p-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div className="flex-1 min-w-0">
                 <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
@@ -367,22 +335,22 @@ export default function HuntViewerPage() {
           </div>
 
           {shareExpanded && (
-            <div className="card p-6 mb-8">
+            <div className="card p-4 mb-6">
               <UniversalLinkGenerator huntId={hunt.id} />
             </div>
           )}
 
           {/* Hunt Interface - Map and Loot Locations */}
-          <div className="mb-8">
+          <div className="mb-6 flex-1 flex flex-col min-h-0">
             {/* Mobile Layout: List above map */}
-            <div className="block lg:hidden space-y-6">
+            <div className="block lg:hidden space-y-4">
               <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} />
-              <div className="card p-6">
+              <div className="card p-4">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   {hunt.type === 'geolocation' ? '🗺️' : '📡'}
                   {hunt.type === 'geolocation' ? 'Hunt Map' : 'Proximity Hunt'}
                 </h3>
-                <div className="map-container-modern" style={{ height: '600px' }}>
+                <div className="map-container-modern" style={{ height: 'min(400px, 40vh)' }}>
                   {hunt.type === 'geolocation' && (
                     <MapContainer
                       initialPins={hunt.pins.filter((p): p is Required<Pick<PinData, 'id' | 'lat' | 'lng'>> => p.lat !== undefined && p.lng !== undefined)}
@@ -401,15 +369,15 @@ export default function HuntViewerPage() {
             </div>
 
             {/* Desktop Layout: Side by side */}
-            <div className="hidden lg:flex gap-8">
+            <div className="hidden lg:flex gap-6 min-h-0 flex-1">
               {/* Map - 2/3 width */}
               <div className="w-2/3">
-                <div className="card p-6">
+                <div className="card p-4">
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     {hunt.type === 'geolocation' ? '🗺️' : '📡'}
                     {hunt.type === 'geolocation' ? 'Hunt Map' : 'Proximity Hunt'}
                   </h3>
-                  <div className="map-container-modern" style={{ height: '600px' }}>
+                  <div className="map-container-modern" style={{ height: 'min(400px, 40vh)' }}>
                     {hunt.type === 'geolocation' && (
                       <MapContainer
                         initialPins={hunt.pins.filter((p): p is Required<Pick<PinData, 'id' | 'lat' | 'lng'>> => p.lat !== undefined && p.lng !== undefined)}
@@ -428,8 +396,8 @@ export default function HuntViewerPage() {
               </div>
 
               {/* Sidebar with Loot Locations and Hunt Configuration - 1/3 width */}
-              <div className="w-1/3 space-y-6">
-                <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} fixedHeight={false} />
+              <div className="w-1/3 flex flex-col space-y-4 min-h-0">
+                <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} fixedHeight={true} />
                 
                 {/* Hunt Management */}
                 {isHuntCreator && (
@@ -467,7 +435,7 @@ export default function HuntViewerPage() {
           </div>
 
           {/* Participants - Below main interface */}
-          <div className="mb-8">
+          <div className="mb-6">
             <div className="card">
               <div className="p-6 border-b border-slate-200 dark:border-dark-700">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -494,15 +462,6 @@ export default function HuntViewerPage() {
           </div>
         </div>
       </main>
-
-      {/* Modern Footer */}
-      <footer className="border-t border-slate-200 dark:border-dark-700">
-        <div className="container-modern py-8">
-          <div className="text-center text-slate-600 dark:text-slate-400">
-            <p>&copy; 2025 Loota - Adventure Awaits</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
