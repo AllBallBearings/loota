@@ -33,8 +33,6 @@
 
 ## TODOs
 
-[] - put some space between the "Loota" title and the slot machine
-[] - make the generated link color white or a light blue
 [] -
 
 ---
@@ -46,5 +44,7 @@
 ---
 
 ## Completed Items
+
+[✅] - Make captured loot colored red on the map - Updated MapComponent.tsx to show collected pins in red (#FF4444) instead of gold
 
 <!-- Move completed items here for reference -->

@@ -51,8 +51,8 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
   // Function to create custom coin-like pin icons
   const createPinIcon = useCallback((isCollected: boolean, isHighlighted: boolean) => {
-    const baseColor = isCollected ? '#FFD700' : '#FFC107'; // Gold variations
-    const strokeColor = isHighlighted ? '#FF4444' : '#B8860B'; // Red for highlighted, dark gold for normal
+    const baseColor = isCollected ? '#FF4444' : '#FFC107'; // Red for collected, gold for uncollected
+    const strokeColor = isHighlighted ? '#FF4444' : (isCollected ? '#CC0000' : '#B8860B'); // Red for highlighted, darker red for collected, dark gold for normal
     const strokeWeight = isHighlighted ? 4 : 2;
     const scale = isHighlighted ? 14 : 12;
     
