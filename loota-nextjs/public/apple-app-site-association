@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "8XHKTX9X49.allballbearings.loota",
+        "paths": [ "/hunt/*", "*" ]
+      }
+    ]
+  }
+}
