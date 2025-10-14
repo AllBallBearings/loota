@@ -3,23 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import MapComponent, { MapComponentRef, MapMarker } from '../components/MapComponent';
 import ProximityComponent, { ProximityComponentRef, ProximityMarkerData } from '../components/ProximityComponent';
-
-// Modern Icon Components (placeholder until Heroicons are installed)
-const ModernIcons = {
-  Map: () => <span className="text-xl">🗺️</span>,
-  Radio: () => <span className="text-xl">📡</span>,
-  Treasure: () => <span className="text-xl">💎</span>,
-  Sparkles: () => <span className="text-xl">✨</span>,
-  User: () => <span className="text-xl">👤</span>,
-  Copy: () => <span className="text-xl">📋</span>,
-  Check: () => <span className="text-xl">✅</span>,
-  Trash: () => <span className="text-xl">🗑️</span>,
-  X: () => <span className="text-xl">❌</span>,
-  Pin: () => <span className="text-xl">📍</span>,
-  Target: () => <span className="text-xl">🎯</span>,
-  Adventure: () => <span className="text-xl">🧭</span>,
-  Magic: () => <span className="text-xl">🔮</span>,
-};
+import { Icons } from '../components/Icons';
 
 export default function ModernHome() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
@@ -191,13 +175,13 @@ export default function ModernHome() {
   }, [currentHuntType, huntName, userName, creatorPhone, creatorEmail, preferredContactMethod]);
 
   return (
-    <div className="main-layout bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-dark-950 dark:via-dark-900 dark:to-dark-800">
+    <div className="main-layout">
       {/* Modern Header */}
       <header className="nav-header">
         <div className="container-modern">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-3">
-              <ModernIcons.Adventure />
+              <Icons.Adventure className="text-accent-cyan" size={28} />
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl md:text-3xl font-bold">
                   Loota
@@ -214,15 +198,15 @@ export default function ModernHome() {
               </div>
             </div>
             <div className="hidden md:flex items-center gap-4">
-              <div className="text-sm text-slate-600 dark:text-slate-400">
+              <div className="text-sm text-slate-300">
                 Tue, 07 June 2022
               </div>
               <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg hover:bg-slate-700 transition-colors">
-                  🔔
+                <button className="p-2 rounded-lg hover:bg-white/10 transition-colors text-slate-200">
+                  <Icons.Bell size={20} className="text-slate-200" />
                 </button>
-                <button className="p-2 rounded-lg hover:bg-slate-700 transition-colors">
-                  👤
+                <button className="p-2 rounded-lg hover:bg-white/10 transition-colors text-slate-200">
+                  <Icons.User size={20} className="text-slate-200" />
                 </button>
               </div>
             </div>
@@ -236,7 +220,7 @@ export default function ModernHome() {
         <div className="w-80 filter-sidebar flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6">
             <div className="flex items-center gap-2 mb-6">
-              <ModernIcons.Target />
+              <Icons.Target className="text-slate-200" size={22} />
               <h2 className="text-lg font-semibold text-white">Hunt Configuration</h2>
             </div>
 
@@ -253,9 +237,13 @@ export default function ModernHome() {
                     value="geolocation"
                     checked={currentHuntType === 'geolocation'}
                     onChange={(e) => handleHuntTypeChange(e.target.value as 'geolocation' | 'proximity')}
-                    className="w-4 h-4 text-green-600"
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
                   />
-                  <span className="ml-3 text-slate-300">🗺️ Location-based Hunt</span>
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Map className="text-slate-200" size={18} />
+                    Location-based Hunt
+                  </span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -264,9 +252,13 @@ export default function ModernHome() {
                     value="proximity"
                     checked={currentHuntType === 'proximity'}
                     onChange={(e) => handleHuntTypeChange(e.target.value as 'geolocation' | 'proximity')}
-                    className="w-4 h-4 text-green-600"
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
                   />
-                  <span className="ml-3 text-slate-300">📡 Proximity Hunt</span>
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Proximity className="text-slate-200" size={18} />
+                    Proximity Hunt
+                  </span>
                 </label>
               </div>
             </div>
@@ -281,7 +273,7 @@ export default function ModernHome() {
                 value={huntName}
                 onChange={(e) => setHuntName(e.target.value)}
                 placeholder="Enter hunt name..."
-                className="w-full bg-slate-700 text-white border border-slate-600 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+                className="input text-sm"
                 maxLength={100}
                 required
               />
@@ -296,7 +288,7 @@ export default function ModernHome() {
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
                 placeholder="Your name..."
-                className="w-full bg-slate-700 text-white border border-slate-600 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+                className="input text-sm"
                 maxLength={100}
                 required
               />
@@ -305,44 +297,51 @@ export default function ModernHome() {
             {/* Contact Information */}
             <div className="mb-6">
               <h4 className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
-                <ModernIcons.User />
+                <Icons.User className="text-slate-200" size={20} />
                 Contact Information
               </h4>
 
               {/* Existing Contact Information Toggle */}
               {existingUserData && (existingUserData.phone || existingUserData.email) && (
-                <div className="mb-4 p-3 bg-blue-900/20 rounded-lg border border-blue-800">
-                  <h5 className="font-medium text-blue-100 mb-2 text-sm">
-                    Found your saved contact info
-                  </h5>
-                  <div className="text-xs text-blue-200 mb-2">
-                    {existingUserData.phone && <div>Phone: {existingUserData.phone}</div>}
-                    {existingUserData.email && <div>Email: {existingUserData.email}</div>}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleContactMethodToggle(true)}
-                      className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                        useExistingContact
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-700 text-blue-300 border border-blue-600'
-                      }`}
-                    >
-                      Use Saved
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleContactMethodToggle(false)}
-                      className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                        !useExistingContact
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-700 text-blue-300 border border-blue-600'
-                      }`}
-                    >
-                      Enter New
-                    </button>
+                <div className="mb-5">
+                  <div className="contact-card">
+                    <div className="contact-card__header">
+                      <div className="contact-card__title">
+                        <Icons.Users className="contact-card__icon text-accent-cyan" size={20} />
+                        Saved contact info
+                      </div>
+                      <span className="contact-card__badge">Auto-fill ready</span>
+                    </div>
+                    <div className="contact-card__details">
+                      {existingUserData.phone && (
+                        <div>
+                          <span>Phone</span>
+                          <strong>{existingUserData.phone}</strong>
+                        </div>
+                      )}
+                      {existingUserData.email && (
+                        <div>
+                          <span>Email</span>
+                          <strong>{existingUserData.email}</strong>
+                        </div>
+                      )}
+                    </div>
+                    <div className="contact-card__actions">
+                      <button
+                        type="button"
+                        onClick={() => handleContactMethodToggle(true)}
+                        className={`contact-card__button ${useExistingContact ? 'is-active' : ''}`}
+                      >
+                        Use Saved
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleContactMethodToggle(false)}
+                        className={`contact-card__button ${!useExistingContact ? 'is-active' : ''}`}
+                      >
+                        Enter New
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -355,7 +354,7 @@ export default function ModernHome() {
                     value={creatorPhone}
                     onChange={(e) => setCreatorPhone(e.target.value)}
                     placeholder="(555) 123-4567"
-                    className="w-full bg-slate-700 text-white border border-slate-600 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none text-sm"
+                    className="input text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                     disabled={useExistingContact && Boolean(existingUserData?.phone)}
                     required
                   />
@@ -368,7 +367,7 @@ export default function ModernHome() {
                     value={creatorEmail}
                     onChange={(e) => setCreatorEmail(e.target.value)}
                     placeholder="your@email.com"
-                    className="w-full bg-slate-700 text-white border border-slate-600 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none text-sm"
+                    className="input text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                     disabled={useExistingContact && Boolean(existingUserData?.email)}
                     required
                   />
@@ -384,9 +383,13 @@ export default function ModernHome() {
                         value="phone"
                         checked={preferredContactMethod === 'phone'}
                         onChange={(e) => setPreferredContactMethod(e.target.value as 'phone')}
-                        className="w-3 h-3 text-green-600"
+                        className="w-3 h-3"
+                        style={{ accentColor: 'var(--accent-violet)' }}
                       />
-                      <span className="ml-2 text-xs text-slate-300">📱 Phone</span>
+                      <span className="ml-2 text-xs text-slate-300 flex items-center gap-1">
+                        <Icons.Phone className="text-slate-300" size={14} />
+                        Phone
+                      </span>
                     </label>
                     
                     <label className="flex items-center">
@@ -396,9 +399,13 @@ export default function ModernHome() {
                         value="email"
                         checked={preferredContactMethod === 'email'}
                         onChange={(e) => setPreferredContactMethod(e.target.value as 'email')}
-                        className="w-3 h-3 text-green-600"
+                        className="w-3 h-3"
+                        style={{ accentColor: 'var(--accent-violet)' }}
                       />
-                      <span className="ml-2 text-xs text-slate-300">📧 Email</span>
+                      <span className="ml-2 text-xs text-slate-300 flex items-center gap-1">
+                        <Icons.Email className="text-slate-300" size={14} />
+                        Email
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -407,20 +414,20 @@ export default function ModernHome() {
           </div>
 
           {/* Bottom Action Button - Fixed at bottom */}
-          <div className="flex-shrink-0 p-6 border-t border-slate-600">
-            <button 
-              className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
-              onClick={generateLootLink} 
+          <div className="flex-shrink-0 p-6 border-t border-slate-600/40">
+            <button
+              className={`btn btn-primary w-full text-base py-3 justify-center gap-2 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              onClick={generateLootLink}
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <div className="loading-spinner" />
+                  <div className="spinner" style={{ width: '22px', height: '22px' }} />
                   Generating Hunt...
                 </>
               ) : (
                 <>
-                  <ModernIcons.Sparkles />
+                  <Icons.Sparkle className="text-slate-100" size={20} />
                   Start the Adventure
                 </>
               )}
@@ -428,29 +435,33 @@ export default function ModernHome() {
 
             {/* Result Area */}
             {generatedUrl && (
-              <div className="mt-4 p-3 bg-slate-700 rounded-lg">
-                <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-                  <ModernIcons.Check />
+              <div className="mt-4 card p-4">
+                <h4 className="text-sm font-medium text-slate-100 mb-3 flex items-center gap-2">
+                  <Icons.Check className="text-emerald-300" size={18} />
                   Hunt Ready!
                 </h4>
                 
-                <div className="bg-slate-800 rounded p-2 mb-2">
-                  <div className="text-xs text-slate-400 mb-1">Share this link:</div>
-                  <div className="flex items-center gap-2">
+                <div className="bg-black/30 rounded-lg p-3 mb-3 border border-white/10">
+                  <div className="text-xs text-slate-400 mb-1 uppercase tracking-wide">Share this link:</div>
+                  <div className="flex items-center gap-2 text-xs">
                     <a
                       href={generatedUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white hover:text-yellow-300 font-mono text-xs break-all flex-1 underline"
+                      className="text-slate-100 hover:text-accent-cyan font-mono break-all flex-1 underline"
                     >
                       {generatedUrl}
                     </a>
                     <button
                       onClick={() => copyToClipboard(generatedUrl)}
-                      className={`px-2 py-1 rounded text-xs ${copyStatus === 'copied' ? 'bg-green-600 text-white' : 'bg-slate-600 text-slate-300'}`}
+                      className={`px-2 py-1 rounded text-xs transition-colors flex items-center justify-center ${copyStatus === 'copied' ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40' : 'bg-white/10 text-slate-200 border border-white/10 hover:bg-white/20'}`}
                       disabled={copyStatus === 'copied'}
                     >
-                      {copyStatus === 'copied' ? '✓' : <ModernIcons.Copy />}
+                      {copyStatus === 'copied' ? (
+                        <Icons.Check className="text-emerald-200" size={16} />
+                      ) : (
+                        <Icons.Copy className="text-slate-200" size={16} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -470,18 +481,18 @@ export default function ModernHome() {
             {/* Locations List */}
             <div className="w-80 results-list overflow-y-auto">
               <div className="p-4">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <ModernIcons.Treasure />
+                <h4 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                  <Icons.Treasure className="text-amber-300" size={22} />
                   {currentHuntType === 'geolocation' ? 'Loot Locations' : 'Proximity Markers'}
                   {currentHuntType === 'geolocation' && (
-                    <span className="text-sm text-gray-500">({mapMarkers.length})</span>
+                    <span className="text-sm text-slate-400">({mapMarkers.length})</span>
                   )}
                 </h4>
 
                 {currentHuntType === 'geolocation' ? (
                   mapMarkers.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <ModernIcons.Target />
+                    <div className="text-center py-8 text-slate-400 flex flex-col items-center gap-2">
+                      <Icons.Target className="text-slate-500" size={28} />
                       <p className="mt-2 text-sm">Click on the map to place your first treasure location!</p>
                     </div>
                   ) : (
@@ -490,7 +501,8 @@ export default function ModernHome() {
                         <div key={index} className="result-card p-3">
                           <div className="flex items-center justify-between mb-2">
                             <div className="font-medium text-slate-100 flex items-center gap-2">
-                              📍 Location #{index + 1}
+                              <Icons.Pin className="text-slate-300" size={16} />
+                              Location #{index + 1}
                             </div>
                             <span className="status-badge text-xs px-2 py-1 rounded">Available</span>
                           </div>
@@ -500,20 +512,20 @@ export default function ModernHome() {
                         </div>
                       ))}
                       
-                      <div className="pt-3 border-t border-gray-200">
+                      <div className="pt-3 border-t border-white/10">
                         <div className="flex gap-2">
                           <button 
-                            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 px-3 rounded flex items-center justify-center gap-1"
+                            className="btn btn-secondary flex-1 text-sm py-2 justify-center gap-2"
                             onClick={() => mapComponentRef.current?.deleteLastPin()}
                           >
-                            <ModernIcons.Trash />
+                            <Icons.Trash className="text-slate-200" size={18} />
                             Delete Last
                           </button>
                           <button 
-                            className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 text-sm py-2 px-3 rounded flex items-center justify-center gap-1"
+                            className="btn btn-danger flex-1 text-sm py-2 justify-center gap-2"
                             onClick={() => mapComponentRef.current?.clearAllPins()}
                           >
-                            <ModernIcons.X />
+                            <Icons.Close className="text-slate-100" size={18} />
                             Clear All
                           </button>
                         </div>
@@ -522,23 +534,23 @@ export default function ModernHome() {
                   )
                 ) : (
                   <div className="space-y-4">
-                    <div className="text-center py-4 text-gray-500">
-                      <ModernIcons.Radio />
+                    <div className="text-center py-4 text-slate-400 flex flex-col items-center gap-2">
+                      <Icons.Proximity className="text-slate-500" size={26} />
                       <p className="mt-2 text-sm">Use the proximity interface to place markers</p>
                     </div>
-                    <div className="space-y-3">
-                      <button 
-                        className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded flex items-center justify-center gap-2"
-                        onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}
-                      >
-                        <ModernIcons.Trash />
-                        Delete Last Marker
-                      </button>
-                      <button 
-                        className="w-full bg-red-100 hover:bg-red-200 text-red-700 py-2 px-3 rounded flex items-center justify-center gap-2"
-                        onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}
-                      >
-                        <ModernIcons.X />
+                  <div className="space-y-3">
+                    <button 
+                      className="btn btn-secondary w-full justify-center gap-2"
+                      onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}
+                    >
+                      <Icons.Trash className="text-slate-200" size={18} />
+                      Delete Last Marker
+                    </button>
+                    <button 
+                      className="btn btn-danger w-full justify-center gap-2"
+                      onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}
+                    >
+                        <Icons.Close className="text-slate-100" size={18} />
                         Clear All Markers
                       </button>
                     </div>
@@ -554,7 +566,7 @@ export default function ModernHome() {
                   <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
                 </div>
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.18), transparent 60%), radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.16), transparent 55%), rgba(9, 14, 32, 0.85)' }}>
                   <div className="w-full h-full relative">
                     <ProximityComponent ref={proximityComponentRef} />
                   </div>
@@ -571,7 +583,7 @@ export default function ModernHome() {
           {/* Hunt Configuration Panel */}
           <div className="card p-4">
             <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <ModernIcons.Target />
+              <Icons.Target className="text-slate-200" size={20} />
               Hunt Configuration
             </h3>
           </div>
