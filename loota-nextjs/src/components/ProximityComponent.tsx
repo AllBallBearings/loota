@@ -7,11 +7,13 @@ export interface ProximityMarkerData {
   directionStr: string;
   x: number;
   y: number;
+  isCollected?: boolean;
 }
 
 export interface ProximityComponentRef {
   getMarkers: () => ProximityMarkerData[];
   addProximityMarkers: (markers: ProximityMarkerData[]) => void; // Add this line
+  setProximityMarkers: (markers: ProximityMarkerData[]) => void;
   deleteLastProximityMarker: () => void;
   clearAllProximityMarkers: () => void;
 }
@@ -22,11 +24,17 @@ interface ProximityComponentProps {
 
 const radiusMapping = [10, 50, 100]; // Maps slider values (0,1,2) to ft
 
+const normalizeMarkers = (markers: ProximityMarkerData[]): ProximityMarkerData[] =>
+  markers.map(marker => ({
+    ...marker,
+    isCollected: marker.isCollected ?? false,
+  }));
+
 const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentProps>((
   { initialMarkers = [] }, // Destructure initialMarkers with a default empty array
   ref
 ) => {
-  const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>(initialMarkers); // Initialize with initialMarkers
+  const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>(() => normalizeMarkers(initialMarkers)); // Initialize with initialMarkers, normalizing collected state
   const [currentProximityRadiusFt, setCurrentProximityRadiusFt] = useState<number>(radiusMapping[0]);
   
   const proximityCircleElementRef = useRef<HTMLDivElement | null>(null);
@@ -68,8 +76,8 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       circleEl.setAttribute('cx', proximityCircleRadiusPx.toString());
       circleEl.setAttribute('cy', proximityCircleRadiusPx.toString());
       circleEl.setAttribute('r', intervalRadiusPx.toString());
-      circleEl.setAttribute('stroke', 'rgba(0, 123, 255, 0.3)');
-      circleEl.setAttribute('stroke-width', '1');
+      circleEl.setAttribute('stroke', 'rgba(34, 211, 238, 0.22)');
+      circleEl.setAttribute('stroke-width', '1.25');
       circleEl.setAttribute('fill', 'none');
       ring.appendChild(circleEl);
       proximityCircleElement.appendChild(ring);
@@ -80,10 +88,10 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       label.style.left = `${proximityCircleRadiusPx + intervalRadiusPx - 10}px`;
       label.style.top = `${proximityCircleRadiusPx - 10}px`;
       label.style.fontSize = '10px';
-      label.style.color = '#555';
-      label.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-      label.style.padding = '1px 3px';
-      label.style.borderRadius = '3px';
+      label.style.color = 'var(--text-primary)';
+      label.style.background = 'rgba(15, 23, 42, 0.75)';
+      label.style.padding = '2px 6px';
+      label.style.borderRadius = '9999px';
       label.style.pointerEvents = 'none';
       label.textContent = `${intervalRadiusFt.toFixed(0)}ft`;
       proximityCircleElement.appendChild(label);
@@ -100,7 +108,12 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     }
 
     const markerListHtml = proximityMarkersData.map((marker, index) => {
-      return `<div style="padding: 2px 5px;">Marker ${index + 1}: ${marker.distanceFt}ft, ${marker.directionStr}</div>`;
+      const statusClass = marker.isCollected ? 'collected' : 'available';
+      const statusLabel = marker.isCollected ? 'Collected' : 'Available';
+      return `<div class="proximity-marker-entry ${statusClass}">
+        <span>Marker ${index + 1}: ${marker.distanceFt}ft, ${marker.directionStr}</span>
+        <span class="status-pill">${statusLabel}</span>
+      </div>`;
     }).join('');
     proximityCoordinatesDisplayElementRef.current.innerHTML = markerListHtml;
   }, [proximityMarkersData]);
@@ -188,13 +201,21 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         distanceFt: parseFloat(distanceFt.toFixed(1)),
         directionStr: directionStr,
         x: clickX,
-        y: clickY
+        y: clickY,
+        isCollected: false,
       }
     ]);
   }, [currentProximityRadiusFt]);
 
   const addProximityMarkers = useCallback((markers: ProximityMarkerData[]) => {
-    setProximityMarkersData((prevData) => [...prevData, ...markers]);
+    setProximityMarkersData((prevData) => [
+      ...prevData,
+      ...normalizeMarkers(markers),
+    ]);
+  }, []);
+
+  const setProximityMarkers = useCallback((markers: ProximityMarkerData[]) => {
+    setProximityMarkersData(normalizeMarkers(markers));
   }, []);
 
   const deleteLastProximityMarker = useCallback(() => {
@@ -218,6 +239,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
   useImperativeHandle(ref, () => ({
     getMarkers: () => proximityMarkersData,
     addProximityMarkers, // Expose addProximityMarkers
+    setProximityMarkers,
     deleteLastProximityMarker,
     clearAllProximityMarkers,
   }));
@@ -237,7 +259,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       // Add new dots
       proximityMarkersData.forEach(marker => {
         const dot = document.createElement('div');
-        dot.className = 'proximity-marker-dot';
+        dot.className = `proximity-marker-dot${marker.isCollected ? ' collected' : ''}`;
         dot.style.left = `${marker.x}px`;
         dot.style.top = `${marker.y}px`;
         proximityCircleElement.appendChild(dot);
@@ -250,25 +272,26 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       id="proximity-view-container"
       // className="hidden-view" // This will be controlled by the parent component
       style={{
-        width: '90%',
-        maxWidth: '1200px',
-        margin: '0 auto 30px auto',
+        width: '100%',
+        maxWidth: '100%',
+        margin: '0 0 30px 0',
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'flex-start',
+        gap: '28px',
       }}
     >
       <div
         id="proximity-interaction-area"
         style={{
-          flex: '0 0 65%',
-          marginRight: '20px',
+          flex: '1 1 65%',
+          marginRight: '28px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
         }}
       >
-        <p style={{ textAlign: 'center', marginBottom: '10px' }}>
+        <p style={{ textAlign: 'center', marginBottom: '14px', color: 'var(--text-secondary)', maxWidth: '420px' }}>
           Click within the circle to place markers. Adjust radius with the
           slider below.
         </p>
@@ -276,16 +299,21 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
           id="proximity-radius-slider-container"
           style={{
             textAlign: 'center',
-            marginBottom: '15px',
+            marginBottom: '24px',
             width: '80%',
-            maxWidth: '350px',
+            maxWidth: '360px',
             marginLeft: 'auto',
             marginRight: 'auto',
+            background: 'rgba(15, 23, 42, 0.6)',
+            padding: '18px 20px',
+            borderRadius: '20px',
+            border: '1px solid rgba(99, 102, 241, 0.25)',
+            boxShadow: '0 25px 45px -30px rgba(14, 165, 233, 0.35)',
           }}
         >
           <label
             htmlFor="proximityRadiusSlider"
-            style={{ display: 'block', marginBottom: '5px' }}
+            style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}
           >
             Radius: <span ref={proximityRadiusDisplayElementRef}>{currentProximityRadiusFt} ft</span>
           </label>
@@ -303,8 +331,10 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              fontSize: '0.8em',
-              marginTop: '2px',
+              fontSize: '0.75em',
+              marginTop: '8px',
+              color: 'var(--text-secondary)',
+              letterSpacing: '0.08em',
             }}
           >
             <span>10ft</span>
@@ -314,18 +344,28 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         </div>
         <div
           id="proximity-circle-wrapper"
-          style={{ position: 'relative', width: '450px', height: '450px' }}
+          style={{
+            position: 'relative',
+            width: 'min(440px, 90vw)',
+            height: 'min(440px, 90vw)',
+            borderRadius: '24px',
+            background: 'linear-gradient(145deg, rgba(15,23,42,0.8), rgba(17,24,39,0.9))',
+            boxShadow: '0 40px 60px -40px rgba(15,118,110,0.45)',
+            padding: '24px',
+            transition: 'transform 0.3s ease',
+          }}
         >
           <div
             id="proximity-circle"
             style={{
               width: '100%',
               height: '100%',
-              border: '3px solid #007bff',
+              border: '3px solid var(--accent-cyan)',
               borderRadius: '50%',
-              backgroundColor: '#f0f8ff',
+              background: 'radial-gradient(circle at 30% 30%, rgba(34, 211, 238, 0.12), rgba(8, 16, 37, 0.92))',
               position: 'relative',
               cursor: 'crosshair',
+              boxShadow: 'inset 0 0 40px rgba(8, 47, 73, 0.55)',
             }}
             ref={proximityCircleElementRef}
             onClick={handleAddProximityMarker}
@@ -333,11 +373,12 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
             <span
               style={{
                 position: 'absolute',
-                top: '10px',
+                top: '14px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                fontWeight: 'bold',
-                color: '#555',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                letterSpacing: '0.12em',
               }}
             >
               N
@@ -345,11 +386,12 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
             <span
               style={{
                 position: 'absolute',
-                bottom: '10px',
+                bottom: '14px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                fontWeight: 'bold',
-                color: '#555',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                letterSpacing: '0.12em',
               }}
             >
               S
@@ -358,10 +400,11 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
               style={{
                 position: 'absolute',
                 top: '50%',
-                left: '10px',
+                left: '14px',
                 transform: 'translateY(-50%)',
-                fontWeight: 'bold',
-                color: '#555',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                letterSpacing: '0.12em',
               }}
             >
               W
@@ -370,10 +413,11 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
               style={{
                 position: 'absolute',
                 top: '50%',
-                right: '10px',
+                right: '14px',
                 transform: 'translateY(-50%)',
-                fontWeight: 'bold',
-                color: '#555',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                letterSpacing: '0.12em',
               }}
             >
               E
@@ -383,14 +427,21 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
               viewBox="0 0 24 24"
               width="24"
               height="24"
-              fill="#333"
+              fill="url(#beaconGradient)"
               style={{
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
+                filter: 'drop-shadow(0 6px 18px rgba(99, 102, 241, 0.45))',
               }}
             >
+              <defs>
+                <linearGradient id="beaconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="var(--accent-cyan)" />
+                  <stop offset="100%" stopColor="var(--accent-violet)" />
+                </linearGradient>
+              </defs>
               <path
                 d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
               />
@@ -399,24 +450,37 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         </div>
       </div>
 
-      <div style={{ 
-        flex: '0 0 35%', 
-        display: 'flex', 
+      <div style={{
+        flex: '1 1 35%',
+        display: 'flex',
         flexDirection: 'column',
-        background: 'rgba(255, 255, 255, 0.8)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1rem',
-        boxShadow: 'var(--shadow)'
+        background: 'rgba(15, 23, 42, 0.7)',
+        border: '1px solid rgba(99, 102, 241, 0.25)',
+        borderRadius: '24px',
+        padding: '1.25rem',
+        boxShadow: '0 30px 60px -40px rgba(79, 70, 229, 0.35)',
+        backdropFilter: 'blur(18px)'
       }}>
-        <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>📍 Proximity Markers</h4>
+        <h4
+          style={{
+            margin: '0 0 1rem 0',
+            color: 'var(--text-primary)',
+            fontSize: '1.1rem',
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+          }}
+        >
+          📍 Luda Locations
+        </h4>
         <div
           id="proximity-coordinates-display"
           style={{
             flex: 1,
             overflowY: 'auto',
-            fontSize: '0.9em',
+            fontSize: '0.95em',
             lineHeight: '1.6',
+            paddingRight: '4px',
           }}
           ref={proximityCoordinatesDisplayElementRef}
         >

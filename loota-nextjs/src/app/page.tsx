@@ -3,23 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import MapComponent, { MapComponentRef, MapMarker } from '../components/MapComponent';
 import ProximityComponent, { ProximityComponentRef, ProximityMarkerData } from '../components/ProximityComponent';
-
-// Modern Icon Components (placeholder until Heroicons are installed)
-const ModernIcons = {
-  Map: () => <span className="text-xl">🗺️</span>,
-  Radio: () => <span className="text-xl">📡</span>,
-  Treasure: () => <span className="text-xl">💎</span>,
-  Sparkles: () => <span className="text-xl">✨</span>,
-  User: () => <span className="text-xl">👤</span>,
-  Copy: () => <span className="text-xl">📋</span>,
-  Check: () => <span className="text-xl">✅</span>,
-  Trash: () => <span className="text-xl">🗑️</span>,
-  X: () => <span className="text-xl">❌</span>,
-  Pin: () => <span className="text-xl">📍</span>,
-  Target: () => <span className="text-xl">🎯</span>,
-  Adventure: () => <span className="text-xl">🧭</span>,
-  Magic: () => <span className="text-xl">🔮</span>,
-};
+import { Icons } from '../components/Icons';
 
 export default function ModernHome() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
@@ -108,6 +92,19 @@ export default function ModernHome() {
     setIsLoading(true);
     setGeneratedUrl('');
 
+    // Validate required fields
+    if (!huntName.trim()) {
+      alert("Please provide a hunt name.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!userName.trim()) {
+      alert("Please provide your name.");
+      setIsLoading(false);
+      return;
+    }
+
     // Validate required contact information
     if (!creatorPhone.trim() || !creatorEmail.trim()) {
       alert("Please provide both phone number and email address.");
@@ -120,7 +117,7 @@ export default function ModernHome() {
     if (currentHuntType === 'geolocation') {
       huntData = mapComponentRef.current?.getMarkers() || [];
       if (huntData.length === 0) {
-        alert("Please drop at least one treasure pin on the map first!");
+        alert("Please drop at least one loota pin on the map first!");
         setIsLoading(false);
         return;
       }
@@ -178,438 +175,420 @@ export default function ModernHome() {
   }, [currentHuntType, huntName, userName, creatorPhone, creatorEmail, preferredContactMethod]);
 
   return (
-    <div className="main-layout bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-dark-950 dark:via-dark-900 dark:to-dark-800">
+    <div className="main-layout">
       {/* Modern Header */}
       <header className="nav-header">
         <div className="container-modern">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-3">
-              <ModernIcons.Adventure />
-              <h1 className="text-3xl md:text-4xl font-bold">
-                Loota
-              </h1>
+              <Icons.Adventure className="text-accent-cyan" size={28} />
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl md:text-3xl font-bold">
+                  Loota
+                </h1>
+                <div className="text-reel">
+                  <div className="text-reel-content">
+                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">&nbsp;</span>
+                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">dollar</span>
+                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">dubloon</span>
+                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">dream</span>
+                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">&nbsp;</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="hidden md:flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <ModernIcons.Magic />
-              <span>AR Treasure Hunts</span>
+            <div className="hidden md:flex items-center gap-4">
+              <div className="text-sm text-slate-300">
+                Tue, 07 June 2022
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="p-2 rounded-lg hover:bg-white/10 transition-colors text-slate-200">
+                  <Icons.Bell size={20} className="text-slate-200" />
+                </button>
+                <button className="p-2 rounded-lg hover:bg-white/10 transition-colors text-slate-200">
+                  <Icons.User size={20} className="text-slate-200" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="content-area">
-        <div className="container-tight">
-          {/* Hero Section */}
-          <div className="text-center mb-12 animate-fade-in">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-balance">
-              Create Your Own AR Treasure Hunt
-            </h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-pretty">
-              Place virtual treasures anywhere in the real world. Drop pins, generate a link, and let the adventure begin!
-            </p>
-          </div>
+      {/* Two-Panel Layout */}
+      <main className="flex-1 flex">
+        {/* Left Sidebar - Hunt Configuration */}
+        <div className="w-80 filter-sidebar flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Icons.Target className="text-slate-200" size={22} />
+              <h2 className="text-lg font-semibold text-white">Hunt Configuration</h2>
+            </div>
 
-          {/* Configuration Card */}
-          <div className="card card-hover mb-8 p-6 animate-slide-up">
-            <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <ModernIcons.Target />
-              Hunt Configuration
-            </h3>
-            
             {/* Hunt Type Selection */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Hunt Type
               </label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => handleHuntTypeChange('geolocation')}
-                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
-                    currentHuntType === 'geolocation'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md ring-2 ring-blue-200'
-                      : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600 hover:bg-slate-50 dark:hover:bg-dark-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <ModernIcons.Map />
-                    <div className="text-left">
-                      <div className={`font-semibold ${currentHuntType === 'geolocation' ? 'text-blue-700 dark:text-blue-300' : ''}`}>
-                        Map-based
-                      </div>
-                      <div className="text-sm text-slate-500">GPS location hunt</div>
-                    </div>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => handleHuntTypeChange('proximity')}
-                  className={`p-4 rounded-xl border-2 transition-all duration-200 ${
-                    currentHuntType === 'proximity'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md ring-2 ring-blue-200'
-                      : 'border-slate-200 dark:border-dark-700 hover:border-slate-300 dark:hover:border-dark-600 hover:bg-slate-50 dark:hover:bg-dark-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <ModernIcons.Radio />
-                    <div className="text-left">
-                      <div className={`font-semibold ${currentHuntType === 'proximity' ? 'text-blue-700 dark:text-blue-300' : ''}`}>
-                        Proximity
-                      </div>
-                      <div className="text-sm text-slate-500">Relative positioning</div>
-                    </div>
-                  </div>
-                </button>
+              <div className="space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="huntType"
+                    value="geolocation"
+                    checked={currentHuntType === 'geolocation'}
+                    onChange={(e) => handleHuntTypeChange(e.target.value as 'geolocation' | 'proximity')}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
+                  />
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Map className="text-slate-200" size={18} />
+                    Location-based Hunt
+                  </span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="huntType"
+                    value="proximity"
+                    checked={currentHuntType === 'proximity'}
+                    onChange={(e) => handleHuntTypeChange(e.target.value as 'geolocation' | 'proximity')}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
+                  />
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Proximity className="text-slate-200" size={18} />
+                    Proximity Hunt
+                  </span>
+                </label>
               </div>
             </div>
 
             {/* Hunt Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Hunt Name
-                </label>
-                <input
-                  type="text"
-                  value={huntName}
-                  onChange={(e) => setHuntName(e.target.value)}
-                  placeholder="Enter hunt name..."
-                  className="input"
-                  maxLength={100}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Your Name
-                </label>
-                <input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Enter your name..."
-                  className="input"
-                  maxLength={100}
-                />
-              </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Hunt Name *
+              </label>
+              <input
+                type="text"
+                value={huntName}
+                onChange={(e) => setHuntName(e.target.value)}
+                placeholder="Enter hunt name..."
+                className="input text-sm"
+                maxLength={100}
+                required
+              />
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Your Name *
+              </label>
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Your name..."
+                className="input text-sm"
+                maxLength={100}
+                required
+              />
             </div>
 
             {/* Contact Information */}
-            <div className="border-t border-slate-200 dark:border-dark-700 pt-6">
-              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <ModernIcons.User />
-                Contact Information (Required)
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
+                <Icons.User className="text-slate-200" size={20} />
+                Contact Information
               </h4>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                Your preferred contact method will be shared with winners so they can reach you to collect their prize.
-              </p>
 
               {/* Existing Contact Information Toggle */}
               {existingUserData && (existingUserData.phone || existingUserData.email) && (
-                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                    We found your saved contact information
-                  </h5>
-                  <div className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-                    {existingUserData.phone && <div>Phone: {existingUserData.phone}</div>}
-                    {existingUserData.email && <div>Email: {existingUserData.email}</div>}
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleContactMethodToggle(true)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        useExistingContact
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white dark:bg-dark-800 text-blue-600 border border-blue-300'
-                      }`}
-                    >
-                      Use Saved Info
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleContactMethodToggle(false)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        !useExistingContact
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white dark:bg-dark-800 text-blue-600 border border-blue-300'
-                      }`}
-                    >
-                      Enter New Info
-                    </button>
+                <div className="mb-5">
+                  <div className="contact-card">
+                    <div className="contact-card__header">
+                      <div className="contact-card__title">
+                        <Icons.Users className="contact-card__icon text-accent-cyan" size={20} />
+                        Saved contact info
+                      </div>
+                      <span className="contact-card__badge">Auto-fill ready</span>
+                    </div>
+                    <div className="contact-card__details">
+                      {existingUserData.phone && (
+                        <div>
+                          <span>Phone</span>
+                          <strong>{existingUserData.phone}</strong>
+                        </div>
+                      )}
+                      {existingUserData.email && (
+                        <div>
+                          <span>Email</span>
+                          <strong>{existingUserData.email}</strong>
+                        </div>
+                      )}
+                    </div>
+                    <div className="contact-card__actions">
+                      <button
+                        type="button"
+                        onClick={() => handleContactMethodToggle(true)}
+                        className={`contact-card__button ${useExistingContact ? 'is-active' : ''}`}
+                      >
+                        Use Saved
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleContactMethodToggle(false)}
+                        className={`contact-card__button ${!useExistingContact ? 'is-active' : ''}`}
+                      >
+                        Enter New
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Phone Number *
-                  </label>
+                  <label className="block text-xs text-slate-400 mb-1">Phone *</label>
                   <input
                     type="tel"
                     value={creatorPhone}
                     onChange={(e) => setCreatorPhone(e.target.value)}
                     placeholder="(555) 123-4567"
-                    className="input"
+                    className="input text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                     disabled={useExistingContact && Boolean(existingUserData?.phone)}
                     required
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Email Address *
-                  </label>
+                  <label className="block text-xs text-slate-400 mb-1">Email *</label>
                   <input
                     type="email"
                     value={creatorEmail}
                     onChange={(e) => setCreatorEmail(e.target.value)}
                     placeholder="your@email.com"
-                    className="input"
+                    className="input text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                     disabled={useExistingContact && Boolean(existingUserData?.email)}
                     required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                  Preferred Contact Method
-                </label>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-dark-700 hover:bg-slate-50 dark:hover:bg-dark-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="preferredContactMethod"
-                      value="phone"
-                      checked={preferredContactMethod === 'phone'}
-                      onChange={(e) => setPreferredContactMethod(e.target.value as 'phone')}
-                      className="w-4 h-4 text-adventure-600 focus:ring-adventure-500"
-                    />
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">📱</span>
-                      <div>
-                        <div className="font-medium">Phone</div>
-                        <div className="text-xs text-slate-500">Text/Call</div>
-                      </div>
-                    </div>
-                  </label>
-                  
-                  <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-dark-700 hover:bg-slate-50 dark:hover:bg-dark-800 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="preferredContactMethod"
-                      value="email"
-                      checked={preferredContactMethod === 'email'}
-                      onChange={(e) => setPreferredContactMethod(e.target.value as 'email')}
-                      className="w-4 h-4 text-adventure-600 focus:ring-adventure-500"
-                    />
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">📧</span>
-                      <div>
-                        <div className="font-medium">Email</div>
-                        <div className="text-xs text-slate-500">Messages</div>
-                      </div>
-                    </div>
-                  </label>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-2">Preferred Contact</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="preferredContactMethod"
+                        value="phone"
+                        checked={preferredContactMethod === 'phone'}
+                        onChange={(e) => setPreferredContactMethod(e.target.value as 'phone')}
+                        className="w-3 h-3"
+                        style={{ accentColor: 'var(--accent-violet)' }}
+                      />
+                      <span className="ml-2 text-xs text-slate-300 flex items-center gap-1">
+                        <Icons.Phone className="text-slate-300" size={14} />
+                        Phone
+                      </span>
+                    </label>
+                    
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="preferredContactMethod"
+                        value="email"
+                        checked={preferredContactMethod === 'email'}
+                        onChange={(e) => setPreferredContactMethod(e.target.value as 'email')}
+                        className="w-3 h-3"
+                        style={{ accentColor: 'var(--accent-violet)' }}
+                      />
+                      <span className="ml-2 text-xs text-slate-300 flex items-center gap-1">
+                        <Icons.Email className="text-slate-300" size={14} />
+                        Email
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Hunt Interface */}
-          {currentHuntType === 'geolocation' && (
-            <div className="grid grid-cols-1 lg-grid-cols-3 gap-8 mb-8">
-              {/* Map Component */}
-              <div className="lg-col-span-2">
-                <div className="card p-6">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <ModernIcons.Pin />
-                    Place Treasure Locations
-                  </h3>
-                  <div className="map-container-modern" style={{ height: '600px' }}>
-                    <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Treasure List */}
-              <div className="card">
-                <div className="p-6 border-b border-slate-200 dark:border-dark-700">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <ModernIcons.Treasure />
-                    Treasure Locations
-                  </h3>
-                </div>
-                
-                <div className="p-6">
-                  {mapMarkers.length === 0 ? (
-                    <div className="text-center py-8">
-                      <ModernIcons.Target />
-                      <p className="text-slate-500 dark:text-slate-400 mt-2">
-                        Click on the map to place your first treasure pin!
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {mapMarkers.map((marker, index) => (
-                        <div key={index} className="card p-4 border-l-4 border-l-treasure-500">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="font-semibold text-slate-900 dark:text-slate-100">
-                              📍 Treasure #{index + 1}
-                            </div>
-                            <span className="status-indicator status-error">
-                              <ModernIcons.Target />
-                              Available
-                            </span>
-                          </div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400 font-mono">
-                            {marker.lat.toFixed(4)}, {marker.lng.toFixed(4)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-6 border-t border-slate-200 dark:border-dark-700">
-                  <div className="flex gap-2">
-                    <button 
-                      className="btn btn-secondary flex-1"
-                      onClick={() => mapComponentRef.current?.deleteLastPin()}
-                    >
-                      <ModernIcons.Trash />
-                      Delete Last
-                    </button>
-                    <button 
-                      className="btn btn-danger flex-1"
-                      onClick={() => mapComponentRef.current?.clearAllPins()}
-                    >
-                      <ModernIcons.X />
-                      Clear All
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentHuntType === 'proximity' && (
-            <div className="card mb-8">
-              <div className="p-6 border-b border-slate-200 dark:border-dark-700">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <ModernIcons.Radio />
-                  Proximity Interface
-                </h3>
-              </div>
-              
-              <div className="p-6">
-                <div style={{ width: '100%', minHeight: '600px', position: 'relative' }}>
-                  <ProximityComponent ref={proximityComponentRef} />
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-slate-200 dark:border-dark-700">
-                <div className="flex justify-center gap-4">
-                  <button 
-                    className="btn btn-secondary"
-                    onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}
-                  >
-                    <ModernIcons.Trash />
-                    Delete Last
-                  </button>
-                  <button 
-                    className="btn btn-danger"
-                    onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}
-                  >
-                    <ModernIcons.X />
-                    Clear All
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Generate Button */}
-          <div className="text-center mb-8">
-            <button 
-              className="btn btn-treasure text-lg px-8 py-4 animate-pulse-glow"
-              onClick={generateLootLink} 
+          {/* Bottom Action Button - Fixed at bottom */}
+          <div className="flex-shrink-0 p-6 border-t border-slate-600/40">
+            <button
+              className={`btn btn-primary w-full text-base py-3 justify-center gap-2 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              onClick={generateLootLink}
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <div className="loading-spinner" />
+                  <div className="spinner" style={{ width: '22px', height: '22px' }} />
                   Generating Hunt...
                 </>
               ) : (
                 <>
-                  <ModernIcons.Sparkles />
+                  <Icons.Sparkle className="text-slate-100" size={20} />
                   Start the Adventure
                 </>
               )}
             </button>
-          </div>
 
-          {/* Result Area */}
-          {generatedUrl && (
-            <div className="card card-glow p-6 animate-slide-up">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <ModernIcons.Check />
-                Your Treasure Hunt is Ready!
-              </h3>
-              
-              <div className="bg-slate-50 dark:bg-dark-800 rounded-xl p-4 mb-4">
-                <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                  Share this link to start the hunt:
+            {/* Result Area */}
+            {generatedUrl && (
+              <div className="mt-4 card p-4">
+                <h4 className="text-sm font-medium text-slate-100 mb-3 flex items-center gap-2">
+                  <Icons.Check className="text-emerald-300" size={18} />
+                  Hunt Ready!
+                </h4>
+                
+                <div className="bg-black/30 rounded-lg p-3 mb-3 border border-white/10">
+                  <div className="text-xs text-slate-400 mb-1 uppercase tracking-wide">Share this link:</div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <a
+                      href={generatedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-slate-100 hover:text-accent-cyan font-mono break-all flex-1 underline"
+                    >
+                      {generatedUrl}
+                    </a>
+                    <button
+                      onClick={() => copyToClipboard(generatedUrl)}
+                      className={`px-2 py-1 rounded text-xs transition-colors flex items-center justify-center ${copyStatus === 'copied' ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40' : 'bg-white/10 text-slate-200 border border-white/10 hover:bg-white/20'}`}
+                      disabled={copyStatus === 'copied'}
+                    >
+                      {copyStatus === 'copied' ? (
+                        <Icons.Check className="text-emerald-200" size={16} />
+                      ) : (
+                        <Icons.Copy className="text-slate-200" size={16} />
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <a
-                    href={generatedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-adventure-600 dark:text-adventure-400 hover:text-adventure-700 dark:hover:text-adventure-300 font-mono text-sm break-all flex-1"
-                  >
-                    {generatedUrl}
-                  </a>
-                  <button
-                    onClick={() => copyToClipboard(generatedUrl)}
-                    className={`btn ${copyStatus === 'copied' ? 'btn-success' : 'btn-secondary'} px-4 py-2`}
-                    disabled={copyStatus === 'copied'}
-                  >
-                    {copyStatus === 'copied' ? (
-                      <>
-                        <ModernIcons.Check />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <ModernIcons.Copy />
-                        Copy
-                      </>
-                    )}
-                  </button>
+
+                <div className="text-xs text-slate-400">
+                  Share with friends to join your hunt!
                 </div>
               </div>
+            )}
+          </div>
+        </div>
 
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                Share this link with friends to let them join your treasure hunt adventure!
+        {/* Right Panel - Hunt Interface and Locations */}
+        <div className="flex-1 flex flex-col">
+          {/* Hunt Interface and Locations */}
+          <div className="flex-1 flex">
+            {/* Locations List */}
+            <div className="w-80 results-list overflow-y-auto">
+              <div className="p-4">
+                <h4 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                  <Icons.Treasure className="text-amber-300" size={22} />
+                  {currentHuntType === 'geolocation' ? 'Loot Locations' : 'Proximity Markers'}
+                  {currentHuntType === 'geolocation' && (
+                    <span className="text-sm text-slate-400">({mapMarkers.length})</span>
+                  )}
+                </h4>
+
+                {currentHuntType === 'geolocation' ? (
+                  mapMarkers.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 flex flex-col items-center gap-2">
+                      <Icons.Target className="text-slate-500" size={28} />
+                      <p className="mt-2 text-sm">Click on the map to place your first treasure location!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {mapMarkers.map((marker, index) => (
+                        <div key={index} className="result-card p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="font-medium text-slate-100 flex items-center gap-2">
+                              <Icons.Pin className="text-slate-300" size={16} />
+                              Location #{index + 1}
+                            </div>
+                            <span className="status-badge text-xs px-2 py-1 rounded">Available</span>
+                          </div>
+                          <div className="text-xs text-slate-300 font-mono">
+                            {marker.lat.toFixed(6)}, {marker.lng.toFixed(6)}
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="pt-3 border-t border-white/10">
+                        <div className="flex gap-2">
+                          <button 
+                            className="btn btn-secondary flex-1 text-sm py-2 justify-center gap-2"
+                            onClick={() => mapComponentRef.current?.deleteLastPin()}
+                          >
+                            <Icons.Trash className="text-slate-200" size={18} />
+                            Delete Last
+                          </button>
+                          <button 
+                            className="btn btn-danger flex-1 text-sm py-2 justify-center gap-2"
+                            onClick={() => mapComponentRef.current?.clearAllPins()}
+                          >
+                            <Icons.Close className="text-slate-100" size={18} />
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center py-4 text-slate-400 flex flex-col items-center gap-2">
+                      <Icons.Proximity className="text-slate-500" size={26} />
+                      <p className="mt-2 text-sm">Use the proximity interface to place markers</p>
+                    </div>
+                  <div className="space-y-3">
+                    <button 
+                      className="btn btn-secondary w-full justify-center gap-2"
+                      onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}
+                    >
+                      <Icons.Trash className="text-slate-200" size={18} />
+                      Delete Last Marker
+                    </button>
+                    <button 
+                      className="btn btn-danger w-full justify-center gap-2"
+                      onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}
+                    >
+                        <Icons.Close className="text-slate-100" size={18} />
+                        Clear All Markers
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+
+            {/* Hunt Interface */}
+            <div className="flex-1 map-panel relative">
+              {currentHuntType === 'geolocation' ? (
+                <div className="absolute inset-0">
+                  <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.18), transparent 60%), radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.16), transparent 55%), rgba(9, 14, 32, 0.85)' }}>
+                  <div className="w-full h-full relative">
+                    <ProximityComponent ref={proximityComponentRef} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </main>
 
-      {/* Modern Footer */}
-      <footer className="border-t border-slate-200 dark:border-dark-700">
-        <div className="container-modern py-8">
-          <div className="text-center text-slate-600 dark:text-slate-400">
-            <p>&copy; 2025 Loota - Adventure Awaits</p>
+      {/* Original Hunt Configuration (Hidden for now) */}
+      <div className="hidden">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Hunt Configuration Panel */}
+          <div className="card p-4">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <Icons.Target className="text-slate-200" size={20} />
+              Hunt Configuration
+            </h3>
           </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

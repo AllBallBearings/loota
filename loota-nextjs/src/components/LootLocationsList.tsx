@@ -1,20 +1,21 @@
 'use client';
 
 import React from 'react';
-import { PinData } from '../app/hunt/[huntId]/page';
+import { PinData } from '../types/hunt';
 
 interface LootLocationsListProps {
   pins: PinData[];
   onPinClick?: (pinId: string) => void;
   modalMode?: boolean;
+  fixedHeight?: boolean;
 }
 
-const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick, modalMode = false }) => {
+const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick, modalMode = false, fixedHeight = false }) => {
   const content = (
     <>
       {pins.length === 0 ? (
         <div className="text-center text-slate-500 py-8">
-          No loot locations found in this hunt.
+          No loota locations found in this hunt.
         </div>
       ) : (
         <div className={modalMode ? "space-y-2" : "space-y-3"}>
@@ -30,7 +31,7 @@ const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick,
             >
               <div className="flex justify-between items-start mb-2">
                 <div className={`font-semibold text-slate-900 ${modalMode ? 'text-sm' : ''}`}>
-                  📍 Loot #{index + 1}
+                  📍 Loota #{index + 1}
                 </div>
                 <div className="flex-shrink-0">
                   {pin.collectedByUserId ? (
@@ -73,13 +74,13 @@ const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick,
   }
 
   return (
-    <div className="card">
-      <div className="p-6 border-b border-slate-200 dark:border-dark-700">
+    <div className={`card ${fixedHeight ? 'flex flex-col flex-1' : ''}`} style={fixedHeight ? { maxHeight: 'calc(60vh - 2rem)' } : {}}>
+      <div className="p-4 border-b border-slate-200 dark:border-dark-700 flex-shrink-0">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          🎯 Loot Locations
+          🎯 Loota Locations
         </h3>
       </div>
-      <div className="p-6">{content}</div>
+      <div className={`p-4 ${fixedHeight ? 'flex-1 overflow-y-auto min-h-0' : ''}`}>{content}</div>
     </div>
   );
 };

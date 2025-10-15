@@ -49,19 +49,21 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
   console.log("MapComponent rendering...");
 
-  // Function to create custom colored pin icons
+  // Function to create custom coin-like pin icons
   const createPinIcon = useCallback((isCollected: boolean, isHighlighted: boolean) => {
-    const color = isCollected ? '#FFD700' : '#10B981'; // Gold for collected, Green for available
-    const strokeColor = isHighlighted ? '#FF0000' : '#FFFFFF'; // Red border for highlighted
-    const strokeWeight = isHighlighted ? 3 : 1;
+    const baseColor = isCollected ? '#FF4444' : '#FFC107'; // Red for collected, gold for uncollected
+    const strokeColor = isHighlighted ? '#FF4444' : (isCollected ? '#CC0000' : '#B8860B'); // Red for highlighted, darker red for collected, dark gold for normal
+    const strokeWeight = isHighlighted ? 4 : 2;
+    const scale = isHighlighted ? 14 : 12;
     
+    // Create a circular coin-like symbol
     return {
-      path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-      fillColor: color,
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: baseColor,
       fillOpacity: 1,
       strokeColor: strokeColor,
       strokeWeight: strokeWeight,
-      scale: 6,
+      scale: scale,
       anchor: new google.maps.Point(0, 0)
     };
   }, []);

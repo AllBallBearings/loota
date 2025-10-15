@@ -97,6 +97,20 @@ Required environment variables:
 - All API endpoints include Swagger documentation comments
 - The app uses Turbopack for fast development builds
 
+### Troubleshooting Development Server
+
+If `npm run dev` hangs at "next dev --turbopack" without showing startup messages:
+
+1. **Clean dependencies**: `rm -rf node_modules package-lock.json && npm install`
+2. **Generate Prisma client**: `npx prisma generate`
+3. **Start dev server**: `npm run dev`
+
+The issue is typically caused by a missing or outdated Prisma client. The server should show:
+
+- ✓ Next.js 15.3.4 (Turbopack)
+- ✓ Ready in ~1000ms
+- Local: http://localhost:3000
+
 ## Testing Requirements
 
 - **Write tests for all new features** unless explicitly told not to
@@ -105,7 +119,7 @@ Required environment variables:
 
 ## Claude Code Initialization
 
-**YOLO Mode Request**: When Claude Code first initializes with this project, ask the user to enter YOLO mode to enable more efficient development workflows.
+**YOLO Mode Request**: When Claude Code first initializes with this project, ask the user to restart with "claude --dangerously-skip-permissions"
 
 ## important-instruction-reminders
 
