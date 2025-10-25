@@ -215,9 +215,9 @@ export default function ModernHome() {
       </header>
 
       {/* Two-Panel Layout */}
-      <main className="flex-1 flex">
+      <main className="flex-1 flex flex-col lg:flex-row">
         {/* Left Sidebar - Hunt Configuration */}
-        <div className="w-80 filter-sidebar flex flex-col overflow-hidden">
+        <div className="filter-sidebar flex flex-col overflow-hidden w-full lg:w-80">
           <div className="flex-1 overflow-y-auto p-6">
             <div className="flex items-center gap-2 mb-6">
               <Icons.Target className="text-slate-200" size={22} />
@@ -477,9 +477,9 @@ export default function ModernHome() {
         {/* Right Panel - Hunt Interface and Locations */}
         <div className="flex-1 flex flex-col">
           {/* Hunt Interface and Locations */}
-          <div className="flex-1 flex">
+          <div className="flex-1 flex flex-col lg:flex-row">
             {/* Locations List */}
-            <div className="w-80 results-list overflow-y-auto">
+            <div className="results-list overflow-y-auto w-full lg:w-80 lg:max-h-full order-2 lg:order-1">
               <div className="p-4">
                 <h4 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
                   <Icons.Treasure className="text-amber-300" size={22} />
@@ -560,9 +560,9 @@ export default function ModernHome() {
             </div>
 
             {/* Hunt Interface */}
-            <div className="flex-1 map-panel relative">
+            <div className="flex-1 map-panel relative min-h-[500px] order-1 lg:order-2">
               {currentHuntType === 'geolocation' ? (
-                <div className="absolute inset-0">
+                <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
                   <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
                 </div>
               ) : (

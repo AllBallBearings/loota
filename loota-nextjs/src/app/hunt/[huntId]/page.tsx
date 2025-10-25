@@ -348,8 +348,8 @@ export default function HuntViewerPage() {
       </header>
 
       {/* Two-Panel Layout */}
-      <main className="flex-1 flex">
-        <div className="container-modern flex-1 py-4 px-6 overflow-y-auto max-h-full flex flex-col min-h-0">
+      <main className="flex-1 flex flex-col">
+        <div className="container-modern flex-1 py-4 px-4 md:px-6 flex flex-col min-h-0 space-y-6 overflow-visible lg:overflow-y-auto lg:max-h-full">
           {allLootCollected && (
             <div className="card card-glow p-6 mb-8 border border-emerald-400/30 bg-emerald-500/10 animate-slide-up">
               <div className="text-center">
@@ -397,7 +397,7 @@ export default function HuntViewerPage() {
           )}
 
           {/* Hunt Header */}
-          <div className="card mb-6 p-4">
+          <div className="card p-4 space-y-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div className="flex-1 min-w-0">
                 <h3 className="text-xl font-semibold text-slate-100 mb-2">
@@ -468,13 +468,13 @@ export default function HuntViewerPage() {
           </div>
 
           {shareExpanded && (
-            <div className="card p-4 mb-6">
+            <div className="card p-4">
               <UniversalLinkGenerator huntId={hunt.id} />
             </div>
           )}
 
           {/* Hunt Interface - Map and Loot Locations */}
-          <div className="mb-6 flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 space-y-6">
             {hunt.type === 'proximity' ? (
               <>
                 <div className="block lg:hidden space-y-4">
@@ -514,7 +514,7 @@ export default function HuntViewerPage() {
                         <Icons.Map className="text-slate-200" size={20} />
                         Hunt Map
                       </h3>
-                      <div className="map-container-modern" style={{ height: 'min(400px, 40vh)' }}>
+                      <div className="map-container-modern" style={{ height: '500px', minHeight: '500px' }}>
                         <MapContainer
                           initialPins={geolocationPins}
                           focusOnMarkers={true}

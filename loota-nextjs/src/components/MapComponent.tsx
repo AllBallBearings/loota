@@ -46,6 +46,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   const markerPinMap = useRef<Map<string, google.maps.Marker>>(new Map());
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
+  const containerResizeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   console.log("MapComponent rendering...");
 
@@ -145,6 +146,9 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
       infoWindowRef.current = new window.google.maps.InfoWindow();
       console.log("Map initialized successfully!");
+
+      // Force an initial resize so Google Maps paints even if the container changed late.
+      window.google.maps.event.trigger(mapRef.current, 'resize');
     } catch (error) {
       console.error("Error initializing map:", error);
       if (mapDivRef.current) {
@@ -193,6 +197,44 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     }
     console.log("Map setup completed with click listener.");
   }, [addMarker, handleLocationError, focusOnMarkers, initialMarkers, fitMapToMarkers]);
+
+  // Ensure the map initializes (or resizes) once the container has real dimensions.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!mapDivRef.current) return;
+    if (!('ResizeObserver' in window)) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      const { width, height } = entry.contentRect;
+      if (width <= 0 || height <= 0) return;
+
+      // Debounce resize-triggered work to avoid hammering the Maps API.
+      if (containerResizeTimeout.current) {
+        clearTimeout(containerResizeTimeout.current);
+      }
+
+      containerResizeTimeout.current = setTimeout(() => {
+        if (mapRef.current && window.google?.maps) {
+          window.google.maps.event.trigger(mapRef.current, 'resize');
+        } else if (window.google?.maps) {
+          initializeMap();
+        }
+      }, 120);
+    });
+
+    observer.observe(mapDivRef.current);
+
+    return () => {
+      if (containerResizeTimeout.current) {
+        clearTimeout(containerResizeTimeout.current);
+        containerResizeTimeout.current = null;
+      }
+      observer.disconnect();
+    };
+  }, [initializeMap]);
 
   useEffect(() => {
     if (!mapRef.current || !window.google) return;
@@ -387,11 +429,34 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
       if (window.google && mapDivRef.current && !mapRef.current) {
         console.log("Reinitializing map after component switch...");
         initializeMap();
+      } else if (mapRef.current && window.google) {
+        // Trigger resize if map already exists
+        console.log("Triggering map resize...");
+        window.google.maps.event.trigger(mapRef.current, 'resize');
+        if (focusOnMarkers && initialMarkers.length > 0) {
+          fitMapToMarkers(initialMarkers);
+        }
       }
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [initializeMap]);
+  }, [initializeMap, focusOnMarkers, initialMarkers, fitMapToMarkers]);
+
+  // Handle window resize to trigger map resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (mapRef.current && window.google) {
+        window.google.maps.event.trigger(mapRef.current, 'resize');
+        // Re-center or re-fit bounds if needed
+        if (focusOnMarkers && initialMarkers.length > 0) {
+          setTimeout(() => fitMapToMarkers(initialMarkers), 100);
+        }
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [focusOnMarkers, initialMarkers, fitMapToMarkers]);
 
   // Cleanup effect
   useEffect(() => {
