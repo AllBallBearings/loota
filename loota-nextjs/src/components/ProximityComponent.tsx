@@ -8,6 +8,7 @@ export interface ProximityMarkerData {
   x: number;
   y: number;
   isCollected?: boolean;
+  objectType?: string; // Type of loot object (coin, giftCard, etc.)
 }
 
 export interface ProximityComponentRef {
@@ -20,6 +21,7 @@ export interface ProximityComponentRef {
 
 interface ProximityComponentProps {
   initialMarkers?: ProximityMarkerData[]; // Add this prop
+  currentLootType?: string; // Current loot type to apply to new markers
 }
 
 const radiusMapping = [10, 50, 100]; // Maps slider values (0,1,2) to ft
@@ -31,7 +33,7 @@ const normalizeMarkers = (markers: ProximityMarkerData[]): ProximityMarkerData[]
   }));
 
 const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentProps>((
-  { initialMarkers = [] }, // Destructure initialMarkers with a default empty array
+  { initialMarkers = [], currentLootType = 'coin' }, // Destructure initialMarkers with a default empty array
   ref
 ) => {
   const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>(() => normalizeMarkers(initialMarkers)); // Initialize with initialMarkers, normalizing collected state
@@ -203,9 +205,10 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         x: clickX,
         y: clickY,
         isCollected: false,
+        objectType: currentLootType,
       }
     ]);
-  }, [currentProximityRadiusFt]);
+  }, [currentProximityRadiusFt, currentLootType]);
 
   const addProximityMarkers = useCallback((markers: ProximityMarkerData[]) => {
     setProximityMarkersData((prevData) => [

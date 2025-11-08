@@ -7,6 +7,7 @@ import { Icons } from '../components/Icons';
 
 export default function ModernHome() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
+  const [currentLootType, setCurrentLootType] = useState<string>('coin');
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [huntName, setHuntName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
@@ -263,6 +264,45 @@ export default function ModernHome() {
               </div>
             </div>
 
+            {/* Loot Type Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Loot Type
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="lootType"
+                    value="coin"
+                    checked={currentLootType === 'coin'}
+                    onChange={(e) => setCurrentLootType(e.target.value)}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
+                  />
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Treasure className="text-amber-300" size={18} />
+                    Coin
+                  </span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="lootType"
+                    value="giftCard"
+                    checked={currentLootType === 'giftCard'}
+                    onChange={(e) => setCurrentLootType(e.target.value)}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
+                  />
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Sparkle className="text-emerald-300" size={18} />
+                    Gift Card
+                  </span>
+                </label>
+              </div>
+            </div>
+
             {/* Hunt Details */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -504,7 +544,9 @@ export default function ModernHome() {
                               <Icons.Pin className="text-slate-300" size={16} />
                               Location #{index + 1}
                             </div>
-                            <span className="status-badge text-xs px-2 py-1 rounded">Available</span>
+                            <span className="status-badge text-xs px-2 py-1 rounded">
+                              {marker.objectType === 'giftCard' ? '🎁 Gift Card' : '🪙 Coin'}
+                            </span>
                           </div>
                           <div className="text-xs text-slate-300 font-mono">
                             {marker.lat.toFixed(6)}, {marker.lng.toFixed(6)}
@@ -563,12 +605,12 @@ export default function ModernHome() {
             <div className="flex-1 map-panel relative min-h-[500px] order-1 lg:order-2">
               {currentHuntType === 'geolocation' ? (
                 <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
-                  <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
+                  <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} currentLootType={currentLootType} />
                 </div>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.18), transparent 60%), radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.16), transparent 55%), rgba(9, 14, 32, 0.85)' }}>
                   <div className="w-full h-full relative">
-                    <ProximityComponent ref={proximityComponentRef} />
+                    <ProximityComponent ref={proximityComponentRef} currentLootType={currentLootType} />
                   </div>
                 </div>
               )}

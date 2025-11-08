@@ -16,6 +16,7 @@ export interface MapMarker {
   isCollected?: boolean;
   title?: string; // e.g., "Loot #1"
   description?: string; // Additional info to show in bubble
+  objectType?: string; // Type of loot object (coin, giftCard, etc.)
 }
 
 export interface MapComponentRef {
@@ -31,12 +32,13 @@ interface MapComponentProps {
   initialMarkers?: MapMarker[];
   onMarkersChange?: (markers: MapMarker[]) => void;
   focusOnMarkers?: boolean; // If true, zoom to fit all markers instead of user location
+  currentLootType?: string; // Current loot type to apply to new markers
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "YOUR_GOOGLE_MAPS_API_KEY";
 
 const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
-  { initialMarkers = [], onMarkersChange, focusOnMarkers = false },
+  { initialMarkers = [], onMarkersChange, focusOnMarkers = false, currentLootType = 'coin' },
   ref
 ) => {
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -93,9 +95,9 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   const addMarker = useCallback((location: google.maps.LatLng) => {
     setMarkerData((prevData) => [
       ...prevData,
-      { lat: location.lat(), lng: location.lng() }
+      { lat: location.lat(), lng: location.lng(), objectType: currentLootType }
     ]);
-  }, []);
+  }, [currentLootType]);
 
   const addMarkers = useCallback((markers: MapMarker[]) => {
     setMarkerData((prevData) => [...prevData, ...markers]);

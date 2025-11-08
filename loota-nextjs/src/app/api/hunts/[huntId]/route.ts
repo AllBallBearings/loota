@@ -67,6 +67,9 @@ const prisma = new PrismaClient();
  *                       y:
  *                         type: number
  *                         format: float
+ *                       objectType:
+ *                         type: string
+ *                         description: Type of loot object (coin, giftCard, etc.)
  *                       collectedByUserId:
  *                         type: string
  *                         format: uuid
@@ -184,6 +187,7 @@ export async function GET(
             directionStr: true,
             x: true,
             y: true,
+            objectType: true,
             order: true,
             collectedByUserId: true,
             collectedAt: true,

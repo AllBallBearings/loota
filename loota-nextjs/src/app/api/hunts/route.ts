@@ -63,6 +63,10 @@ const prisma = new PrismaClient();
  *                       type: number
  *                       format: float
  *                       description: Relative Y coordinate for proximity pins.
+ *                     objectType:
+ *                       type: string
+ *                       description: Type of loot object (coin, giftCard, etc.)
+ *                       default: coin
  *     responses:
  *       201:
  *         description: Hunt created successfully. Returns the new hunt's ID.
@@ -204,6 +208,10 @@ export async function GET() {
  *                       type: number
  *                       format: float
  *                       description: Relative Y coordinate for proximity pins.
+ *                     objectType:
+ *                       type: string
+ *                       description: Type of loot object (coin, giftCard, etc.)
+ *                       default: coin
  *     responses:
  *       201:
  *         description: Hunt created successfully. Returns the new hunt's ID.
@@ -297,13 +305,14 @@ export async function POST(request: Request) {
           },
         },
         pins: {
-          create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string }, index: number) => ({
+          create: pins.map((pin: { lat?: string; lng?: string; distanceFt?: string; directionStr?: string; x?: string; y?: string; objectType?: string }, index: number) => ({
             lat: pin.lat !== undefined ? parseFloat(pin.lat) : null,
             lng: pin.lng !== undefined ? parseFloat(pin.lng) : null,
             distanceFt: pin.distanceFt !== undefined ? parseFloat(pin.distanceFt) : null,
             directionStr: pin.directionStr || null,
             x: pin.x !== undefined ? parseFloat(pin.x) : null,
             y: pin.y !== undefined ? parseFloat(pin.y) : null,
+            objectType: pin.objectType || 'coin',
             order: index,
           })),
         },
