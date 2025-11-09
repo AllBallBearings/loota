@@ -30,6 +30,7 @@ const normalizeMarkers = (markers: ProximityMarkerData[]): ProximityMarkerData[]
   markers.map(marker => ({
     ...marker,
     isCollected: marker.isCollected ?? false,
+    objectType: marker.objectType ?? 'coin',
   }));
 
 const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentProps>((
@@ -262,7 +263,8 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       // Add new dots
       proximityMarkersData.forEach(marker => {
         const dot = document.createElement('div');
-        dot.className = `proximity-marker-dot${marker.isCollected ? ' collected' : ''}`;
+        const typeClass = marker.objectType === 'giftCard' ? 'proximity-marker-dot--gift' : 'proximity-marker-dot--coin';
+        dot.className = `proximity-marker-dot ${typeClass}${marker.isCollected ? ' collected' : ''}`;
         dot.style.left = `${marker.x}px`;
         dot.style.top = `${marker.y}px`;
         proximityCircleElement.appendChild(dot);
@@ -474,7 +476,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
             fontWeight: 600,
           }}
         >
-          📍 Luda Locations
+          📍 Loota Locations
         </h4>
         <div
           id="proximity-coordinates-display"
