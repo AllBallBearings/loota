@@ -7,6 +7,7 @@ import { Icons } from '../components/Icons';
 
 export default function ModernHome() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
+  const [currentLootType, setCurrentLootType] = useState<string>('coin');
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [huntName, setHuntName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
@@ -263,6 +264,45 @@ export default function ModernHome() {
               </div>
             </div>
 
+            {/* Loot Type Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Loot Type
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="lootType"
+                    value="coin"
+                    checked={currentLootType === 'coin'}
+                    onChange={(e) => setCurrentLootType(e.target.value)}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
+                  />
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Treasure className="text-amber-300" size={18} />
+                    Coin
+                  </span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="lootType"
+                    value="giftCard"
+                    checked={currentLootType === 'giftCard'}
+                    onChange={(e) => setCurrentLootType(e.target.value)}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
+                  />
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Sparkle className="text-emerald-300" size={18} />
+                    Gift Card
+                  </span>
+                </label>
+              </div>
+            </div>
+
             {/* Hunt Details */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -476,21 +516,18 @@ export default function ModernHome() {
 
         {/* Right Panel - Hunt Interface and Locations */}
         <div className="flex-1 flex flex-col">
-          {/* Hunt Interface and Locations */}
-          <div className="flex-1 flex flex-col lg:flex-row">
-            {/* Locations List */}
-            <div className="results-list overflow-y-auto w-full lg:w-80 lg:max-h-full order-2 lg:order-1">
-              <div className="p-4">
-                <h4 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
-                  <Icons.Treasure className="text-amber-300" size={22} />
-                  {currentHuntType === 'geolocation' ? 'Loot Locations' : 'Proximity Markers'}
-                  {currentHuntType === 'geolocation' && (
+          {currentHuntType === 'geolocation' ? (
+            <div className="flex-1 flex flex-col lg:flex-row">
+              {/* Locations List */}
+              <div className="results-list overflow-y-auto w-full lg:w-80 lg:max-h-full order-2 lg:order-1">
+                <div className="p-4">
+                  <h4 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                    <Icons.Treasure className="text-amber-300" size={22} />
+                    Loot Locations
                     <span className="text-sm text-slate-400">({mapMarkers.length})</span>
-                  )}
-                </h4>
+                  </h4>
 
-                {currentHuntType === 'geolocation' ? (
-                  mapMarkers.length === 0 ? (
+                  {mapMarkers.length === 0 ? (
                     <div className="text-center py-8 text-slate-400 flex flex-col items-center gap-2">
                       <Icons.Target className="text-slate-500" size={28} />
                       <p className="mt-2 text-sm">Click on the map to place your first treasure location!</p>
@@ -504,7 +541,22 @@ export default function ModernHome() {
                               <Icons.Pin className="text-slate-300" size={16} />
                               Location #{index + 1}
                             </div>
-                            <span className="status-badge text-xs px-2 py-1 rounded">Available</span>
+                            <span
+                              className={`status-badge ${
+                                marker.objectType === 'giftCard' ? 'status-badge--gift' : 'status-badge--coin'
+                              }`}
+                            >
+                              <span
+                                className="status-badge__icon"
+                                role="img"
+                                aria-label={marker.objectType === 'giftCard' ? 'Gift card loot' : 'Coin loot'}
+                              >
+                                {marker.objectType === 'giftCard' ? '🎁' : '🪙'}
+                              </span>
+                              <span className="status-badge__text">
+                                {marker.objectType === 'giftCard' ? 'Gift Card' : 'Coin'}
+                              </span>
+                            </span>
                           </div>
                           <div className="text-xs text-slate-300 font-mono">
                             {marker.lat.toFixed(6)}, {marker.lng.toFixed(6)}
@@ -531,49 +583,48 @@ export default function ModernHome() {
                         </div>
                       </div>
                     </div>
-                  )
-                ) : (
-                  <div className="space-y-4">
-                    <div className="text-center py-4 text-slate-400 flex flex-col items-center gap-2">
-                      <Icons.Proximity className="text-slate-500" size={26} />
-                      <p className="mt-2 text-sm">Use the proximity interface to place markers</p>
-                    </div>
-                  <div className="space-y-3">
-                    <button 
+                  )}
+                </div>
+              </div>
+
+              {/* Hunt Interface */}
+              <div className="flex-1 map-panel relative min-h-[500px] order-1 lg:order-2">
+                <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
+                  <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} currentLootType={currentLootType} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex">
+              <div className="flex-1 map-panel relative min-h-[500px]">
+                <div
+                  className="h-full w-full overflow-auto px-4 py-6"
+                  style={{
+                    background: 'radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.18), transparent 60%), radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.16), transparent 55%), rgba(9, 14, 32, 0.85)',
+                    borderRadius: 'inherit'
+                  }}
+                >
+                  <ProximityComponent ref={proximityComponentRef} currentLootType={currentLootType} />
+                  <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                    <button
                       className="btn btn-secondary w-full justify-center gap-2"
                       onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}
                     >
                       <Icons.Trash className="text-slate-200" size={18} />
                       Delete Last Marker
                     </button>
-                    <button 
+                    <button
                       className="btn btn-danger w-full justify-center gap-2"
                       onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}
                     >
-                        <Icons.Close className="text-slate-100" size={18} />
-                        Clear All Markers
-                      </button>
-                    </div>
+                      <Icons.Close className="text-slate-100" size={18} />
+                      Clear All Markers
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             </div>
-
-            {/* Hunt Interface */}
-            <div className="flex-1 map-panel relative min-h-[500px] order-1 lg:order-2">
-              {currentHuntType === 'geolocation' ? (
-                <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
-                  <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
-                </div>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.18), transparent 60%), radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.16), transparent 55%), rgba(9, 14, 32, 0.85)' }}>
-                  <div className="w-full h-full relative">
-                    <ProximityComponent ref={proximityComponentRef} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </main>
 

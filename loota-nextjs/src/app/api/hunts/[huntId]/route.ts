@@ -67,6 +67,9 @@ const prisma = new PrismaClient();
  *                       y:
  *                         type: number
  *                         format: float
+ *                       objectType:
+ *                         type: string
+ *                         description: Type of loot object (coin, giftCard, etc.)
  *                       collectedByUserId:
  *                         type: string
  *                         format: uuid
@@ -184,6 +187,7 @@ export async function GET(
             directionStr: true,
             x: true,
             y: true,
+            objectType: true,
             order: true,
             collectedByUserId: true,
             collectedAt: true,
@@ -248,6 +252,7 @@ export async function GET(
         distanceFt: pin.distanceFt ? Number(pin.distanceFt) : undefined,
         x: pin.x ? Number(pin.x) : undefined,
         y: pin.y ? Number(pin.y) : undefined,
+        objectType: pin.objectType || 'coin',
       })),
       winnerContact: undefined as { name?: string; phone?: string } | undefined,
       creatorContact: undefined as { name?: string; preferred?: string; phone?: string; email?: string } | undefined,

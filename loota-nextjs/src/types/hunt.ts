@@ -6,6 +6,7 @@ export interface PinData {
   directionStr?: string;
   x?: number;
   y?: number;
+  objectType?: string; // Type of loot object (coin, giftCard, etc.)
   collectedByUserId?: string;
   collectedByUser?: {
     id: string;

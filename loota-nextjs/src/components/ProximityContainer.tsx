@@ -23,6 +23,7 @@ const ProximityContainer: React.FC<ProximityContainerProps> = ({ initialPins }) 
         x: pin.x!,
         y: pin.y!,
         isCollected: !!pin.collectedByUserId,
+        objectType: pin.objectType || 'coin',
       }));
   }, [initialPins]);
 
@@ -44,7 +45,8 @@ const ProximityContainer: React.FC<ProximityContainerProps> = ({ initialPins }) 
             marker.directionStr !== next.directionStr ||
             marker.x !== next.x ||
             marker.y !== next.y ||
-            (!!marker.isCollected) !== (!!next.isCollected)
+            (!!marker.isCollected) !== (!!next.isCollected) ||
+            (marker.objectType || 'coin') !== (next.objectType || 'coin')
           );
         });
 

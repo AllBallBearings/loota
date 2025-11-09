@@ -8,6 +8,7 @@ export interface ProximityMarkerData {
   x: number;
   y: number;
   isCollected?: boolean;
+  objectType?: string; // Type of loot object (coin, giftCard, etc.)
 }
 
 export interface ProximityComponentRef {
@@ -20,6 +21,7 @@ export interface ProximityComponentRef {
 
 interface ProximityComponentProps {
   initialMarkers?: ProximityMarkerData[]; // Add this prop
+  currentLootType?: string; // Current loot type to apply to new markers
 }
 
 const radiusMapping = [10, 50, 100]; // Maps slider values (0,1,2) to ft
@@ -28,10 +30,11 @@ const normalizeMarkers = (markers: ProximityMarkerData[]): ProximityMarkerData[]
   markers.map(marker => ({
     ...marker,
     isCollected: marker.isCollected ?? false,
+    objectType: marker.objectType ?? 'coin',
   }));
 
 const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentProps>((
-  { initialMarkers = [] }, // Destructure initialMarkers with a default empty array
+  { initialMarkers = [], currentLootType = 'coin' }, // Destructure initialMarkers with a default empty array
   ref
 ) => {
   const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>(() => normalizeMarkers(initialMarkers)); // Initialize with initialMarkers, normalizing collected state
@@ -203,9 +206,10 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         x: clickX,
         y: clickY,
         isCollected: false,
+        objectType: currentLootType,
       }
     ]);
-  }, [currentProximityRadiusFt]);
+  }, [currentProximityRadiusFt, currentLootType]);
 
   const addProximityMarkers = useCallback((markers: ProximityMarkerData[]) => {
     setProximityMarkersData((prevData) => [
@@ -259,7 +263,8 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       // Add new dots
       proximityMarkersData.forEach(marker => {
         const dot = document.createElement('div');
-        dot.className = `proximity-marker-dot${marker.isCollected ? ' collected' : ''}`;
+        const typeClass = marker.objectType === 'giftCard' ? 'proximity-marker-dot--gift' : 'proximity-marker-dot--coin';
+        dot.className = `proximity-marker-dot ${typeClass}${marker.isCollected ? ' collected' : ''}`;
         dot.style.left = `${marker.x}px`;
         dot.style.top = `${marker.y}px`;
         proximityCircleElement.appendChild(dot);
@@ -471,7 +476,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
             fontWeight: 600,
           }}
         >
-          📍 Luda Locations
+          📍 Loota Locations
         </h4>
         <div
           id="proximity-coordinates-display"
