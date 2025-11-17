@@ -258,19 +258,45 @@ export default function HuntViewerPage() {
     p.lat !== undefined && p.lng !== undefined
   );
 
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(segment => segment[0]?.toUpperCase() ?? '')
+      .join('')
+      .slice(0, 2) || '?';
+  };
+
+  const getLatestCollectionTime = (pins: PinData[]) =>
+    pins.reduce((latest, pin) => {
+      if (!pin.collectedAt) return latest;
+      const timestamp = new Date(pin.collectedAt).getTime();
+      return timestamp > latest ? timestamp : latest;
+    }, 0);
+
+  const sortedCollectors = Object.values(collectors).sort((a, b) => {
+    const pinDifference = b.pins.length - a.pins.length;
+    if (pinDifference !== 0) return pinDifference;
+    return getLatestCollectionTime(a.pins) - getLatestCollectionTime(b.pins);
+  });
+
+  const totalPinsPlaced = hunt.pins.length;
+  const completionTimestamp = allLootCollected ? getLatestCollectionTime(hunt.pins) : null;
+  const completionDate = completionTimestamp ? new Date(completionTimestamp) : null;
+  const leaderboardLeader = sortedCollectors[0];
+
   const renderHuntManagementCard = () => {
     if (!isHuntCreator) return null;
 
     return (
-      <div className="card">
-        <div className="p-6 border-b border-slate-200 dark:border-dark-700">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Icons.Refresh className="text-amber-300" size={20} />
-            Hunt Management
-          </h3>
+      <div className="card card-panel">
+        <div className="card-section card-section--divider flex items-center gap-2">
+          <Icons.Refresh className="text-amber-300" size={20} />
+          <h3 className="text-lg font-semibold">Hunt Management</h3>
         </div>
-        <div className="p-6">
-          <div className="space-y-3">
+        <div className="card-section space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button 
               className="btn btn-warning w-full flex items-center justify-center gap-2"
               onClick={handleResetLoot}
@@ -306,8 +332,8 @@ export default function HuntViewerPage() {
               )}
             </button>
           </div>
-          <p className="text-xs text-slate-400 mt-3">
-            Reset collected pins or clear participants independently
+          <p className="text-xs text-slate-400">
+            Reset collected pins or clear participants independently.
           </p>
         </div>
       </div>
@@ -315,16 +341,21 @@ export default function HuntViewerPage() {
   };
 
   const renderProximityCard = () => (
-    <div className="card p-4">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        <Icons.Proximity className="text-accent-cyan" size={22} />
-        Proximity Hunt
-      </h3>
-      <div
-        className="map-container-modern map-container-proximity"
-        style={{ minHeight: '560px' }}
-      >
-        <ProximityContainer initialPins={proximityPins} />
+    <div className="card card-panel">
+      <div className="card-section card-section--divider card-section--header">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Icons.Proximity className="text-accent-cyan" size={22} />
+          Proximity Hunt
+        </h3>
+        <span className="text-sm text-slate-400">{proximityPins.length} clue{proximityPins.length === 1 ? '' : 's'}</span>
+      </div>
+      <div className="card-section">
+        <div
+          className="map-container-modern map-container-proximity"
+          style={{ minHeight: '560px' }}
+        >
+          <ProximityContainer initialPins={proximityPins} />
+        </div>
       </div>
     </div>
   );
@@ -349,56 +380,96 @@ export default function HuntViewerPage() {
 
       {/* Two-Panel Layout */}
       <main className="flex-1 flex flex-col">
-        <div className="container-modern flex-1 py-4 px-4 md:px-6 flex flex-col min-h-0 space-y-6 overflow-visible lg:overflow-y-auto lg:max-h-full">
+        <div className="container-modern flex-1 py-4 px-4 md:px-6 min-h-0 overflow-visible lg:overflow-y-auto lg:max-h-full section-stack">
           {allLootCollected && (
-            <div className="card card-glow p-6 mb-8 border border-emerald-400/30 bg-emerald-500/10 animate-slide-up">
-              <div className="text-center">
-                <h2 className="text-3xl font-bold text-emerald-200 mb-2 flex items-center justify-center gap-3">
-                  <Icons.Celebration className="text-emerald-200" size={30} />
+            <section className="card card-glow looted-banner mb-8 animate-slide-up">
+              <div className="looted-banner__background" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div className="looted-banner__content">
+                <p className="looted-eyebrow">Hunt Complete</p>
+                <h2 className="looted-title">
+                  <Icons.Celebration className="text-emerald-200" size={32} />
                   Everything&apos;s Looted!
                 </h2>
-                <p className="text-lg text-emerald-100 mb-6">
-                  The hunt is complete
+                <p className="looted-subtitle">
+                  {leaderboardLeader
+                    ? `${leaderboardLeader.user.name} led the charge while the crew secured every single pin.`
+                    : 'Every pin has been claimed—time to celebrate the crew!'}
                 </p>
-              
-                <div className="bg-emerald-500/15 border border-emerald-400/30 rounded-xl p-4 max-w-2xl mx-auto">
-                  <h3 className="text-xl font-semibold text-emerald-100 mb-4 flex items-center justify-center gap-2">
-                    <Icons.Trophy className="text-amber-200" size={22} />
-                    Winners & Their Loot
-                  </h3>
-                
-                  {Object.values(collectors).map((collector, index) => (
-                    <div key={collector.user.id} className={`bg-black/20 border border-emerald-400/30 rounded-lg p-3 text-left ${index < Object.values(collectors).length - 1 ? 'mb-2' : ''}`}>
-                      <div className="text-lg font-semibold text-emerald-100 mb-2 flex items-center gap-2">
-                        <Icons.User className="text-emerald-200" size={18} />
-                        {collector.user.name}
-                      </div>
-                      <div className="text-sm text-emerald-100/80 mb-2">
-                        Collected {collector.pins.length} pin{collector.pins.length === 1 ? '' : 's'}:
-                      </div>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {collector.pins.map((pin, pinIndex) => (
-                          <span key={pin.id} className="bg-yellow-300/80 text-yellow-900 px-2 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1">
-                            <Icons.Target className="text-yellow-900" size={14} />
-                            Pin #{pinIndex + 1}
-                          </span>
-                        ))}
-                      </div>
-                      {collector.pins[0]?.collectedAt && (
-                        <div className="text-xs text-slate-200/80">
-                          Last collected: {new Date(collector.pins[collector.pins.length - 1].collectedAt!).toLocaleString()}
-                        </div>
-                      )}
+
+                <div className="looted-stats-grid">
+                  <div className="looted-stat">
+                    <p className="looted-stat__label">Pins Collected</p>
+                    <p className="looted-stat__value">{totalPinsPlaced}</p>
+                  </div>
+                  <div className="looted-stat">
+                    <p className="looted-stat__label">Looters</p>
+                    <p className="looted-stat__value">{sortedCollectors.length}</p>
+                  </div>
+                  <div className="looted-stat">
+                    <p className="looted-stat__label">Finish Time</p>
+                    <p className="looted-stat__value looted-stat__value--time">
+                      {completionDate ? completionDate.toLocaleString() : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="looted-winners">
+                  <div className="looted-winners__header">
+                    <Icons.Trophy className="text-amber-200" size={24} />
+                    <h3>Winners & Their Loot</h3>
+                  </div>
+
+                  {sortedCollectors.length > 0 ? (
+                    <div className="looted-winners-grid">
+                      {sortedCollectors.map((collector, index) => (
+                        <article
+                          key={collector.user.id}
+                          className={`looted-winner-card ${index === 0 ? 'looted-winner-card--leader' : ''}`}
+                        >
+                          <div className="looted-winner-card__rank">#{index + 1}</div>
+                          <div className="looted-winner-card__identity">
+                            <div className="looted-avatar">{getInitials(collector.user.name)}</div>
+                            <div>
+                              <p className="looted-winner-card__name">{collector.user.name}</p>
+                              <p className="looted-winner-card__meta">
+                                {collector.pins.length} pin{collector.pins.length === 1 ? '' : 's'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="looted-pin-chips">
+                            {collector.pins.map((pin, pinIndex) => (
+                              <span key={pin.id} className="looted-pin-chip">
+                                <Icons.Target className="text-yellow-300" size={12} />
+                                Pin #{pinIndex + 1}
+                              </span>
+                            ))}
+                          </div>
+                          {collector.pins[collector.pins.length - 1]?.collectedAt && (
+                            <p className="looted-winner-card__timestamp">
+                              Last pin ·{' '}
+                              {new Date(
+                                collector.pins[collector.pins.length - 1].collectedAt!
+                              ).toLocaleTimeString()}
+                            </p>
+                          )}
+                        </article>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <p className="text-slate-200/70 text-center">No collectors recorded.</p>
+                  )}
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
           {/* Hunt Header */}
-          <div className="card p-4 space-y-4">
-            <div className="flex justify-between items-center flex-wrap gap-4">
+          <div className="card card-panel">
+            <div className="card-section card-section--divider card-section--header">
               <div className="flex-1 min-w-0">
                 <h3 className="text-xl font-semibold text-slate-100 mb-2">
                   {hunt.name || 'Untitled Hunt'}
@@ -418,13 +489,13 @@ export default function HuntViewerPage() {
                       by {hunt.creator.name}
                     </span>
                   )}
-                  <span className="flex items-center gap-1 font-mono">
+                  <span className="flex items-center gap-1 font-mono text-slate-400">
                     🆔 {hunt.id.substring(0, 8)}...
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap justify-end">
                 {!hasUserJoined && !isHuntCreator && (
                   <JoinHuntButton
                     huntId={hunt.id}
@@ -449,102 +520,90 @@ export default function HuntViewerPage() {
             </div>
 
             {!hasUserJoined && !isHuntCreator && (
-              <div className="mt-4 p-4 rounded-lg border border-blue-500/30 bg-blue-500/10">
-                <p className="text-sm text-slate-100 flex items-center gap-2">
+              <div className="card-section card-section--compact">
+                <div className="status-callout status-callout--info">
                   <Icons.Lightbulb className="text-yellow-200" size={18} />
-                  <span><span className="font-medium">Join this hunt</span> to start collecting loot and compete with other players!</span>
-                </p>
+                  <p className="text-sm">
+                    <span className="font-medium text-slate-100">Join this hunt</span> to start collecting loot and compete with other players.
+                  </p>
+                </div>
               </div>
             )}
 
             {hasUserJoined && !isHuntCreator && (
-              <div className="mt-4 p-4 rounded-lg border border-emerald-400/40 bg-emerald-500/10">
-                <p className="text-sm text-emerald-100 flex items-center gap-2">
+              <div className="card-section card-section--compact">
+                <div className="status-callout status-callout--success">
                   <Icons.Check className="text-emerald-200" size={18} />
-                  <span><span className="font-medium">You&apos;re in the hunt!</span> The AR view below shows all available loot locations.</span>
-                </p>
+                  <p className="text-sm text-emerald-50">
+                    <span className="font-semibold text-emerald-100">You&apos;re in!</span> The AR view below shows every active loot location.
+                  </p>
+                </div>
               </div>
             )}
           </div>
 
           {shareExpanded && (
-            <div className="card p-4">
-              <UniversalLinkGenerator huntId={hunt.id} />
+            <div className="card card-panel">
+              <div className="card-section">
+                <UniversalLinkGenerator huntId={hunt.id} />
+              </div>
             </div>
           )}
 
           {/* Hunt Interface - Map and Loot Locations */}
-          <div className="flex-1 flex flex-col min-h-0 space-y-6">
+          <section className="min-h-0">
             {hunt.type === 'proximity' ? (
-              <>
-                <div className="block lg:hidden space-y-4">
-                  {renderProximityCard()}
-                </div>
-                <div className="hidden lg:block">
-                  {renderProximityCard()}
-                </div>
-                {isHuntCreator && (
-                  <div className="mt-4">
-                    {renderHuntManagementCard()}
-                  </div>
-                )}
-              </>
+              <div className="hunt-grid">
+                {renderProximityCard()}
+                {isHuntCreator && renderHuntManagementCard()}
+              </div>
             ) : (
-              <>
-                <div className="block lg:hidden space-y-4">
-                  <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} />
-                  <div className="card p-4">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <div className="hunt-grid hunt-grid--two-column">
+                <div className="card card-panel">
+                  <div className="card-section card-section--divider card-section--header">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
                       <Icons.Map className="text-slate-200" size={20} />
                       Hunt Map
                     </h3>
-                    <div className="map-container-modern" style={{ height: 'min(400px, 40vh)' }}>
+                    <span className="text-sm text-slate-400">
+                      {geolocationPins.length} active pin{geolocationPins.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="card-section">
+                    <div className="map-container-modern" style={{ height: '500px', minHeight: '400px' }}>
                       <MapContainer
                         initialPins={geolocationPins}
                         focusOnMarkers={true}
                       />
                     </div>
                   </div>
-                  {isHuntCreator && renderHuntManagementCard()}
                 </div>
-                <div className="hidden lg:flex gap-6 min-h-0 flex-1">
-                  <div className="w-2/3">
-                    <div className="card p-4">
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Icons.Map className="text-slate-200" size={20} />
-                        Hunt Map
-                      </h3>
-                      <div className="map-container-modern" style={{ height: '500px', minHeight: '500px' }}>
-                        <MapContainer
-                          initialPins={geolocationPins}
-                          focusOnMarkers={true}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="w-1/3 flex flex-col space-y-4 min-h-0">
-                    <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} fixedHeight={true} />
-                    {renderHuntManagementCard()}
-                  </div>
+
+                <div className="flex flex-col gap-4 min-h-0">
+                  <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} fixedHeight />
+                  {renderHuntManagementCard()}
                 </div>
-              </>
+              </div>
             )}
-          </div>
+          </section>
 
           {/* Participants - Below main interface */}
           <div className="mb-6">
-            <div className="card">
-              <div className="p-6 border-b border-slate-200 dark:border-dark-700">
+            <div className="card card-panel">
+              <div className="card-section card-section--divider card-section--header">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <Icons.Users className="text-slate-200" size={20} />
-                  Participants ({hunt.participants.length})
+                  Participants
                 </h3>
+                <span className="text-sm text-slate-400">
+                  {hunt.participants.length} joined
+                </span>
               </div>
-              <div className="p-6">
+              <div className="card-section">
                 {hunt.participants.length > 0 ? (
                   <div className="space-y-3">
                     {hunt.participants.map(p => (
-                      <div key={p.id} className="flex justify-between items-center p-3 rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm">
+                      <div key={p.id} className="flex justify-between items-center p-3 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
                         <span className="font-medium text-slate-100">{p.user.name}</span>
                         <span className="text-sm text-slate-300">
                           {new Date(p.joinedAt).toLocaleDateString()}

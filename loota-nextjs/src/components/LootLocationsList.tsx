@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Icons } from '@/components/Icons';
 import { PinData } from '../types/hunt';
 
 interface LootLocationsListProps {
@@ -11,55 +12,67 @@ interface LootLocationsListProps {
 }
 
 const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick, modalMode = false, fixedHeight = false }) => {
-  const content = (
+  const formatCoordinate = (value?: number) =>
+    typeof value === 'number' ? value.toFixed(4) : 'N/A';
+
+  const listContent = (
     <>
       {pins.length === 0 ? (
-        <div className="text-center text-slate-500 py-8">
-          No loota locations found in this hunt.
+        <div className="text-center text-slate-400 py-8">
+          No loot locations found in this hunt.
         </div>
       ) : (
-        <div className={modalMode ? "space-y-2" : "space-y-3"}>
+        <div className="space-y-3">
           {pins.map((pin, index) => (
             <div 
               key={pin.id} 
-              className={`${modalMode ? 'p-3' : 'p-4'} rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                pin.collectedByUserId 
-                  ? 'bg-amber-50 border-amber-200 hover:bg-amber-100' 
-                  : 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
-              }`}
+              className={[
+                'loot-location-card',
+                modalMode ? 'loot-location-card--compact' : '',
+                pin.collectedByUserId ? 'loot-location-card--collected' : 'loot-location-card--available'
+              ].join(' ')}
               onClick={() => onPinClick && onPinClick(pin.id)}
             >
-              <div className="flex justify-between items-start mb-2">
-                <div className={`font-semibold text-slate-900 ${modalMode ? 'text-sm' : ''}`}>
-                  📍 Loota #{index + 1}
+              <div className="loot-location-card__row">
+                <div className="loot-location-card__title text-base">
+                  <span className="text-slate-200">Loot #{index + 1}</span>
                 </div>
-                <div className="flex-shrink-0">
+                <span className={`loot-pill ${pin.collectedByUserId ? 'loot-pill--collected' : 'loot-pill--available'}`}>
                   {pin.collectedByUserId ? (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 ${modalMode ? 'px-1.5 text-xs' : 'px-2.5'}`}>
-                      ✓ COLLECTED
-                    </span>
+                    <>
+                      <Icons.Check size={14} className="text-amber-200" />
+                      Collected
+                    </>
                   ) : (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 ${modalMode ? 'px-1.5 text-xs' : 'px-2.5'}`}>
-                      🎯 AVAILABLE
-                    </span>
+                    <>
+                      <Icons.Target size={14} className="text-emerald-200" />
+                      Available
+                    </>
                   )}
-                </div>
+                </span>
               </div>
               
-              <div className={`text-slate-600 mb-2 ${modalMode ? 'text-xs' : 'text-sm'}`}>
-                📍 {pin.lat?.toFixed(4) || 'N/A'}, {pin.lng?.toFixed(4) || 'N/A'}
+              <div className="loot-location-card__coords">
+                <Icons.Pin size={16} className="inline text-rose-200 mr-1 align-middle" />
+                <span className="align-middle">
+                  {formatCoordinate(pin.lat)}, {formatCoordinate(pin.lng)}
+                </span>
               </div>
               
               {pin.collectedByUserId && (
-                <div className={`text-slate-500 pt-2 border-t border-slate-200 ${modalMode ? 'text-xs' : 'text-xs'}`}>
-                  <div className="font-medium text-amber-700">
+                <div className="loot-location-card__meta space-y-1">
+                  <p className="text-amber-200 font-medium">
                     Collected by {pin.collectedByUser?.name || 'Unknown'}
-                  </div>
-                  {!modalMode && (
-                    <div className="text-slate-400">
-                      {pin.collectedAt ? new Date(pin.collectedAt).toLocaleString() : 'Time unknown'}
-                    </div>
-                  )}
+                  </p>
+                  <p className="loot-meta-muted">
+                    {pin.collectedAt ? new Date(pin.collectedAt).toLocaleString() : 'Time unknown'}
+                  </p>
+                </div>
+              )}
+
+              {!pin.collectedByUserId && (
+                <div className="loot-meta-muted">
+                  Waiting to be claimed
                 </div>
               )}
             </div>
@@ -70,17 +83,21 @@ const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick,
   );
 
   if (modalMode) {
-    return <div className="p-4">{content}</div>;
+    return <div className="space-y-3 p-4">{listContent}</div>;
   }
 
   return (
-    <div className={`card ${fixedHeight ? 'flex flex-col flex-1' : ''}`} style={fixedHeight ? { maxHeight: 'calc(60vh - 2rem)' } : {}}>
-      <div className="p-4 border-b border-slate-200 dark:border-dark-700 flex-shrink-0">
+    <div className={`card card-panel ${fixedHeight ? 'loot-list-card loot-list-card--fixed' : ''}`}>
+      <div className="card-section card-section--divider card-section--header">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          🎯 Loota Locations
+          <Icons.Target className="text-emerald-200" size={20} />
+          Loot Locations
         </h3>
+        <span className="text-sm text-slate-400">
+          {pins.length} pin{pins.length === 1 ? '' : 's'}
+        </span>
       </div>
-      <div className={`p-4 ${fixedHeight ? 'flex-1 overflow-y-auto min-h-0' : ''}`}>{content}</div>
+      <div className={`card-section ${fixedHeight ? 'loot-list-scroll' : ''}`}>{listContent}</div>
     </div>
   );
 };
