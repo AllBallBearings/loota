@@ -199,6 +199,396 @@ p {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/* Hunt completion banner */
+.looted-banner {
+  position: relative;
+  padding: 2.5rem;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  background: radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.25), transparent 55%),
+              radial-gradient(circle at 85% 15%, rgba(34, 211, 238, 0.18), transparent 45%),
+              rgba(6, 78, 59, 0.65);
+}
+
+.looted-banner__background {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.looted-banner__background span {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  filter: blur(60px);
+  opacity: 0.4;
+  background: linear-gradient(135deg, rgba(190, 242, 100, 0.6), rgba(16, 185, 129, 0.3));
+}
+
+.looted-banner__background span:nth-child(1) {
+  top: -60px;
+  left: -60px;
+}
+
+.looted-banner__background span:nth-child(2) {
+  bottom: -80px;
+  right: 10%;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.5), rgba(34, 211, 238, 0.2));
+}
+
+.looted-banner__background span:nth-child(3) {
+  top: 15%;
+  right: 20%;
+  width: 160px;
+  height: 160px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.4), rgba(249, 115, 22, 0.2));
+}
+
+.looted-banner__content {
+  position: relative;
+  z-index: 1;
+}
+
+.looted-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: rgba(236, 253, 245, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.looted-title {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 700;
+  color: #d1fae5;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.looted-subtitle {
+  color: rgba(226, 232, 240, 0.8);
+  font-size: 1.05rem;
+  margin-bottom: 1.75rem;
+}
+
+.looted-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.looted-stat {
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(15, 118, 110, 0.35);
+}
+
+.looted-stat__label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.looted-stat__value {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #ecfccb;
+}
+
+.looted-stat__value--time {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.looted-winners {
+  margin-top: 1.5rem;
+}
+
+.looted-winners__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.looted-winners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.looted-winner-card {
+  position: relative;
+  padding: 1.25rem;
+  border-radius: 18px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(2, 44, 34, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.looted-winner-card--leader {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: linear-gradient(145deg, rgba(6, 78, 59, 0.85), rgba(15, 118, 110, 0.65));
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.18);
+}
+
+.looted-winner-card__rank {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.7);
+}
+
+.looted-winner-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.looted-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(226, 232, 240, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #d1fae5;
+}
+
+.looted-winner-card__name {
+  font-weight: 600;
+  color: #f0fdf4;
+  margin: 0;
+}
+
+.looted-winner-card__meta {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.7);
+  margin: 0;
+}
+
+.looted-pin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.looted-pin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #fef3c7;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.looted-winner-card__timestamp {
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.65);
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .looted-banner {
+    padding: 1.75rem;
+  }
+
+  .looted-winner-card__rank {
+    position: static;
+  }
+}
+
+/* Hunt viewer scaffolding */
+.section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.hunt-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .hunt-grid {
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hunt-grid--two-column {
+    grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.card-panel {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-section {
+  padding: 1.5rem;
+}
+
+.card-section--compact {
+  padding: 1.25rem;
+}
+
+.card-section--divider {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.card-section--header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.status-callout {
+  border-radius: 18px;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.65);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(226, 232, 240, 0.95);
+}
+
+.status-callout--info {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(37, 99, 235, 0.18);
+}
+
+.status-callout--success {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(5, 150, 105, 0.2);
+}
+
+.loot-list-card {
+  flex: 1;
+  min-height: 0;
+}
+
+.loot-list-scroll {
+  min-height: 0;
+}
+
+@media (min-width: 1024px) {
+  .loot-list-card--fixed .loot-list-scroll {
+    max-height: calc(60vh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+.loot-location-card {
+  cursor: pointer;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(5, 10, 25, 0.65);
+  padding: 1.25rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.loot-location-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34, 211, 238, 0.4);
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.loot-location-card--available {
+  border-color: rgba(34, 197, 94, 0.28);
+  background: rgba(6, 78, 59, 0.25);
+}
+
+.loot-location-card--collected {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(120, 53, 15, 0.25);
+}
+
+.loot-location-card--compact {
+  padding: 1rem;
+}
+
+.loot-location-card__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.loot-location-card__title {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.loot-location-card__coords {
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.85rem;
+  color: rgba(241, 245, 249, 0.75);
+  margin-bottom: 0.5rem;
+}
+
+.loot-location-card__meta {
+  font-size: 0.8rem;
+  color: rgba(241, 245, 249, 0.75);
+}
+
+.loot-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.15rem 0.75rem;
+  border: 1px solid transparent;
+}
+
+.loot-pill--available {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #bbf7d0;
+}
+
+.loot-pill--collected {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fde68a;
+}
+
+.loot-meta-muted {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
 .btn-treasure:hover {
   background: linear-gradient(135deg, #f97316, #fb923c);
   box-shadow: 0 0 35px rgba(251, 191, 36, 0.6), var(--shadow-lg);

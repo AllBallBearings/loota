@@ -476,7 +476,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
             fontWeight: 600,
           }}
         >
-          📍 Loota Locations
+          📍 Loot Locations
         </h4>
         <div
           id="proximity-coordinates-display"

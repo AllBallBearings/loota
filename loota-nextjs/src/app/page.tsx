@@ -22,6 +22,13 @@ export default function ModernHome() {
 
   const mapComponentRef = useRef<MapComponentRef>(null);
   const proximityComponentRef = useRef<ProximityComponentRef>(null);
+  const isPhoneMissing = !creatorPhone.trim();
+  const isEmailMissing = !creatorEmail.trim();
+  const isHuntNameMissing = !huntName.trim();
+  const isUserNameMissing = !userName.trim();
+  const isContactInfoIncomplete = isPhoneMissing || isEmailMissing;
+  const hasValidationErrors = isContactInfoIncomplete || isHuntNameMissing || isUserNameMissing;
+  const encourageButtonDisabled = isLoading || isContactInfoIncomplete;
 
   // Check for existing user data on component mount
   useEffect(() => {
@@ -69,6 +76,48 @@ export default function ModernHome() {
       setCreatorEmail('');
     }
   };
+
+  const renderContactFields = () => (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">
+          Phone *
+          {isPhoneMissing && (
+            <span className="text-red-400 ml-2 text-xs">Required</span>
+          )}
+        </label>
+        <input
+          type="tel"
+          value={creatorPhone}
+          onChange={(e) => setCreatorPhone(e.target.value)}
+          placeholder="(555) 123-4567"
+          className={`input text-sm ${isPhoneMissing ? 'border-red-400/50' : ''}`}
+          readOnly={useExistingContact && Boolean(existingUserData?.phone)}
+          required
+        />
+        {isPhoneMissing && <p className="mt-1 text-xs text-red-300">Add a phone number so we can text you loot updates.</p>}
+      </div>
+
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">
+          Email *
+          {isEmailMissing && (
+            <span className="text-red-400 ml-2 text-xs">Required</span>
+          )}
+        </label>
+        <input
+          type="email"
+          value={creatorEmail}
+          onChange={(e) => setCreatorEmail(e.target.value)}
+          placeholder="your@email.com"
+          className={`input text-sm ${isEmailMissing ? 'border-red-400/50' : ''}`}
+          readOnly={useExistingContact && Boolean(existingUserData?.email)}
+          required
+        />
+        {isEmailMissing && <p className="mt-1 text-xs text-red-300">Add an email so we can send you the loot link.</p>}
+      </div>
+    </div>
+  );
 
   const handleHuntTypeChange = (type: 'geolocation' | 'proximity') => {
     setCurrentHuntType(type);
@@ -184,9 +233,12 @@ export default function ModernHome() {
             <div className="flex items-center gap-3">
               <Icons.Adventure className="text-accent-cyan" size={28} />
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl md:text-3xl font-bold">
-                  Loota
-                </h1>
+                <div className="flex flex-col items-center">
+                  <span className="mb-1 h-5 w-5 rounded-full bg-red-500 shadow-[0_0_12px_rgba(248,113,113,0.9)]" />
+                  <h1 className="text-2xl md:text-3xl font-bold">
+                    Loota
+                  </h1>
+                </div>
                 <div className="text-reel">
                   <div className="text-reel-content">
                     <span className="text-2xl md:text-3xl font-bold text-yellow-400">&nbsp;</span>
@@ -342,29 +394,15 @@ export default function ModernHome() {
               </h4>
 
               {/* Existing Contact Information Toggle */}
-              {existingUserData && (existingUserData.phone || existingUserData.email) && (
-                <div className="mb-5">
+              <div className="space-y-4">
+                {existingUserData && (existingUserData.phone || existingUserData.email) ? (
                   <div className="contact-card">
                     <div className="contact-card__header">
                       <div className="contact-card__title">
                         <Icons.Users className="contact-card__icon text-accent-cyan" size={20} />
-                        Saved contact info
+                        Save Contact Info
                       </div>
                       <span className="contact-card__badge">Auto-fill ready</span>
-                    </div>
-                    <div className="contact-card__details">
-                      {existingUserData.phone && (
-                        <div>
-                          <span>Phone</span>
-                          <strong>{existingUserData.phone}</strong>
-                        </div>
-                      )}
-                      {existingUserData.email && (
-                        <div>
-                          <span>Email</span>
-                          <strong>{existingUserData.email}</strong>
-                        </div>
-                      )}
                     </div>
                     <div className="contact-card__actions">
                       <button
@@ -379,39 +417,16 @@ export default function ModernHome() {
                         onClick={() => handleContactMethodToggle(false)}
                         className={`contact-card__button ${!useExistingContact ? 'is-active' : ''}`}
                       >
-                        Enter New
+                        Clear & Edit
                       </button>
                     </div>
+                    <div className="mt-4">
+                      {renderContactFields()}
+                    </div>
                   </div>
-                </div>
-              )}
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Phone *</label>
-                  <input
-                    type="tel"
-                    value={creatorPhone}
-                    onChange={(e) => setCreatorPhone(e.target.value)}
-                    placeholder="(555) 123-4567"
-                    className="input text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={useExistingContact && Boolean(existingUserData?.phone)}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    value={creatorEmail}
-                    onChange={(e) => setCreatorEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="input text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={useExistingContact && Boolean(existingUserData?.email)}
-                    required
-                  />
-                </div>
+                ) : (
+                  renderContactFields()
+                )}
 
                 <div>
                   <label className="block text-xs text-slate-400 mb-2">Preferred Contact</label>
@@ -455,10 +470,23 @@ export default function ModernHome() {
 
           {/* Bottom Action Button - Fixed at bottom */}
           <div className="flex-shrink-0 p-6 border-t border-slate-600/40">
+            {/* Validation Messages */}
+            {hasValidationErrors && (
+              <div className="mb-3 p-3 bg-red-500/10 border border-red-400/30 rounded-lg">
+                <p className="text-xs text-red-300 mb-1 font-medium">Please complete the following:</p>
+                <ul className="text-xs text-red-200 space-y-1 ml-4 list-disc">
+                  {isHuntNameMissing && <li>Enter a hunt name</li>}
+                  {isUserNameMissing && <li>Enter your name</li>}
+                  {isPhoneMissing && <li>Enter your phone number</li>}
+                  {isEmailMissing && <li>Enter your email address</li>}
+                </ul>
+              </div>
+            )}
+
             <button
-              className={`btn btn-primary w-full text-base py-3 justify-center gap-2 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              className={`btn btn-primary w-full text-base py-3 justify-center gap-2 ${encourageButtonDisabled ? 'opacity-75 cursor-not-allowed' : ''}`}
               onClick={generateLootLink}
-              disabled={isLoading}
+              disabled={encourageButtonDisabled}
             >
               {isLoading ? (
                 <>
@@ -468,7 +496,7 @@ export default function ModernHome() {
               ) : (
                 <>
                   <Icons.Sparkle className="text-slate-100" size={20} />
-                  Start the Adventure
+                  Encourage Looting
                 </>
               )}
             </button>
