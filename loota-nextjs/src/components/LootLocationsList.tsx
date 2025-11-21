@@ -91,13 +91,10 @@ const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick,
       <div className="card-section card-section--divider card-section--header">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Icons.Target className="text-emerald-200" size={20} />
-          Loot Locations
+          Loot Locations ({pins.length})
         </h3>
-        <span className="text-sm text-slate-400">
-          {pins.length} pin{pins.length === 1 ? '' : 's'}
-        </span>
       </div>
-      <div className={`card-section ${fixedHeight ? 'loot-list-scroll' : ''}`}>{listContent}</div>
+      <div className={`card-section ${fixedHeight ? 'loot-list-scroll loot-list-scroll--sync' : ''}`}>{listContent}</div>
     </div>
   );
 };

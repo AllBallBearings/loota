@@ -35,4 +35,18 @@ export interface HuntData {
   };
   pins: PinData[];
   participants: HuntParticipationData[];
+  winnerContact?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+  };
+  creatorContact?: {
+    name?: string;
+    preferred?: string;
+    phone?: string;
+    email?: string;
+  };
+  isCompleted?: boolean;
+  completedAt?: string;
+  winnerId?: string;
 }
