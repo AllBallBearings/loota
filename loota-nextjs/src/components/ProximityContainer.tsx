@@ -105,6 +105,7 @@ const ProximityContainer: React.FC<ProximityContainerProps> = ({ initialPins }) 
       <ProximityComponent
         ref={proximityComponentRef}
         initialMarkers={validMarkers}
+        clueCount={initialPins.length}
       />
       <LoadingOverlay
         isLoading={isProximityLoading || isMarkersLoading}

@@ -27,6 +27,13 @@
   --surface-glass-strong: rgba(15, 23, 42, 0.9);
   --accent-cyan: #22d3ee;
   --accent-violet: #a855f7;
+  --hunt-stage-max-height: 520px;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --hunt-stage-max-height: clamp(340px, calc(100vh - 320px), 560px);
+  }
 }
 
 /* Base styles */
@@ -86,6 +93,7 @@ p {
 /* Modern Layout Components */
 .main-layout {
   min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -102,6 +110,16 @@ p {
   display: flex; /* Ensure proper flex behavior */
 }
 
+@media (max-width: 1023px) {
+  .main-layout {
+    height: auto;
+  }
+  
+  .main-layout main {
+    overflow: visible;
+  }
+}
+
 .nav-header {
   background: rgba(9, 14, 32, 0.75);
   backdrop-filter: blur(18px);
@@ -112,7 +130,7 @@ p {
 }
 
 .container-modern {
-  max-width: 1200px;
+  max-width: 1340px;
   margin: 0 auto;
   padding: 0 1rem;
 }
@@ -383,6 +401,16 @@ p {
   margin: 0;
 }
 
+.looted-winner-card__contact {
+  font-size: 0.875rem;
+  color: rgba(167, 243, 208, 0.95);
+  margin: 0.25rem 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
 .looted-pin-chips {
   display: flex;
   flex-wrap: wrap;
@@ -422,7 +450,89 @@ p {
 .section-stack {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.75rem;
+}
+
+.hunt-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hunt-shell__inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+}
+
+.hunt-shell__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.hunt-shell__primary,
+.hunt-shell__secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.hunt-stage-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.hunt-stage-card__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.hunt-stage-card__body .map-container-modern,
+.hunt-stage-card__body .map-container-proximity {
+  min-height: 500px;
+}
+
+.looted-banner--full {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .hunt-shell__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(320px, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .hunt-shell__secondary {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .looted-banner--full {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1023px) {
+  .hunt-shell {
+    overflow: visible;
+  }
+
+  .hunt-shell__inner {
+    height: auto;
+  }
+
+  .hunt-shell__grid {
+    display: flex;
+  }
 }
 
 .hunt-grid {
@@ -499,9 +609,31 @@ p {
   min-height: 0;
 }
 
+.map-stage {
+  min-height: 320px;
+  width: 100%;
+  flex: 1;
+  height: 100%;
+}
+
+.loot-list-scroll--sync {
+  overflow: visible;
+}
+
+@media (max-width: 1023px) {
+  .map-stage {
+    height: min(420px, 60vh);
+  }
+}
+
 @media (min-width: 1024px) {
-  .loot-list-card--fixed .loot-list-scroll {
-    max-height: calc(60vh - 2rem);
+  .map-stage {
+    max-height: var(--hunt-stage-max-height);
+  }
+
+  .loot-list-card--fixed .loot-list-scroll,
+  .loot-list-scroll--sync {
+    max-height: var(--hunt-stage-max-height);
     overflow-y: auto;
   }
 }
@@ -587,6 +719,12 @@ p {
 .loot-meta-muted {
   font-size: 0.75rem;
   color: rgba(148, 163, 184, 0.75);
+}
+
+.participants-card__list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .btn-treasure:hover {

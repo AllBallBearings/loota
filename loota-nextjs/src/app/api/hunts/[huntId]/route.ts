@@ -209,11 +209,12 @@ export async function GET(
             userId: true,
             huntId: true,
             joinedAt: true,
-            participantPhone: true,
             user: {
               select: {
                 id: true,
                 name: true,
+                phone: true,
+                email: true,
               },
             },
           },
@@ -254,17 +255,18 @@ export async function GET(
         y: pin.y ? Number(pin.y) : undefined,
         objectType: pin.objectType || 'coin',
       })),
-      winnerContact: undefined as { name?: string; phone?: string } | undefined,
+      winnerContact: undefined as { name?: string; phone?: string; email?: string } | undefined,
       creatorContact: undefined as { name?: string; preferred?: string; phone?: string; email?: string } | undefined,
     };
 
     // Add contact information based on authorization and hunt completion
     if (isCompleted && isCreator && hunt.winnerId) {
       // Creator can see winner's contact info for completed hunts
-      const winnerParticipation = hunt.participants.find(p => p.userId === hunt.winnerId);
+      const winnerUser = hunt.participants.find(p => p.userId === hunt.winnerId)?.user;
       processedHunt.winnerContact = {
-        name: hunt.winner?.name,
-        phone: winnerParticipation?.participantPhone || undefined,
+        name: winnerUser?.name,
+        phone: winnerUser?.phone || undefined,
+        email: winnerUser?.email || undefined,
       };
     }
 
@@ -282,12 +284,16 @@ export async function GET(
     delete (processedHunt as Record<string, unknown>).creatorPhone;
     delete (processedHunt as Record<string, unknown>).creatorEmail;
     delete (processedHunt as Record<string, unknown>).preferredContactMethod;
-    
-    // Remove participant phone numbers unless authorized
+
+    // Remove participant contact info unless authorized
     if (!isCreator || !isCompleted) {
       processedHunt.participants = hunt.participants.map(p => ({
         ...p,
-        participantPhone: null,
+        user: {
+          ...p.user,
+          phone: null,
+          email: null,
+        },
       }));
     }
 
