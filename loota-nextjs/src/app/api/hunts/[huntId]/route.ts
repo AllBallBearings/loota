@@ -255,7 +255,7 @@ export async function GET(
         y: pin.y ? Number(pin.y) : undefined,
         objectType: pin.objectType || 'coin',
       })),
-      winnerContact: undefined as { name?: string; phone?: string } | undefined,
+      winnerContact: undefined as { name?: string; phone?: string; email?: string } | undefined,
       creatorContact: undefined as { name?: string; preferred?: string; phone?: string; email?: string } | undefined,
     };
 
