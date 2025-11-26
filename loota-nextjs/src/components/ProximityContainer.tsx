@@ -103,6 +103,7 @@ const ProximityContainer: React.FC<ProximityContainerProps> = ({ initialPins }) 
       <ProximityComponent
         ref={proximityComponentRef}
         initialMarkers={validMarkers}
+        showRadiusControls={false}
       />
       <LoadingOverlay
         isLoading={isProximityLoading || isMarkersLoading}
