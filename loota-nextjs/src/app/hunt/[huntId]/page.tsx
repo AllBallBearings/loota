@@ -251,13 +251,11 @@ export default function HuntViewerPage() {
     }, {} as Record<string, { user: { id: string; name: string }, pins: PinData[] }>);
 
   const renderHuntManagementCard = ({
-  hunt,
   isHuntCreator,
   resetting,
   handleResetLoot,
   handleClearLooters,
 }: {
-  hunt: HuntData;
   isHuntCreator: boolean;
   resetting: boolean;
   handleResetLoot: () => void;
@@ -321,7 +319,6 @@ export default function HuntViewerPage() {
 const LootAndManagementWrapper = ({
   pins,
   onPinClick,
-  hunt,
   isHuntCreator,
   resetting,
   handleResetLoot,
@@ -329,14 +326,12 @@ const LootAndManagementWrapper = ({
 }: {
   pins: PinData[];
   onPinClick: (pinId: string) => void;
-  hunt: HuntData;
   isHuntCreator: boolean;
   resetting: boolean;
   handleResetLoot: () => void;
   handleClearLooters: () => void;
 }) => {
   const huntManagementCard = renderHuntManagementCard({
-    hunt,
     isHuntCreator,
     resetting,
     handleResetLoot,
@@ -401,9 +396,7 @@ const LootAndManagementWrapper = ({
     p.distanceFt !== undefined && p.directionStr !== undefined && p.x !== undefined && p.y !== undefined
   );
 
-  const geolocationPins = hunt.pins.filter((p): p is Required<Pick<PinData, 'id' | 'lat' | 'lng'>> =>
-    p.lat !== undefined && p.lng !== undefined
-  );
+
 
   const renderProximityCard = () => (
     <div className="card p-4">
@@ -577,7 +570,6 @@ const LootAndManagementWrapper = ({
                 {isHuntCreator && (
                   <div className="mt-4">
                     {renderHuntManagementCard({
-                      hunt,
                       isHuntCreator,
                       resetting,
                       handleResetLoot,
@@ -590,7 +582,6 @@ const LootAndManagementWrapper = ({
               <LootAndManagementWrapper
                 pins={hunt.pins}
                 onPinClick={handlePinClick}
-                hunt={hunt}
                 isHuntCreator={isHuntCreator}
                 resetting={resetting}
                 handleResetLoot={handleResetLoot}
