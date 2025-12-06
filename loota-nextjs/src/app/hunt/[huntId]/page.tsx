@@ -444,6 +444,39 @@ const LootAndManagementWrapper = ({
                 <p className="text-lg text-emerald-100 mb-6">
                   The hunt is complete
                 </p>
+
+                {isHuntCreator && hunt.winnerContact && (
+                  <div className="bg-emerald-500/20 border border-emerald-400/50 rounded-xl p-4 max-w-2xl mx-auto mb-6 animate-pulse-slow">
+                    <h3 className="text-xl font-bold text-emerald-100 mb-3 flex items-center justify-center gap-2">
+                      <Icons.User className="text-emerald-200" size={24} />
+                      Winner Contact Info
+                    </h3>
+                    <div className="space-y-2 text-emerald-50 text-left max-w-xs mx-auto">
+                      {hunt.winnerContact.name && (
+                        <div className="flex items-center gap-3 bg-black/20 p-2 rounded">
+                          <Icons.User size={18} className="text-emerald-300" />
+                          <span className="font-medium">{hunt.winnerContact.name}</span>
+                        </div>
+                      )}
+                      {hunt.winnerContact.phone && (
+                        <div className="flex items-center gap-3 bg-black/20 p-2 rounded">
+                          <Icons.Phone size={18} className="text-emerald-300" />
+                          <a href={`tel:${hunt.winnerContact.phone}`} className="hover:text-emerald-300 underline decoration-emerald-300/50">
+                            {hunt.winnerContact.phone}
+                          </a>
+                        </div>
+                      )}
+                      {hunt.winnerContact.email && (
+                        <div className="flex items-center gap-3 bg-black/20 p-2 rounded">
+                          <Icons.Email size={18} className="text-emerald-300" />
+                          <a href={`mailto:${hunt.winnerContact.email}`} className="hover:text-emerald-300 underline decoration-emerald-300/50">
+                            {hunt.winnerContact.email}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               
                 <div className="bg-emerald-500/15 border border-emerald-400/30 rounded-xl p-4 max-w-2xl mx-auto">
                   <h3 className="text-xl font-semibold text-emerald-100 mb-4 flex items-center justify-center gap-2">
