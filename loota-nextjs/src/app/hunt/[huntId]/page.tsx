@@ -250,69 +250,153 @@ export default function HuntViewerPage() {
       return acc;
     }, {} as Record<string, { user: { id: string; name: string }, pins: PinData[] }>);
 
+  const renderHuntManagementCard = ({
+  isHuntCreator,
+  resetting,
+  handleResetLoot,
+  handleClearLooters,
+}: {
+  isHuntCreator: boolean;
+  resetting: boolean;
+  handleResetLoot: () => void;
+  handleClearLooters: () => void;
+}) => {
+  if (!isHuntCreator) return null;
+
+  return (
+    <div className="card">
+      <div className="p-6 border-b border-slate-200 dark:border-dark-700">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Icons.Refresh className="text-amber-300" size={20} />
+          Hunt Management
+        </h3>
+      </div>
+      <div className="p-6">
+        <div className="space-y-3">
+          <button
+            className="btn btn-warning w-full flex items-center justify-center gap-2"
+            onClick={handleResetLoot}
+            disabled={resetting}
+          >
+            {resetting ? (
+              <>
+                <Icons.Refresh className="animate-spin text-slate-900/80" size={18} />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Icons.Target className="text-slate-900" size={18} />
+                Reset Loot
+              </>
+            )}
+          </button>
+          <button
+            className="btn btn-danger w-full flex items-center justify-center gap-2"
+            onClick={handleClearLooters}
+            disabled={resetting}
+          >
+            {resetting ? (
+              <>
+                <Icons.Refresh className="animate-spin text-slate-100" size={18} />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Icons.Users className="text-slate-100" size={18} />
+                Clear Looters
+              </>
+            )}
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 mt-3">
+          Reset collected pins or clear participants independently
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const LootAndManagementWrapper = ({
+  pins,
+  onPinClick,
+  isHuntCreator,
+  resetting,
+  handleResetLoot,
+  handleClearLooters,
+}: {
+  pins: PinData[];
+  onPinClick: (pinId: string) => void;
+  isHuntCreator: boolean;
+  resetting: boolean;
+  handleResetLoot: () => void;
+  handleClearLooters: () => void;
+}) => {
+  const huntManagementCard = renderHuntManagementCard({
+    isHuntCreator,
+    resetting,
+    handleResetLoot,
+    handleClearLooters,
+  });
+
+  return (
+    <>
+      {/* Mobile Layout */}
+      <div className="block lg:hidden space-y-4">
+        <div className="card p-4">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Icons.Target className="text-slate-200" size={20} />
+            Loot Locations
+          </h3>
+          <LootLocationsList pins={pins} onPinClick={onPinClick} showTitle={false} fixedHeight={true} />
+        </div>
+        <div className="card p-4">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Icons.Map className="text-slate-200" size={20} />
+            Hunt Map
+          </h3>
+          <div className="map-container-modern" style={{ height: 'min(400px, 40vh)' }}>
+            <MapContainer
+              initialPins={pins.filter((p): p is Required<Pick<PinData, 'id' | 'lat' | 'lng'>> =>
+                p.lat !== undefined && p.lng !== undefined
+              )}
+              focusOnMarkers={true}
+            />
+          </div>
+        </div>
+        {huntManagementCard}
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex gap-6 min-h-0 flex-1">
+        <div className="w-2/3">
+          <div className="card p-4 h-full flex flex-col">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 flex-shrink-0">
+              <Icons.Map className="text-slate-200" size={20} />
+              Hunt Map
+            </h3>
+            <div className="map-container-modern flex-1 min-h-0">
+              <MapContainer
+                initialPins={pins.filter((p): p is Required<Pick<PinData, 'id' | 'lat' | 'lng'>> =>
+                  p.lat !== undefined && p.lng !== undefined
+                )}
+                focusOnMarkers={true}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="w-1/3 flex flex-col space-y-4 min-h-0">
+          <LootLocationsList pins={pins} onPinClick={onPinClick} fixedHeight={true} />
+          {huntManagementCard}
+        </div>
+      </div>
+    </>
+  );
+};
   const proximityPins = hunt.pins.filter((p): p is Required<Pick<PinData, 'id' | 'distanceFt' | 'directionStr' | 'x' | 'y'>> =>
     p.distanceFt !== undefined && p.directionStr !== undefined && p.x !== undefined && p.y !== undefined
   );
 
-  const geolocationPins = hunt.pins.filter((p): p is Required<Pick<PinData, 'id' | 'lat' | 'lng'>> =>
-    p.lat !== undefined && p.lng !== undefined
-  );
 
-  const renderHuntManagementCard = () => {
-    if (!isHuntCreator) return null;
-
-    return (
-      <div className="card">
-        <div className="p-6 border-b border-slate-200 dark:border-dark-700">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Icons.Refresh className="text-amber-300" size={20} />
-            Hunt Management
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-3">
-            <button 
-              className="btn btn-warning w-full flex items-center justify-center gap-2"
-              onClick={handleResetLoot}
-              disabled={resetting}
-            >
-              {resetting ? (
-                <>
-                  <Icons.Refresh className="animate-spin text-slate-900/80" size={18} />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Icons.Target className="text-slate-900" size={18} />
-                  Reset Loot
-                </>
-              )}
-            </button>
-            <button 
-              className="btn btn-danger w-full flex items-center justify-center gap-2"
-              onClick={handleClearLooters}
-              disabled={resetting}
-            >
-              {resetting ? (
-                <>
-                  <Icons.Refresh className="animate-spin text-slate-100" size={18} />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Icons.Users className="text-slate-100" size={18} />
-                  Clear Looters
-                </>
-              )}
-            </button>
-          </div>
-          <p className="text-xs text-slate-400 mt-3">
-            Reset collected pins or clear participants independently
-          </p>
-        </div>
-      </div>
-    );
-  };
 
   const renderProximityCard = () => (
     <div className="card p-4">
@@ -360,6 +444,39 @@ export default function HuntViewerPage() {
                 <p className="text-lg text-emerald-100 mb-6">
                   The hunt is complete
                 </p>
+
+                {isHuntCreator && hunt.winnerContact && (
+                  <div className="bg-emerald-500/20 border border-emerald-400/50 rounded-xl p-4 max-w-2xl mx-auto mb-6 animate-pulse-slow">
+                    <h3 className="text-xl font-bold text-emerald-100 mb-3 flex items-center justify-center gap-2">
+                      <Icons.User className="text-emerald-200" size={24} />
+                      Winner Contact Info
+                    </h3>
+                    <div className="space-y-2 text-emerald-50 text-left max-w-xs mx-auto">
+                      {hunt.winnerContact.name && (
+                        <div className="flex items-center gap-3 bg-black/20 p-2 rounded">
+                          <Icons.User size={18} className="text-emerald-300" />
+                          <span className="font-medium">{hunt.winnerContact.name}</span>
+                        </div>
+                      )}
+                      {hunt.winnerContact.phone && (
+                        <div className="flex items-center gap-3 bg-black/20 p-2 rounded">
+                          <Icons.Phone size={18} className="text-emerald-300" />
+                          <a href={`tel:${hunt.winnerContact.phone}`} className="hover:text-emerald-300 underline decoration-emerald-300/50">
+                            {hunt.winnerContact.phone}
+                          </a>
+                        </div>
+                      )}
+                      {hunt.winnerContact.email && (
+                        <div className="flex items-center gap-3 bg-black/20 p-2 rounded">
+                          <Icons.Email size={18} className="text-emerald-300" />
+                          <a href={`mailto:${hunt.winnerContact.email}`} className="hover:text-emerald-300 underline decoration-emerald-300/50">
+                            {hunt.winnerContact.email}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               
                 <div className="bg-emerald-500/15 border border-emerald-400/30 rounded-xl p-4 max-w-2xl mx-auto">
                   <h3 className="text-xl font-semibold text-emerald-100 mb-4 flex items-center justify-center gap-2">
@@ -485,49 +602,24 @@ export default function HuntViewerPage() {
                 </div>
                 {isHuntCreator && (
                   <div className="mt-4">
-                    {renderHuntManagementCard()}
+                    {renderHuntManagementCard({
+                      isHuntCreator,
+                      resetting,
+                      handleResetLoot,
+                      handleClearLooters,
+                    })}
                   </div>
                 )}
               </>
             ) : (
-              <>
-                <div className="block lg:hidden space-y-4">
-                  <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} />
-                  <div className="card p-4">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Icons.Map className="text-slate-200" size={20} />
-                      Hunt Map
-                    </h3>
-                    <div className="map-container-modern" style={{ height: 'min(400px, 40vh)' }}>
-                      <MapContainer
-                        initialPins={geolocationPins}
-                        focusOnMarkers={true}
-                      />
-                    </div>
-                  </div>
-                  {isHuntCreator && renderHuntManagementCard()}
-                </div>
-                <div className="hidden lg:flex gap-6 min-h-0 flex-1">
-                  <div className="w-2/3">
-                    <div className="card p-4">
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Icons.Map className="text-slate-200" size={20} />
-                        Hunt Map
-                      </h3>
-                      <div className="map-container-modern" style={{ height: '500px', minHeight: '500px' }}>
-                        <MapContainer
-                          initialPins={geolocationPins}
-                          focusOnMarkers={true}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="w-1/3 flex flex-col space-y-4 min-h-0">
-                    <LootLocationsList pins={hunt.pins} onPinClick={handlePinClick} fixedHeight={true} />
-                    {renderHuntManagementCard()}
-                  </div>
-                </div>
-              </>
+              <LootAndManagementWrapper
+                pins={hunt.pins}
+                onPinClick={handlePinClick}
+                isHuntCreator={isHuntCreator}
+                resetting={resetting}
+                handleResetLoot={handleResetLoot}
+                handleClearLooters={handleClearLooters}
+              />
             )}
           </div>
 

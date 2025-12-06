@@ -224,6 +224,7 @@ export async function GET(
           select: {
             id: true,
             name: true,
+            email: true,
           },
         },
       },
@@ -249,7 +250,7 @@ export async function GET(
         x: pin.x ? Number(pin.x) : undefined,
         y: pin.y ? Number(pin.y) : undefined,
       })),
-      winnerContact: undefined as { name?: string; phone?: string } | undefined,
+      winnerContact: undefined as { name?: string; phone?: string; email?: string } | undefined,
       creatorContact: undefined as { name?: string; preferred?: string; phone?: string; email?: string } | undefined,
     };
 
@@ -260,6 +261,7 @@ export async function GET(
       processedHunt.winnerContact = {
         name: hunt.winner?.name,
         phone: winnerParticipation?.participantPhone || undefined,
+        email: hunt.winner?.email || undefined,
       };
     }
 
