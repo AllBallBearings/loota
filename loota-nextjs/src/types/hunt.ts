@@ -48,5 +48,5 @@ export interface HuntData {
   };
   isCompleted?: boolean;
   completedAt?: string;
-  winnerId?: string;
+  winnerId?: string | null;
 }
