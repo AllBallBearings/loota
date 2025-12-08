@@ -43,11 +43,7 @@ export default function HuntViewerPage() {
 
     const fetchHunt = async () => {
       try {
-        const response = await fetch(`/api/hunts/${huntId}?userId=${currentUserId}`, {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
-          },
-        });
+        const response = await fetch(`/api/client/hunts/${huntId}?userId=${currentUserId}`);
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.message || 'Failed to fetch hunt');
@@ -89,11 +85,10 @@ export default function HuntViewerPage() {
 
     setResetting(true);
     try {
-      const response = await fetch(`/api/hunts/${huntId}/reset`, {
+      const response = await fetch(`/api/client/hunts/${huntId}/reset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
         },
         body: JSON.stringify({
           userId: currentUserId,
@@ -109,11 +104,7 @@ export default function HuntViewerPage() {
 
       // Refresh hunt data immediately after successful reset
       try {
-        const huntResponse = await fetch(`/api/hunts/${huntId}`, {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
-          },
-        });
+        const huntResponse = await fetch(`/api/client/hunts/${huntId}`);
         
         if (huntResponse.ok) {
           const updatedHunt: HuntData = await huntResponse.json();
@@ -148,11 +139,10 @@ export default function HuntViewerPage() {
 
     setResetting(true);
     try {
-      const response = await fetch(`/api/hunts/${huntId}/reset`, {
+      const response = await fetch(`/api/client/hunts/${huntId}/reset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
         },
         body: JSON.stringify({
           userId: currentUserId,
@@ -168,11 +158,7 @@ export default function HuntViewerPage() {
 
       // Refresh hunt data immediately after successful reset
       try {
-        const huntResponse = await fetch(`/api/hunts/${huntId}`, {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
-          },
-        });
+        const huntResponse = await fetch(`/api/client/hunts/${huntId}`);
         
         if (huntResponse.ok) {
           const updatedHunt: HuntData = await huntResponse.json();
@@ -443,7 +429,7 @@ export default function HuntViewerPage() {
               <div className="looted-banner__content">
                 <p className="looted-eyebrow">Hunt Complete</p>
                 <h2 className="looted-title">
-                  <Icons.Celebration className="text-emerald-200" size={32} />
+                  <Icons.Celebration className="text-emerald-200" size={18} />
                   Everything&apos;s Looted!
                 </h2>
                 <p className="looted-subtitle">
@@ -471,7 +457,7 @@ export default function HuntViewerPage() {
 
                 <div className="looted-winners">
                   <div className="looted-winners__header">
-                    <Icons.Trophy className="text-amber-200" size={24} />
+                    <Icons.Trophy className="text-amber-200" size={16} />
                     <h3>Winners & Their Loot</h3>
                   </div>
 
