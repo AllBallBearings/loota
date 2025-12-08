@@ -32,7 +32,8 @@ const MapContainer: React.FC<MapContainerProps> = ({ initialPins, onPinHighlight
             id: pin.id,
             isCollected: !!pin.collectedByUserId,
             title: `Loot #${index + 1}`,
-            description: `📍 Lat: ${pin.lat!.toFixed(4)}, Lng: ${pin.lng!.toFixed(4)}${pin.collectedByUserId ? `<br/>✓ Collected by ${pin.collectedByUser?.name || 'Unknown'}` : '<br/>🎯 Available for collection'}`
+            description: `📍 Lat: ${pin.lat!.toFixed(4)}, Lng: ${pin.lng!.toFixed(4)}${pin.collectedByUserId ? `<br/>✓ Collected by ${pin.collectedByUser?.name || 'Unknown'}` : '<br/>🎯 Available for collection'}`,
+            objectType: pin.objectType || 'coin'
           }));
         mapComponentRef.current.addMarkers(validMarkers);
         setIsMarkersLoading(false);
@@ -55,12 +56,13 @@ const MapContainer: React.FC<MapContainerProps> = ({ initialPins, onPinHighlight
   const allMarkers: MapMarker[] = initialPins
     .filter(pin => pin.lat !== undefined && pin.lng !== undefined)
     .map((pin, index) => ({
-      lat: pin.lat!, 
+      lat: pin.lat!,
       lng: pin.lng!,
       id: pin.id,
       isCollected: !!pin.collectedByUserId,
       title: `Loot #${index + 1}`,
-      description: `📍 Lat: ${pin.lat!.toFixed(4)}, Lng: ${pin.lng!.toFixed(4)}${pin.collectedByUserId ? `<br/>✓ Collected by ${pin.collectedByUser?.name || 'Unknown'}` : '<br/>🎯 Available for collection'}`
+      description: `📍 Lat: ${pin.lat!.toFixed(4)}, Lng: ${pin.lng!.toFixed(4)}${pin.collectedByUserId ? `<br/>✓ Collected by ${pin.collectedByUser?.name || 'Unknown'}` : '<br/>🎯 Available for collection'}`,
+      objectType: pin.objectType || 'coin'
     }));
 
   // Expose highlight function to parent

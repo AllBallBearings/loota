@@ -6,6 +6,7 @@ export interface PinData {
   directionStr?: string;
   x?: number;
   y?: number;
+  objectType?: string; // Type of loot object (coin, giftCard, etc.)
   collectedByUserId?: string;
   collectedByUser?: {
     id: string;
@@ -34,8 +35,6 @@ export interface HuntData {
   };
   pins: PinData[];
   participants: HuntParticipationData[];
-  isCompleted?: boolean;
-  winnerId?: string | null;
   winnerContact?: {
     name?: string;
     phone?: string;
@@ -47,4 +46,7 @@ export interface HuntData {
     phone?: string;
     email?: string;
   };
+  isCompleted?: boolean;
+  completedAt?: string;
+  winnerId?: string | null;
 }

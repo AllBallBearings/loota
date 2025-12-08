@@ -8,6 +8,7 @@ export interface ProximityMarkerData {
   x: number;
   y: number;
   isCollected?: boolean;
+  objectType?: string; // Type of loot object (coin, giftCard, etc.)
 }
 
 export interface ProximityComponentRef {
@@ -20,28 +21,26 @@ export interface ProximityComponentRef {
 
 interface ProximityComponentProps {
   initialMarkers?: ProximityMarkerData[]; // Add this prop
-  showRadiusControls?: boolean;
+  currentLootType?: string; // Current loot type to apply to new markers
+  clueCount?: number;
 }
-
-const radiusMapping = [10, 50, 100]; // Maps slider values (0,1,2) to ft
 
 const normalizeMarkers = (markers: ProximityMarkerData[]): ProximityMarkerData[] =>
   markers.map(marker => ({
     ...marker,
     isCollected: marker.isCollected ?? false,
+    objectType: marker.objectType ?? 'coin',
   }));
 
 const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentProps>((
-  { initialMarkers = [], showRadiusControls = true }, // Destructure initialMarkers with a default empty array
+  { initialMarkers = [], currentLootType = 'coin', clueCount }, // Destructure initialMarkers with a default empty array
   ref
 ) => {
   const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>(() => normalizeMarkers(initialMarkers)); // Initialize with initialMarkers, normalizing collected state
-  const [currentProximityRadiusFt, setCurrentProximityRadiusFt] = useState<number>(radiusMapping[0]);
+  const [currentProximityRadiusFt] = useState<number>(100);
   
   const proximityCircleElementRef = useRef<HTMLDivElement | null>(null);
   const proximityCoordinatesDisplayElementRef = useRef<HTMLDivElement | null>(null);
-  const proximityRadiusSliderRef = useRef<HTMLInputElement | null>(null);
-  const proximityRadiusDisplayElementRef = useRef<HTMLSpanElement | null>(null);
 
   const drawProximityCircle = useCallback(() => {
     const proximityCircleElement = proximityCircleElementRef.current;
@@ -119,29 +118,6 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     proximityCoordinatesDisplayElementRef.current.innerHTML = markerListHtml;
   }, [proximityMarkersData]);
 
-  const handleProximityRadiusChange = useCallback(() => {
-    const slider = proximityRadiusSliderRef.current;
-    const display = proximityRadiusDisplayElementRef.current;
-
-    if (!slider || !display) {
-      console.error("Slider or display element for radius not found.");
-      return;
-    }
-
-    const sliderValue = parseInt(slider.value, 10);
-    const newRadius = radiusMapping[sliderValue];
-    
-    setCurrentProximityRadiusFt(newRadius);
-    display.textContent = `${newRadius} ft`;
-    console.log("Proximity radius changed to:", newRadius, "ft (Slider value:", sliderValue + ")");
-
-    if (proximityMarkersData.length > 0) {
-      alert("Radius changed. Existing proximity markers have been cleared as their scale is now different.");
-      setProximityMarkersData([]); // Clear existing markers
-      // The dots will be removed by the useEffect that watches proximityMarkersData
-    }
-  }, [proximityMarkersData]);
-
   const handleAddProximityMarker = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     const proximityCircleElement = proximityCircleElementRef.current;
     if (!proximityCircleElement) return;
@@ -204,9 +180,10 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         x: clickX,
         y: clickY,
         isCollected: false,
+        objectType: currentLootType,
       }
     ]);
-  }, [currentProximityRadiusFt]);
+  }, [currentProximityRadiusFt, currentLootType]);
 
   const addProximityMarkers = useCallback((markers: ProximityMarkerData[]) => {
     setProximityMarkersData((prevData) => [
@@ -260,7 +237,8 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       // Add new dots
       proximityMarkersData.forEach(marker => {
         const dot = document.createElement('div');
-        dot.className = `proximity-marker-dot${marker.isCollected ? ' collected' : ''}`;
+        const typeClass = marker.objectType === 'giftCard' ? 'proximity-marker-dot--gift' : 'proximity-marker-dot--coin';
+        dot.className = `proximity-marker-dot ${typeClass}${marker.isCollected ? ' collected' : ''}`;
         dot.style.left = `${marker.x}px`;
         dot.style.top = `${marker.y}px`;
         proximityCircleElement.appendChild(dot);
@@ -268,29 +246,17 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     }
   }, [proximityMarkersData, updateProximityMarkerDisplay]);
 
-  useEffect(() => {
-    if (!showRadiusControls && initialMarkers.length > 0) {
-      const maxDistance = Math.max(...initialMarkers.map(marker => marker.distanceFt ?? 0));
-      const matchedRadius = radiusMapping.find(radius => maxDistance <= radius) ?? radiusMapping[radiusMapping.length - 1];
-      setCurrentProximityRadiusFt(prev => prev === matchedRadius ? prev : matchedRadius);
-    }
-  }, [initialMarkers, showRadiusControls]);
-
-  const instructionText = showRadiusControls
-    ? 'Click within the circle to place markers. Adjust radius with the slider below.'
-    : 'Radius is set by the hunt creator. Review the radar to see loot locations.';
-
   return (
     <div
       id="proximity-view-container"
       // className="hidden-view" // This will be controlled by the parent component
       style={{
         width: '100%',
+        height: '100%',
         maxWidth: '100%',
-        margin: '0 0 30px 0',
         display: 'flex',
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'stretch',
         gap: '28px',
       }}
     >
@@ -298,75 +264,28 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         id="proximity-interaction-area"
         style={{
           flex: '1 1 65%',
-          marginRight: '28px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          gap: '16px',
+          height: '100%',
+          minHeight: '320px',
         }}
       >
-        <p style={{ textAlign: 'center', marginBottom: showRadiusControls ? '14px' : '20px', color: 'var(--text-secondary)', maxWidth: '420px' }}>
-          {instructionText}
-        </p>
-        {showRadiusControls && (
-          <div
-            id="proximity-radius-slider-container"
-            style={{
-              textAlign: 'center',
-              marginBottom: '24px',
-              width: '80%',
-              maxWidth: '360px',
-              marginLeft: 'auto',
-              marginRight: 'auto',
-              background: 'rgba(15, 23, 42, 0.6)',
-              padding: '18px 20px',
-              borderRadius: '20px',
-              border: '1px solid rgba(99, 102, 241, 0.25)',
-              boxShadow: '0 25px 45px -30px rgba(14, 165, 233, 0.35)',
-            }}
-          >
-            <label
-              htmlFor="proximityRadiusSlider"
-              style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.04em', textTransform: 'uppercase' }}
-            >
-              Radius: <span ref={proximityRadiusDisplayElementRef}>{currentProximityRadiusFt} ft</span>
-            </label>
-            <input
-              type="range"
-              id="proximityRadiusSlider"
-              min="0"
-              max="2"
-              defaultValue="0"
-              style={{ width: '100%' }}
-              ref={proximityRadiusSliderRef}
-              onChange={handleProximityRadiusChange}
-            />
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '0.75em',
-                marginTop: '8px',
-                color: 'var(--text-secondary)',
-                letterSpacing: '0.08em',
-              }}
-            >
-              <span>10ft</span>
-              <span>50ft</span>
-              <span>100ft</span>
-            </div>
-          </div>
-        )}
         <div
           id="proximity-circle-wrapper"
           style={{
             position: 'relative',
-            width: 'min(440px, 90vw)',
-            height: 'min(440px, 90vw)',
+            width: 'min(420px, 100%)',
+            maxWidth: '420px',
+            aspectRatio: '1 / 1',
+            height: 'auto',
             borderRadius: '24px',
             background: 'linear-gradient(145deg, rgba(15,23,42,0.8), rgba(17,24,39,0.9))',
             boxShadow: '0 40px 60px -40px rgba(15,118,110,0.45)',
             padding: '24px',
             transition: 'transform 0.3s ease',
+            maxHeight: '100%',
           }}
         >
           <div
@@ -382,7 +301,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
               boxShadow: 'inset 0 0 40px rgba(8, 47, 73, 0.55)',
             }}
             ref={proximityCircleElementRef}
-            onClick={showRadiusControls ? handleAddProximityMarker : undefined}
+            onClick={handleAddProximityMarker}
           >
             <span
               style={{
@@ -473,20 +392,27 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         borderRadius: '24px',
         padding: '1.25rem',
         boxShadow: '0 30px 60px -40px rgba(79, 70, 229, 0.35)',
-        backdropFilter: 'blur(18px)'
+        backdropFilter: 'blur(18px)',
+        height: '100%',
+        maxHeight: '100%'
       }}>
-        <h4
-          style={{
-            margin: '0 0 1rem 0',
-            color: 'var(--text-primary)',
-            fontSize: '1.1rem',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            fontWeight: 600,
-          }}
-        >
-          📍 Loot Locations
-        </h4>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h4
+            style={{
+              margin: 0,
+              color: 'var(--text-primary)',
+              fontSize: '1.1rem',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+            }}
+          >
+            📍 Loot Locations
+          </h4>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            {(clueCount ?? proximityMarkersData.length)} clue{(clueCount ?? proximityMarkersData.length) === 1 ? '' : 's'}
+          </span>
+        </div>
         <div
           id="proximity-coordinates-display"
           style={{

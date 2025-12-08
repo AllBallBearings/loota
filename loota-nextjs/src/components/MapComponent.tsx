@@ -16,6 +16,7 @@ export interface MapMarker {
   isCollected?: boolean;
   title?: string; // e.g., "Loot #1"
   description?: string; // Additional info to show in bubble
+  objectType?: string; // Type of loot object (coin, giftCard, etc.)
 }
 
 export interface MapComponentRef {
@@ -31,12 +32,13 @@ interface MapComponentProps {
   initialMarkers?: MapMarker[];
   onMarkersChange?: (markers: MapMarker[]) => void;
   focusOnMarkers?: boolean; // If true, zoom to fit all markers instead of user location
+  currentLootType?: string; // Current loot type to apply to new markers
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "YOUR_GOOGLE_MAPS_API_KEY";
 
 const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
-  { initialMarkers = [], onMarkersChange, focusOnMarkers = false },
+  { initialMarkers = [], onMarkersChange, focusOnMarkers = false, currentLootType = 'coin' },
   ref
 ) => {
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -47,24 +49,66 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const containerResizeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentLootTypeRef = useRef<string>(currentLootType);
 
-  console.log("MapComponent rendering...");
+  // Keep ref in sync with prop
+  useEffect(() => {
+    currentLootTypeRef.current = currentLootType;
+    console.log("currentLootType updated to:", currentLootType);
+  }, [currentLootType]);
 
-  // Function to create custom coin-like pin icons
-  const createPinIcon = useCallback((isCollected: boolean, isHighlighted: boolean) => {
+  console.log("MapComponent rendering with currentLootType:", currentLootType);
+
+  // Function to create custom pin icons (coin or gift card)
+  const createPinIcon = useCallback((isCollected: boolean, isHighlighted: boolean, objectType?: string) => {
+    console.log('Creating pin icon with objectType:', objectType);
     const baseColor = isCollected ? '#FF4444' : '#FFC107'; // Red for collected, gold for uncollected
     const strokeColor = isHighlighted ? '#FF4444' : (isCollected ? '#CC0000' : '#B8860B'); // Red for highlighted, darker red for collected, dark gold for normal
     const strokeWeight = isHighlighted ? 4 : 2;
-    const scale = isHighlighted ? 14 : 12;
-    
-    // Create a circular coin-like symbol
+    const baseSizeMultiplier = isHighlighted ? 1.2 : 1; // Keep both shapes proportionally consistent
+
+    // Create different shapes based on objectType
+    if (objectType === 'giftCard') {
+      // Create a rounded rectangle for gift card using simpler SVG path
+      // Card dimensions (will be scaled)
+      const w = 18 * baseSizeMultiplier;
+      const h = 12 * baseSizeMultiplier;
+      const r = 1.5 * baseSizeMultiplier;
+
+      // SVG path for rounded rectangle centered at origin
+      const path = `
+        M ${-w/2 + r} ${-h/2}
+        h ${w - 2*r}
+        a ${r} ${r} 0 0 1 ${r} ${r}
+        v ${h - 2*r}
+        a ${r} ${r} 0 0 1 ${-r} ${r}
+        h ${-(w - 2*r)}
+        a ${r} ${r} 0 0 1 ${-r} ${-r}
+        v ${-(h - 2*r)}
+        a ${r} ${r} 0 0 1 ${r} ${-r}
+        z
+      `.replace(/\s+/g, ' ').trim();
+
+      return {
+        path: path,
+        fillColor: baseColor,
+        fillOpacity: 1,
+        strokeColor: strokeColor,
+        strokeWeight: strokeWeight,
+        scale: 1,
+        anchor: new google.maps.Point(0, 0)
+      };
+    }
+
+    // Default: Create a circular coin-like symbol
+    const coinScale = 9 * baseSizeMultiplier;
     return {
       path: google.maps.SymbolPath.CIRCLE,
       fillColor: baseColor,
       fillOpacity: 1,
       strokeColor: strokeColor,
       strokeWeight: strokeWeight,
-      scale: scale,
+      scale: coinScale,
       anchor: new google.maps.Point(0, 0)
     };
   }, []);
@@ -91,9 +135,11 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   }, []);
 
   const addMarker = useCallback((location: google.maps.LatLng) => {
+    const lootType = currentLootTypeRef.current;
+    console.log('Adding marker with objectType:', lootType);
     setMarkerData((prevData) => [
       ...prevData,
-      { lat: location.lat(), lng: location.lng() }
+      { lat: location.lat(), lng: location.lng(), objectType: lootType }
     ]);
   }, []);
 
@@ -252,7 +298,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         map: mapRef.current,
         draggable: !focusOnMarkers, // Only allow dragging in creation mode
         title: '', // Remove default tooltip
-        icon: createPinIcon(data.isCollected || false, isHighlighted)
+        icon: createPinIcon(data.isCollected || false, isHighlighted, data.objectType)
       });
 
       // Store marker data on the marker for later reference
@@ -396,7 +442,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     if (marker) {
       const markerData = marker.get('markerData') as MapMarker;
       const isHighlighted = highlightedPinId !== pinId; // Will be the new state
-      marker.setIcon(createPinIcon(markerData.isCollected || false, isHighlighted));
+      marker.setIcon(createPinIcon(markerData.isCollected || false, isHighlighted, markerData.objectType));
       
       // Center the map on the highlighted pin and show info window
       if (isHighlighted) {
