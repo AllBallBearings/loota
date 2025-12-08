@@ -7,6 +7,7 @@ import { Icons } from '../components/Icons';
 
 export default function ModernHome() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
+  const [currentLootType, setCurrentLootType] = useState<string>('coin');
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [huntName, setHuntName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
@@ -21,6 +22,13 @@ export default function ModernHome() {
 
   const mapComponentRef = useRef<MapComponentRef>(null);
   const proximityComponentRef = useRef<ProximityComponentRef>(null);
+  const isPhoneMissing = !creatorPhone.trim();
+  const isEmailMissing = !creatorEmail.trim();
+  const isHuntNameMissing = !huntName.trim();
+  const isUserNameMissing = !userName.trim();
+  const isContactInfoIncomplete = isPhoneMissing || isEmailMissing;
+  const hasValidationErrors = isContactInfoIncomplete || isHuntNameMissing || isUserNameMissing;
+  const encourageButtonDisabled = isLoading || isContactInfoIncomplete;
 
   // Check for existing user data on component mount
   useEffect(() => {
@@ -68,6 +76,48 @@ export default function ModernHome() {
       setCreatorEmail('');
     }
   };
+
+  const renderContactFields = () => (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">
+          Phone *
+          {isPhoneMissing && (
+            <span className="text-red-400 ml-2 text-xs">Required</span>
+          )}
+        </label>
+        <input
+          type="tel"
+          value={creatorPhone}
+          onChange={(e) => setCreatorPhone(e.target.value)}
+          placeholder="(555) 123-4567"
+          className={`input text-sm ${isPhoneMissing ? 'border-red-400/50' : ''}`}
+          readOnly={useExistingContact && Boolean(existingUserData?.phone)}
+          required
+        />
+        {isPhoneMissing && <p className="mt-1 text-xs text-red-300">Add a phone number so we can text you loot updates.</p>}
+      </div>
+
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">
+          Email *
+          {isEmailMissing && (
+            <span className="text-red-400 ml-2 text-xs">Required</span>
+          )}
+        </label>
+        <input
+          type="email"
+          value={creatorEmail}
+          onChange={(e) => setCreatorEmail(e.target.value)}
+          placeholder="your@email.com"
+          className={`input text-sm ${isEmailMissing ? 'border-red-400/50' : ''}`}
+          readOnly={useExistingContact && Boolean(existingUserData?.email)}
+          required
+        />
+        {isEmailMissing && <p className="mt-1 text-xs text-red-300">Add an email so we can send you the loot link.</p>}
+      </div>
+    </div>
+  );
 
   const handleHuntTypeChange = (type: 'geolocation' | 'proximity') => {
     setCurrentHuntType(type);
@@ -183,9 +233,12 @@ export default function ModernHome() {
             <div className="flex items-center gap-3">
               <Icons.Adventure className="text-accent-cyan" size={28} />
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl md:text-3xl font-bold">
-                  Loota
-                </h1>
+                <div className="flex flex-col items-center">
+                  <span className="mb-1 h-5 w-5 rounded-full bg-red-500 shadow-[0_0_12px_rgba(248,113,113,0.9)]" />
+                  <h1 className="text-2xl md:text-3xl font-bold">
+                    Loota
+                  </h1>
+                </div>
                 <div className="text-reel">
                   <div className="text-reel-content">
                     <span className="text-2xl md:text-3xl font-bold text-yellow-400">&nbsp;</span>
@@ -263,6 +316,45 @@ export default function ModernHome() {
               </div>
             </div>
 
+            {/* Loot Type Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Loot Type
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="lootType"
+                    value="coin"
+                    checked={currentLootType === 'coin'}
+                    onChange={(e) => setCurrentLootType(e.target.value)}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
+                  />
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Treasure className="text-amber-300" size={18} />
+                    Coin
+                  </span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="lootType"
+                    value="giftCard"
+                    checked={currentLootType === 'giftCard'}
+                    onChange={(e) => setCurrentLootType(e.target.value)}
+                    className="w-4 h-4"
+                    style={{ accentColor: 'var(--accent-violet)' }}
+                  />
+                  <span className="ml-3 text-slate-300 flex items-center gap-2">
+                    <Icons.Sparkle className="text-emerald-300" size={18} />
+                    Gift Card
+                  </span>
+                </label>
+              </div>
+            </div>
+
             {/* Hunt Details */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -302,29 +394,15 @@ export default function ModernHome() {
               </h4>
 
               {/* Existing Contact Information Toggle */}
-              {existingUserData && (existingUserData.phone || existingUserData.email) && (
-                <div className="mb-5">
+              <div className="space-y-4">
+                {existingUserData && (existingUserData.phone || existingUserData.email) ? (
                   <div className="contact-card">
                     <div className="contact-card__header">
                       <div className="contact-card__title">
                         <Icons.Users className="contact-card__icon text-accent-cyan" size={20} />
-                        Saved contact info
+                        Save Contact Info
                       </div>
                       <span className="contact-card__badge">Auto-fill ready</span>
-                    </div>
-                    <div className="contact-card__details">
-                      {existingUserData.phone && (
-                        <div>
-                          <span>Phone</span>
-                          <strong>{existingUserData.phone}</strong>
-                        </div>
-                      )}
-                      {existingUserData.email && (
-                        <div>
-                          <span>Email</span>
-                          <strong>{existingUserData.email}</strong>
-                        </div>
-                      )}
                     </div>
                     <div className="contact-card__actions">
                       <button
@@ -339,39 +417,16 @@ export default function ModernHome() {
                         onClick={() => handleContactMethodToggle(false)}
                         className={`contact-card__button ${!useExistingContact ? 'is-active' : ''}`}
                       >
-                        Enter New
+                        Clear & Edit
                       </button>
                     </div>
+                    <div className="mt-4">
+                      {renderContactFields()}
+                    </div>
                   </div>
-                </div>
-              )}
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Phone *</label>
-                  <input
-                    type="tel"
-                    value={creatorPhone}
-                    onChange={(e) => setCreatorPhone(e.target.value)}
-                    placeholder="(555) 123-4567"
-                    className="input text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={useExistingContact && Boolean(existingUserData?.phone)}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    value={creatorEmail}
-                    onChange={(e) => setCreatorEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="input text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={useExistingContact && Boolean(existingUserData?.email)}
-                    required
-                  />
-                </div>
+                ) : (
+                  renderContactFields()
+                )}
 
                 <div>
                   <label className="block text-xs text-slate-400 mb-2">Preferred Contact</label>
@@ -415,10 +470,23 @@ export default function ModernHome() {
 
           {/* Bottom Action Button - Fixed at bottom */}
           <div className="flex-shrink-0 p-6 border-t border-slate-600/40">
+            {/* Validation Messages */}
+            {hasValidationErrors && (
+              <div className="mb-3 p-3 bg-red-500/10 border border-red-400/30 rounded-lg">
+                <p className="text-xs text-red-300 mb-1 font-medium">Please complete the following:</p>
+                <ul className="text-xs text-red-200 space-y-1 ml-4 list-disc">
+                  {isHuntNameMissing && <li>Enter a hunt name</li>}
+                  {isUserNameMissing && <li>Enter your name</li>}
+                  {isPhoneMissing && <li>Enter your phone number</li>}
+                  {isEmailMissing && <li>Enter your email address</li>}
+                </ul>
+              </div>
+            )}
+
             <button
-              className={`btn btn-primary w-full text-base py-3 justify-center gap-2 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              className={`btn btn-primary w-full text-base py-3 justify-center gap-2 ${encourageButtonDisabled ? 'opacity-75 cursor-not-allowed' : ''}`}
               onClick={generateLootLink}
-              disabled={isLoading}
+              disabled={encourageButtonDisabled}
             >
               {isLoading ? (
                 <>
@@ -428,7 +496,7 @@ export default function ModernHome() {
               ) : (
                 <>
                   <Icons.Sparkle className="text-slate-100" size={20} />
-                  Start the Adventure
+                  Encourage Looting
                 </>
               )}
             </button>
@@ -476,21 +544,18 @@ export default function ModernHome() {
 
         {/* Right Panel - Hunt Interface and Locations */}
         <div className="flex-1 flex flex-col">
-          {/* Hunt Interface and Locations */}
-          <div className="flex-1 flex flex-col lg:flex-row">
-            {/* Locations List */}
-            <div className="results-list overflow-y-auto w-full lg:w-80 lg:max-h-full order-2 lg:order-1">
-              <div className="p-4">
-                <h4 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
-                  <Icons.Treasure className="text-amber-300" size={22} />
-                  {currentHuntType === 'geolocation' ? 'Loot Locations' : 'Proximity Markers'}
-                  {currentHuntType === 'geolocation' && (
+          {currentHuntType === 'geolocation' ? (
+            <div className="flex-1 flex flex-col lg:flex-row">
+              {/* Locations List */}
+              <div className="results-list overflow-y-auto w-full lg:w-80 lg:max-h-full order-2 lg:order-1">
+                <div className="p-4">
+                  <h4 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                    <Icons.Treasure className="text-amber-300" size={22} />
+                    Loot Locations
                     <span className="text-sm text-slate-400">({mapMarkers.length})</span>
-                  )}
-                </h4>
+                  </h4>
 
-                {currentHuntType === 'geolocation' ? (
-                  mapMarkers.length === 0 ? (
+                  {mapMarkers.length === 0 ? (
                     <div className="text-center py-8 text-slate-400 flex flex-col items-center gap-2">
                       <Icons.Target className="text-slate-500" size={28} />
                       <p className="mt-2 text-sm">Click on the map to place your first treasure location!</p>
@@ -504,7 +569,22 @@ export default function ModernHome() {
                               <Icons.Pin className="text-slate-300" size={16} />
                               Location #{index + 1}
                             </div>
-                            <span className="status-badge text-xs px-2 py-1 rounded">Available</span>
+                            <span
+                              className={`status-badge ${
+                                marker.objectType === 'giftCard' ? 'status-badge--gift' : 'status-badge--coin'
+                              }`}
+                            >
+                              <span
+                                className="status-badge__icon"
+                                role="img"
+                                aria-label={marker.objectType === 'giftCard' ? 'Gift card loot' : 'Coin loot'}
+                              >
+                                {marker.objectType === 'giftCard' ? '🎁' : '🪙'}
+                              </span>
+                              <span className="status-badge__text">
+                                {marker.objectType === 'giftCard' ? 'Gift Card' : 'Coin'}
+                              </span>
+                            </span>
                           </div>
                           <div className="text-xs text-slate-300 font-mono">
                             {marker.lat.toFixed(6)}, {marker.lng.toFixed(6)}
@@ -531,49 +611,48 @@ export default function ModernHome() {
                         </div>
                       </div>
                     </div>
-                  )
-                ) : (
-                  <div className="space-y-4">
-                    <div className="text-center py-4 text-slate-400 flex flex-col items-center gap-2">
-                      <Icons.Proximity className="text-slate-500" size={26} />
-                      <p className="mt-2 text-sm">Use the proximity interface to place markers</p>
-                    </div>
-                  <div className="space-y-3">
-                    <button 
+                  )}
+                </div>
+              </div>
+
+              {/* Hunt Interface */}
+              <div className="flex-1 map-panel relative min-h-[500px] order-1 lg:order-2">
+                <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
+                  <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} currentLootType={currentLootType} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex">
+              <div className="flex-1 map-panel relative min-h-[500px]">
+                <div
+                  className="h-full w-full overflow-auto px-4 py-6"
+                  style={{
+                    background: 'radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.18), transparent 60%), radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.16), transparent 55%), rgba(9, 14, 32, 0.85)',
+                    borderRadius: 'inherit'
+                  }}
+                >
+                  <ProximityComponent ref={proximityComponentRef} currentLootType={currentLootType} />
+                  <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                    <button
                       className="btn btn-secondary w-full justify-center gap-2"
                       onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}
                     >
                       <Icons.Trash className="text-slate-200" size={18} />
                       Delete Last Marker
                     </button>
-                    <button 
+                    <button
                       className="btn btn-danger w-full justify-center gap-2"
                       onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}
                     >
-                        <Icons.Close className="text-slate-100" size={18} />
-                        Clear All Markers
-                      </button>
-                    </div>
+                      <Icons.Close className="text-slate-100" size={18} />
+                      Clear All Markers
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             </div>
-
-            {/* Hunt Interface */}
-            <div className="flex-1 map-panel relative min-h-[500px] order-1 lg:order-2">
-              {currentHuntType === 'geolocation' ? (
-                <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
-                  <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} />
-                </div>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.18), transparent 60%), radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.16), transparent 55%), rgba(9, 14, 32, 0.85)' }}>
-                  <div className="w-full h-full relative">
-                    <ProximityComponent ref={proximityComponentRef} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </main>
 

@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,66 +8,66 @@ datasource db {
 }
 
 model User {
-  id              String             @id @default(uuid()) @db.Uuid
-  name            String
-  phone           String?            @unique // Optional, but useful for contact and unique identification
-  email           String?            @unique // Email address for contact
-  paypalId        String?            @unique // Optional, for receiving winnings
-  deviceId        String?            @unique // New field for iOS device ID
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  huntsWon        Hunt[]             @relation("Winner") // Link to hunts won by this user (one winner per hunt)
-  participations  HuntParticipation[] // Link to all hunts this user is participating in
-  collectedPins   Pin[]               @relation("CollectedPins") // Link to pins collected by this user
-  createdHunts    Hunt[]              @relation("CreatedHunts") // Link to hunts created by this user
+  id             String              @id @default(uuid()) @db.Uuid
+  name           String
+  phone          String?             @unique
+  paypalId       String?             @unique
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deviceId       String?             @unique
+  email          String?             @unique
+  createdHunts   Hunt[]              @relation("CreatedHunts")
+  huntsWon       Hunt[]              @relation("Winner")
+  participations HuntParticipation[]
+  collectedPins  Pin[]               @relation("CollectedPins")
 }
 
 model Hunt {
-  id              String             @id @default(uuid()) @db.Uuid
-  name            String?            // Optional name for the hunt
-  type            String   // 'geolocation' or 'proximity'
-  creatorId       String?  @db.Uuid // New field to store the ID of the user who created this hunt (made optional for migration)
-  creator         User?    @relation("CreatedHunts", fields: [creatorId], references: [id])
-  creatorPhone    String?  // Creator's phone number for winner contact
-  creatorEmail    String?  // Creator's email for winner contact
-  preferredContactMethod String? // 'phone' or 'email' - creator's preferred contact method
-  winnerId        String?  @db.Uuid // New field to store the ID of the winning user
-  winner          User?    @relation("Winner", fields: [winnerId], references: [id])
-  isCompleted     Boolean  @default(false) // Track if hunt is completed
-  completedAt     DateTime? // When the hunt was completed
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  pins            Pin[]
-  participants    HuntParticipation[] // Link to all users participating in this hunt
+  id                     String              @id @default(uuid()) @db.Uuid
+  type                   String
+  winnerId               String?             @db.Uuid
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  creatorId              String?             @db.Uuid
+  name                   String?
+  creatorPhone           String?
+  creatorEmail           String?
+  preferredContactMethod String?
+  isCompleted            Boolean             @default(false)
+  completedAt            DateTime?
+  creator                User?               @relation("CreatedHunts", fields: [creatorId], references: [id])
+  winner                 User?               @relation("Winner", fields: [winnerId], references: [id])
+  participants           HuntParticipation[]
+  pins                   Pin[]
 }
 
 model Pin {
-  id           String   @id @default(uuid()) @db.Uuid
-  huntId       String   @db.Uuid
-  hunt         Hunt     @relation(fields: [huntId], references: [id], onDelete: Cascade)
-  lat          Decimal? // For geolocation pins
-  lng          Decimal? // For geolocation pins
-  distanceFt   Decimal? // For proximity pins
-  directionStr String?  // For proximity pins (e.g., "N45E")
-  x            Decimal? // Relative X coordinate for proximity pins within the circle
-  y            Decimal? // Relative Y coordinate for proximity pins within the circle
-  order        Int      @default(0) // Order of pin creation to maintain sequence
-  collectedByUserId String?  @db.Uuid // New field to store the ID of the user who collected this pin
-  collectedByUser   User?    @relation("CollectedPins", fields: [collectedByUserId], references: [id])
-  collectedAt       DateTime? // Timestamp when the pin was collected
-  createdAt    DateTime @default(now())
+  id                String    @id @default(uuid()) @db.Uuid
+  huntId            String    @db.Uuid
+  lat               Decimal?
+  lng               Decimal?
+  distanceFt        Decimal?
+  directionStr      String?
+  x                 Decimal?
+  y                 Decimal?
+  createdAt         DateTime  @default(now())
+  collectedAt       DateTime?
+  collectedByUserId String?   @db.Uuid
+  order             Int       @default(0)
+  objectType        String    @default("coin")
+  collectedByUser   User?     @relation("CollectedPins", fields: [collectedByUserId], references: [id])
+  hunt              Hunt      @relation(fields: [huntId], references: [id], onDelete: Cascade)
 }
 
 model HuntParticipation {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  huntId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id])
-  hunt      Hunt     @relation(fields: [huntId], references: [id])
-  participantPhone String? // Participant's phone number for winner contact (required for joining)
-  joinedAt  DateTime @default(now()) // Timestamp when the user joined this specific hunt
-  notifiedOfCompletion Boolean @default(false) // Track if user was notified of hunt completion
-  // You could add other fields here, e.g., score, current progress, status (active, left, etc.)
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @db.Uuid
+  huntId               String   @db.Uuid
+  joinedAt             DateTime @default(now())
+  participantPhone     String?
+  notifiedOfCompletion Boolean  @default(false)
+  hunt                 Hunt     @relation(fields: [huntId], references: [id])
+  user                 User     @relation(fields: [userId], references: [id])
 
-  @@unique([userId, huntId]) // Ensures a user can only participate in a specific hunt once
+  @@unique([userId, huntId])
 }
