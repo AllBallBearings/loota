@@ -2,10 +2,10 @@ import { NextResponse, NextRequest } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { huntId: string } }
+  { params }: { params: Promise<{ huntId: string }> }
 ) {
   try {
-    const { huntId } = params;
+    const { huntId } = await params;
     const body = await request.json();
 
     if (!huntId) {
