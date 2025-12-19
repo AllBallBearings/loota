@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Loota** - an augmented reality treasure hunt application with two main components:
 
-1. **Legacy HTML/JS frontend** (`legacy-pages/`) - Original implementation
-2. **Next.js application** (`loota-nextjs/`) - Current main application
+1. **Legacy HTML/JS frontend** (`Legacy-Pages/`) - Original implementation (AR view lives here)
+2. **Next.js application** (repo root) - Current main application
 
-The active development happens in the `loota-nextjs/` directory.
+The active development happens in the repo root.
 
 ## Key Commands
 
-All commands should be run from the `loota-nextjs/` directory:
+All commands should be run from the repo root:
 
 ```bash
 # Development
