@@ -507,9 +507,12 @@ p {
   flex-direction: column;
 }
 
-.hunt-stage-card__body .map-container-modern,
-.hunt-stage-card__body .map-container-proximity {
+.hunt-stage-card__body .map-container-modern {
   min-height: 500px;
+}
+
+.hunt-stage-card__body .map-container-proximity {
+  min-height: auto;
 }
 
 .looted-banner--full {
@@ -825,7 +828,7 @@ p {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   overflow: visible;
-  min-height: 600px;
+  min-height: auto;
 }
 
 /* Status Indicators */

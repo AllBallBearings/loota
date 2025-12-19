@@ -7,9 +7,10 @@ import { LoadingOverlay } from './LoadingOverlay';
 
 interface ProximityContainerProps {
   initialPins: PinData[];
+  showLootPanel?: boolean;
 }
 
-const ProximityContainer: React.FC<ProximityContainerProps> = ({ initialPins }) => {
+const ProximityContainer: React.FC<ProximityContainerProps> = ({ initialPins, showLootPanel = true }) => {
   const proximityComponentRef = useRef<ProximityComponentRef>(null);
   const [isProximityLoading, setIsProximityLoading] = useState(true);
   const [isMarkersLoading, setIsMarkersLoading] = useState(false);
@@ -106,6 +107,7 @@ const ProximityContainer: React.FC<ProximityContainerProps> = ({ initialPins }) 
         ref={proximityComponentRef}
         initialMarkers={validMarkers}
         clueCount={initialPins.length}
+        showLootPanel={showLootPanel}
       />
       <LoadingOverlay
         isLoading={isProximityLoading || isMarkersLoading}
