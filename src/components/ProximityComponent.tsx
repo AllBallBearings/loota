@@ -23,6 +23,8 @@ interface ProximityComponentProps {
   initialMarkers?: ProximityMarkerData[]; // Add this prop
   currentLootType?: string; // Current loot type to apply to new markers
   clueCount?: number;
+  showLootPanel?: boolean;
+  proximityRadiusFt?: number;
 }
 
 const normalizeMarkers = (markers: ProximityMarkerData[]): ProximityMarkerData[] =>
@@ -33,11 +35,16 @@ const normalizeMarkers = (markers: ProximityMarkerData[]): ProximityMarkerData[]
   }));
 
 const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentProps>((
-  { initialMarkers = [], currentLootType = 'coin', clueCount }, // Destructure initialMarkers with a default empty array
+  {
+    initialMarkers = [],
+    currentLootType = 'coin',
+    clueCount,
+    showLootPanel = true,
+    proximityRadiusFt = 100,
+  }, // Destructure initialMarkers with a default empty array
   ref
 ) => {
   const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>(() => normalizeMarkers(initialMarkers)); // Initialize with initialMarkers, normalizing collected state
-  const [currentProximityRadiusFt] = useState<number>(100);
   
   const proximityCircleElementRef = useRef<HTMLDivElement | null>(null);
   const proximityCoordinatesDisplayElementRef = useRef<HTMLDivElement | null>(null);
@@ -60,7 +67,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     const numIntervals = 10;
 
     for (let i = 1; i < numIntervals; i++) {
-      const intervalRadiusFt = (currentProximityRadiusFt / numIntervals) * i;
+      const intervalRadiusFt = (proximityRadiusFt / numIntervals) * i;
       const intervalRadiusPx = (proximityCircleRadiusPx / numIntervals) * i;
 
       const ring = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -82,22 +89,24 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       ring.appendChild(circleEl);
       proximityCircleElement.appendChild(ring);
 
-      const label = document.createElement('div');
-      label.classList.add('measurement-label');
-      label.style.position = 'absolute';
-      label.style.left = `${proximityCircleRadiusPx + intervalRadiusPx - 10}px`;
-      label.style.top = `${proximityCircleRadiusPx - 10}px`;
-      label.style.fontSize = '10px';
-      label.style.color = 'var(--text-primary)';
-      label.style.background = 'rgba(15, 23, 42, 0.75)';
-      label.style.padding = '2px 6px';
-      label.style.borderRadius = '9999px';
-      label.style.pointerEvents = 'none';
-      label.textContent = `${intervalRadiusFt.toFixed(0)}ft`;
-      proximityCircleElement.appendChild(label);
+      if (i % 2 === 0) {
+        const label = document.createElement('div');
+        label.classList.add('measurement-label');
+        label.style.position = 'absolute';
+        label.style.left = `${proximityCircleRadiusPx + intervalRadiusPx - 10}px`;
+        label.style.top = `${proximityCircleRadiusPx - 10}px`;
+        label.style.fontSize = '10px';
+        label.style.color = 'var(--text-primary)';
+        label.style.background = 'rgba(15, 23, 42, 0.75)';
+        label.style.padding = '2px 6px';
+        label.style.borderRadius = '9999px';
+        label.style.pointerEvents = 'none';
+        label.textContent = `${intervalRadiusFt.toFixed(0)}ft`;
+        proximityCircleElement.appendChild(label);
+      }
     }
-    console.log(`Drew ${numIntervals -1} concentric circles for ${currentProximityRadiusFt}ft radius.`);
-  }, [currentProximityRadiusFt]);
+    console.log(`Drew ${numIntervals -1} concentric circles for ${proximityRadiusFt}ft radius.`);
+  }, [proximityRadiusFt]);
 
   const updateProximityMarkerDisplay = useCallback(() => {
     if (!proximityCoordinatesDisplayElementRef.current) return;
@@ -139,11 +148,11 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     const distanceFromCenterPx = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
 
     if (distanceFromCenterPx > proximityCircleRadiusPx) {
-      alert(`Marker is outside the ${currentProximityRadiusFt}ft radius!`);
+      alert(`Marker is outside the ${proximityRadiusFt}ft radius!`);
       return;
     }
 
-    const distanceFt = (distanceFromCenterPx / proximityCircleRadiusPx) * currentProximityRadiusFt;
+    const distanceFt = (distanceFromCenterPx / proximityCircleRadiusPx) * proximityRadiusFt;
 
     const angleDeg = (Math.atan2(relativeX, -relativeY) * (180 / Math.PI) + 360) % 360;
 
@@ -183,7 +192,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         objectType: currentLootType,
       }
     ]);
-  }, [currentProximityRadiusFt, currentLootType]);
+  }, [proximityRadiusFt, currentLootType]);
 
   const addProximityMarkers = useCallback((markers: ProximityMarkerData[]) => {
     setProximityMarkersData((prevData) => [
@@ -225,7 +234,22 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
   // Effect to draw the circle when radius changes or component mounts
   useEffect(() => {
     drawProximityCircle();
-  }, [currentProximityRadiusFt, drawProximityCircle]);
+  }, [proximityRadiusFt, drawProximityCircle]);
+
+  // Redraw rings whenever the circle resizes to keep them aligned.
+  useEffect(() => {
+    const proximityCircleElement = proximityCircleElementRef.current;
+    if (!proximityCircleElement) return undefined;
+
+    const observer = new ResizeObserver(() => {
+      drawProximityCircle();
+    });
+    observer.observe(proximityCircleElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [drawProximityCircle]);
 
   // Effect to update display and dots when markers data changes
   useEffect(() => {
@@ -250,9 +274,10 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     <div
       id="proximity-view-container"
       // className="hidden-view" // This will be controlled by the parent component
+      className="proximity-view"
       style={{
         width: '100%',
-        height: '100%',
+        height: 'auto',
         maxWidth: '100%',
         display: 'flex',
         flexDirection: 'row',
@@ -262,18 +287,20 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     >
       <div
         id="proximity-interaction-area"
+        className="proximity-interaction"
         style={{
           flex: '1 1 65%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '16px',
-          height: '100%',
+          height: 'auto',
           minHeight: '320px',
         }}
       >
         <div
           id="proximity-circle-wrapper"
+          className="proximity-circle-wrapper"
           style={{
             position: 'relative',
             width: 'min(420px, 100%)',
@@ -383,50 +410,77 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         </div>
       </div>
 
-      <div style={{
-        flex: '1 1 35%',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'rgba(15, 23, 42, 0.7)',
-        border: '1px solid rgba(99, 102, 241, 0.25)',
-        borderRadius: '24px',
-        padding: '1.25rem',
-        boxShadow: '0 30px 60px -40px rgba(79, 70, 229, 0.35)',
-        backdropFilter: 'blur(18px)',
-        height: '100%',
-        maxHeight: '100%'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h4
-            style={{
-              margin: 0,
-              color: 'var(--text-primary)',
-              fontSize: '1.1rem',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              fontWeight: 600,
-            }}
-          >
-            📍 Loot Locations
-          </h4>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            {(clueCount ?? proximityMarkersData.length)} clue{(clueCount ?? proximityMarkersData.length) === 1 ? '' : 's'}
-          </span>
-        </div>
-        <div
-          id="proximity-coordinates-display"
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            fontSize: '0.95em',
-            lineHeight: '1.6',
-            paddingRight: '4px',
-          }}
-          ref={proximityCoordinatesDisplayElementRef}
+      {showLootPanel && (
+        <div style={{
+          flex: '1 1 35%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'rgba(15, 23, 42, 0.7)',
+          border: '1px solid rgba(99, 102, 241, 0.25)',
+          borderRadius: '24px',
+          padding: '1.25rem',
+          boxShadow: '0 30px 60px -40px rgba(79, 70, 229, 0.35)',
+          backdropFilter: 'blur(18px)',
+          height: '100%',
+          maxHeight: '100%'
+        }}
+        className="proximity-loot-panel"
         >
-          {/* Proximity marker data will appear here */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h4
+              style={{
+                margin: 0,
+                color: 'var(--text-primary)',
+                fontSize: '1.1rem',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+              }}
+            >
+              📍 Loot Locations
+            </h4>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              {(clueCount ?? proximityMarkersData.length)} clue{(clueCount ?? proximityMarkersData.length) === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div
+            id="proximity-coordinates-display"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              fontSize: '0.95em',
+              lineHeight: '1.6',
+              paddingRight: '4px',
+            }}
+            ref={proximityCoordinatesDisplayElementRef}
+          >
+            {/* Proximity marker data will appear here */}
+          </div>
         </div>
-      </div>
+      )}
+      <style jsx>{`
+        @media (max-width: 860px) {
+          .proximity-view {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .proximity-interaction {
+            width: 100%;
+            min-height: 360px;
+          }
+
+          .proximity-circle-wrapper {
+            width: 100%;
+            max-width: 100%;
+            padding: 16px;
+          }
+
+          .proximity-loot-panel {
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   );
 });

@@ -67,6 +67,10 @@ const prisma = new PrismaClient();
  *                       type: string
  *                       description: Type of loot object (coin, giftCard, etc.)
  *                       default: coin
+ *               proximityRadiusFt:
+ *                 type: number
+ *                 format: float
+ *                 description: Placement radius in feet for proximity hunts.
  *     responses:
  *       201:
  *         description: Hunt created successfully. Returns the new hunt's ID.
@@ -212,6 +216,10 @@ export async function GET() {
  *                       type: string
  *                       description: Type of loot object (coin, giftCard, etc.)
  *                       default: coin
+ *               proximityRadiusFt:
+ *                 type: number
+ *                 format: float
+ *                 description: Placement radius in feet for proximity hunts.
  *     responses:
  *       201:
  *         description: Hunt created successfully. Returns the new hunt's ID.
@@ -247,7 +255,7 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const { name, type, creatorId, creatorName, creatorPhone, creatorEmail, preferredContactMethod, pins } = await request.json();
+    const { name, type, creatorId, creatorName, creatorPhone, creatorEmail, preferredContactMethod, pins, proximityRadiusFt } = await request.json();
 
     if (!type || !creatorId || !pins || !Array.isArray(pins) || !creatorPhone || !creatorEmail) {
       return NextResponse.json({ message: 'Invalid request data. Phone and email are required.' }, { status: 400 });
@@ -292,10 +300,18 @@ export async function POST(request: Request) {
       }
     }
 
+    const parsedProximityRadiusFt = proximityRadiusFt !== undefined && proximityRadiusFt !== null
+      ? Number(proximityRadiusFt)
+      : null;
+    const proximityRadiusValue = Number.isFinite(parsedProximityRadiusFt)
+      ? parsedProximityRadiusFt
+      : null;
+
     const newHunt = await prisma.hunt.create({
       data: {
         name: name || null,
         type: type,
+        proximityRadiusFt: type === 'proximity' ? proximityRadiusValue : null,
         creatorPhone: creatorPhone,
         creatorEmail: creatorEmail,
         preferredContactMethod: preferredContactMethod || 'phone',

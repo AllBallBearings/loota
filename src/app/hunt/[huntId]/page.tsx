@@ -337,7 +337,11 @@ export default function HuntViewerPage() {
       </div>
       <div className="card-section hunt-stage-card__body">
         <div className="map-container-modern map-container-proximity map-stage">
-          <ProximityContainer initialPins={proximityPins} />
+          <ProximityContainer
+            initialPins={proximityPins}
+            showLootPanel={false}
+            proximityRadiusFt={hunt.proximityRadiusFt ?? 100}
+          />
         </div>
       </div>
     </div>

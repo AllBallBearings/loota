@@ -15,6 +15,11 @@ const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick,
   const formatCoordinate = (value?: number) =>
     typeof value === 'number' ? value.toFixed(4) : 'N/A';
 
+  const formatProximity = (pin: PinData) => {
+    if (typeof pin.distanceFt !== 'number' || !pin.directionStr) return null;
+    return `${pin.distanceFt.toFixed(1)}ft, ${pin.directionStr}`;
+  };
+
   const listContent = (
     <>
       {pins.length === 0 ? (
@@ -51,12 +56,20 @@ const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick,
                   )}
                 </span>
               </div>
-              
               <div className="loot-location-card__coords">
-                <Icons.Pin size={16} className="inline text-rose-200 mr-1 align-middle" />
-                <span className="align-middle">
-                  {formatCoordinate(pin.lat)}, {formatCoordinate(pin.lng)}
-                </span>
+                {formatProximity(pin) ? (
+                  <>
+                    <Icons.Proximity size={16} className="inline text-cyan-200 mr-1 align-middle" />
+                    <span className="align-middle">{formatProximity(pin)}</span>
+                  </>
+                ) : (
+                  <>
+                    <Icons.Pin size={16} className="inline text-rose-200 mr-1 align-middle" />
+                    <span className="align-middle">
+                      {formatCoordinate(pin.lat)}, {formatCoordinate(pin.lng)}
+                    </span>
+                  </>
+                )}
               </div>
               
               {pin.collectedByUserId && (
