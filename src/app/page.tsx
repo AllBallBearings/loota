@@ -227,7 +227,7 @@ export default function ModernHome() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentHuntType, huntName, userName, creatorPhone, creatorEmail, preferredContactMethod]);
+  }, [currentHuntType, huntName, userName, creatorPhone, creatorEmail, preferredContactMethod, proximityRadiusFt]);
 
   return (
     <div className="main-layout">
@@ -664,7 +664,7 @@ export default function ModernHome() {
                                   max={proximityRadiusOptions.length - 1}
                                   step={1}
                                   value={proximityRadiusIndex}
-                                  style={{ ['--percent' as any]: `${proximityRadiusPercent}%` }}
+                                  style={{ '--percent': `${proximityRadiusPercent}%` } as React.CSSProperties}
                                   onChange={(event) => {
                                     const nextIndex = Number(event.target.value);
                                     const nextValue = proximityRadiusOptions[nextIndex] ?? 100;
