@@ -19,6 +19,10 @@ export default function ModernHome() {
   const [generatedUrl, setGeneratedUrl] = useState<string>('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isLoading, setIsLoading] = useState(false);
+  const [proximityRadiusFt, setProximityRadiusFt] = useState(100);
+  const proximityRadiusOptions = [10, 50, 100] as const;
+  const proximityRadiusIndex = Math.max(0, proximityRadiusOptions.indexOf(proximityRadiusFt as (typeof proximityRadiusOptions)[number]));
+  const proximityRadiusPercent = (proximityRadiusIndex / (proximityRadiusOptions.length - 1)) * 100;
 
   const mapComponentRef = useRef<MapComponentRef>(null);
   const proximityComponentRef = useRef<ProximityComponentRef>(null);
@@ -203,6 +207,7 @@ export default function ModernHome() {
           creatorEmail: creatorEmail.trim(),
           preferredContactMethod: preferredContactMethod,
           pins: huntData,
+          proximityRadiusFt: currentHuntType === 'proximity' ? proximityRadiusFt : null,
         }),
       });
 
@@ -632,7 +637,66 @@ export default function ModernHome() {
                     borderRadius: 'inherit'
                   }}
                 >
-                  <ProximityComponent ref={proximityComponentRef} currentLootType={currentLootType} />
+                  <div className="proximity-stack">
+                    <div className="proximity-radius-align">
+                      <div className="proximity-radius-panel">
+                        <div className="card card-panel mb-4 proximity-radius-card">
+                          <div className="card-section card-section--compact">
+                            <div className="flex flex-col gap-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-xs uppercase tracking-wide text-slate-400">Placement Radius</p>
+                                  <p className="mt-1 text-sm text-slate-100">
+                                    <span className="font-semibold">{proximityRadiusFt}</span> ft
+                                    <span className="ml-2 text-xs text-slate-400">closer = harder</span>
+                                  </p>
+                                </div>
+                                <span className="proximity-radius__badge">
+                                  {proximityRadiusFt === 10 ? 'Tight' : proximityRadiusFt === 50 ? 'Medium' : 'Wide'}
+                                </span>
+                              </div>
+
+                              <div className="proximity-radius">
+                                <input
+                                  className="proximity-radius__range"
+                                  type="range"
+                                  min={0}
+                                  max={proximityRadiusOptions.length - 1}
+                                  step={1}
+                                  value={proximityRadiusIndex}
+                                  style={{ ['--percent' as any]: `${proximityRadiusPercent}%` }}
+                                  onChange={(event) => {
+                                    const nextIndex = Number(event.target.value);
+                                    const nextValue = proximityRadiusOptions[nextIndex] ?? 100;
+                                    setProximityRadiusFt(nextValue);
+                                  }}
+                                  aria-label="Proximity placement radius"
+                                  aria-valuetext={`${proximityRadiusFt} feet`}
+                                />
+                                <div className="proximity-radius__ticks" aria-hidden="true">
+                                  {proximityRadiusOptions.map((radius) => (
+                                    <button
+                                      key={radius}
+                                      type="button"
+                                      className={`proximity-radius__tick ${proximityRadiusFt === radius ? 'is-active' : ''}`}
+                                      onClick={() => setProximityRadiusFt(radius)}
+                                    >
+                                      {radius} ft
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <ProximityComponent
+                      ref={proximityComponentRef}
+                      currentLootType={currentLootType}
+                      proximityRadiusFt={proximityRadiusFt}
+                    />
+                  </div>
                   <div className="mt-6 flex flex-col gap-2 sm:flex-row">
                     <button
                       className="btn btn-secondary w-full justify-center gap-2"
