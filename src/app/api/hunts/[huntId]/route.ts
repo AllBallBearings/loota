@@ -33,6 +33,9 @@ const prisma = new PrismaClient();
  *                   description: Optional name for the hunt
  *                 type:
  *                   type: string
+ *                 proximityRadiusFt:
+ *                   type: number
+ *                   format: float
  *                 createdAt:
  *                   type: string
  *                   format: date-time
@@ -168,6 +171,7 @@ export async function GET(
         id: true,
         name: true,
         type: true,
+        proximityRadiusFt: true,
         createdAt: true,
         updatedAt: true,
         creatorId: true,

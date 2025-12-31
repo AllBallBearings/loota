@@ -24,6 +24,7 @@ interface ProximityComponentProps {
   currentLootType?: string; // Current loot type to apply to new markers
   clueCount?: number;
   showLootPanel?: boolean;
+  proximityRadiusFt?: number;
 }
 
 const normalizeMarkers = (markers: ProximityMarkerData[]): ProximityMarkerData[] =>
@@ -39,11 +40,11 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     currentLootType = 'coin',
     clueCount,
     showLootPanel = true,
+    proximityRadiusFt = 100,
   }, // Destructure initialMarkers with a default empty array
   ref
 ) => {
   const [proximityMarkersData, setProximityMarkersData] = useState<ProximityMarkerData[]>(() => normalizeMarkers(initialMarkers)); // Initialize with initialMarkers, normalizing collected state
-  const [currentProximityRadiusFt] = useState<number>(100);
   
   const proximityCircleElementRef = useRef<HTMLDivElement | null>(null);
   const proximityCoordinatesDisplayElementRef = useRef<HTMLDivElement | null>(null);
@@ -66,7 +67,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     const numIntervals = 10;
 
     for (let i = 1; i < numIntervals; i++) {
-      const intervalRadiusFt = (currentProximityRadiusFt / numIntervals) * i;
+      const intervalRadiusFt = (proximityRadiusFt / numIntervals) * i;
       const intervalRadiusPx = (proximityCircleRadiusPx / numIntervals) * i;
 
       const ring = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -88,22 +89,24 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
       ring.appendChild(circleEl);
       proximityCircleElement.appendChild(ring);
 
-      const label = document.createElement('div');
-      label.classList.add('measurement-label');
-      label.style.position = 'absolute';
-      label.style.left = `${proximityCircleRadiusPx + intervalRadiusPx - 10}px`;
-      label.style.top = `${proximityCircleRadiusPx - 10}px`;
-      label.style.fontSize = '10px';
-      label.style.color = 'var(--text-primary)';
-      label.style.background = 'rgba(15, 23, 42, 0.75)';
-      label.style.padding = '2px 6px';
-      label.style.borderRadius = '9999px';
-      label.style.pointerEvents = 'none';
-      label.textContent = `${intervalRadiusFt.toFixed(0)}ft`;
-      proximityCircleElement.appendChild(label);
+      if (i % 2 === 0) {
+        const label = document.createElement('div');
+        label.classList.add('measurement-label');
+        label.style.position = 'absolute';
+        label.style.left = `${proximityCircleRadiusPx + intervalRadiusPx - 10}px`;
+        label.style.top = `${proximityCircleRadiusPx - 10}px`;
+        label.style.fontSize = '10px';
+        label.style.color = 'var(--text-primary)';
+        label.style.background = 'rgba(15, 23, 42, 0.75)';
+        label.style.padding = '2px 6px';
+        label.style.borderRadius = '9999px';
+        label.style.pointerEvents = 'none';
+        label.textContent = `${intervalRadiusFt.toFixed(0)}ft`;
+        proximityCircleElement.appendChild(label);
+      }
     }
-    console.log(`Drew ${numIntervals -1} concentric circles for ${currentProximityRadiusFt}ft radius.`);
-  }, [currentProximityRadiusFt]);
+    console.log(`Drew ${numIntervals -1} concentric circles for ${proximityRadiusFt}ft radius.`);
+  }, [proximityRadiusFt]);
 
   const updateProximityMarkerDisplay = useCallback(() => {
     if (!proximityCoordinatesDisplayElementRef.current) return;
@@ -145,11 +148,11 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
     const distanceFromCenterPx = Math.sqrt(relativeX * relativeX + relativeY * relativeY);
 
     if (distanceFromCenterPx > proximityCircleRadiusPx) {
-      alert(`Marker is outside the ${currentProximityRadiusFt}ft radius!`);
+      alert(`Marker is outside the ${proximityRadiusFt}ft radius!`);
       return;
     }
 
-    const distanceFt = (distanceFromCenterPx / proximityCircleRadiusPx) * currentProximityRadiusFt;
+    const distanceFt = (distanceFromCenterPx / proximityCircleRadiusPx) * proximityRadiusFt;
 
     const angleDeg = (Math.atan2(relativeX, -relativeY) * (180 / Math.PI) + 360) % 360;
 
@@ -189,7 +192,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
         objectType: currentLootType,
       }
     ]);
-  }, [currentProximityRadiusFt, currentLootType]);
+  }, [proximityRadiusFt, currentLootType]);
 
   const addProximityMarkers = useCallback((markers: ProximityMarkerData[]) => {
     setProximityMarkersData((prevData) => [
@@ -231,7 +234,7 @@ const ProximityComponent = forwardRef<ProximityComponentRef, ProximityComponentP
   // Effect to draw the circle when radius changes or component mounts
   useEffect(() => {
     drawProximityCircle();
-  }, [currentProximityRadiusFt, drawProximityCircle]);
+  }, [proximityRadiusFt, drawProximityCircle]);
 
   // Redraw rings whenever the circle resizes to keep them aligned.
   useEffect(() => {

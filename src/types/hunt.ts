@@ -29,6 +29,7 @@ export interface HuntData {
   id: string;
   name?: string;
   type: 'geolocation' | 'proximity';
+  proximityRadiusFt?: number;
   creator?: {
     id: string;
     name: string;
