@@ -30,6 +30,7 @@ model Hunt {
   updatedAt              DateTime            @updatedAt
   creatorId              String?             @db.Uuid
   name                   String?
+  proximityRadiusFt      Int?
   creatorPhone           String?
   creatorEmail           String?
   preferredContactMethod String?
