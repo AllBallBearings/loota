@@ -508,39 +508,52 @@ export default function ModernHome() {
 
             {/* Result Area */}
             {generatedUrl && (
-              <div className="mt-4 card p-4">
-                <h4 className="text-sm font-medium text-slate-100 mb-3 flex items-center gap-2">
-                  <Icons.Check className="text-emerald-300" size={18} />
-                  Hunt Ready!
-                </h4>
-                
-                <div className="bg-black/30 rounded-lg p-3 mb-3 border border-white/10">
-                  <div className="text-xs text-slate-400 mb-1 uppercase tracking-wide">Share this link:</div>
-                  <div className="flex items-center gap-2 text-xs">
+              <div className="mt-4 share-link-card">
+                <div className="share-link-card__header">
+                  <div className="share-link-card__status">
+                    <span className="share-link-card__status-dot" />
+                    <span className="share-link-card__status-text">Hunt Ready</span>
+                  </div>
+                  <Icons.Sparkle className="text-amber-300" size={16} />
+                </div>
+
+                <div className="share-link-card__body">
+                  <div className="share-link-card__label">
+                    <Icons.Share className="text-accent-cyan" size={14} />
+                    <span>Share Link</span>
+                  </div>
+                  <div className="share-link-card__url-row">
                     <a
                       href={generatedUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-slate-100 hover:text-accent-cyan font-mono break-all flex-1 underline"
+                      className="share-link-card__url"
                     >
                       {generatedUrl}
                     </a>
                     <button
                       onClick={() => copyToClipboard(generatedUrl)}
-                      className={`px-2 py-1 rounded text-xs transition-colors flex items-center justify-center ${copyStatus === 'copied' ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40' : 'bg-white/10 text-slate-200 border border-white/10 hover:bg-white/20'}`}
+                      className={`share-link-card__copy-btn ${copyStatus === 'copied' ? 'is-copied' : ''}`}
                       disabled={copyStatus === 'copied'}
                     >
                       {copyStatus === 'copied' ? (
-                        <Icons.Check className="text-emerald-200" size={16} />
+                        <>
+                          <Icons.Check size={14} />
+                          <span>Copied!</span>
+                        </>
                       ) : (
-                        <Icons.Copy className="text-slate-200" size={16} />
+                        <>
+                          <Icons.Copy size={14} />
+                          <span>Copy</span>
+                        </>
                       )}
                     </button>
                   </div>
                 </div>
 
-                <div className="text-xs text-slate-400">
-                  Share with friends to join your hunt!
+                <div className="share-link-card__footer">
+                  <Icons.Users className="text-slate-400" size={14} />
+                  <span>Share with friends to start the hunt!</span>
                 </div>
               </div>
             )}
