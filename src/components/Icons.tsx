@@ -22,6 +22,7 @@ import {
   Trophy,
   UsersThree,
   UserCircle,
+  WarningCircle,
   XCircle,
   Phone,
 } from 'phosphor-react';
@@ -66,6 +67,7 @@ export const Icons = {
   Refresh: withDefaults(ClockClockwise),
   Phone: withDefaults(Phone),
   Email: withDefaults(EnvelopeSimple),
+  AlertCircle: withDefaults(WarningCircle),
 };
 
 export type { IconProps } from 'phosphor-react';
