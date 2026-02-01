@@ -254,6 +254,17 @@ export default function HuntViewerPage() {
       .slice(0, 2) || '?';
   };
 
+  // Get the object type from the first pin (all pins in a hunt have the same type)
+  const huntObjectType = hunt.pins[0]?.objectType || 'coin';
+
+  // Format object type for display (e.g., "giftCard" → "Gift Card")
+  const formatObjectType = (type: string) => {
+    return type
+      .replace(/([A-Z])/g, ' $1') // Add space before capitals
+      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+      .trim();
+  };
+
   const getLatestCollectionTime = (pins: PinData[]) =>
     pins.reduce((latest, pin) => {
       if (!pin.collectedAt) return latest;
@@ -370,6 +381,10 @@ export default function HuntViewerPage() {
                     <Icons.Proximity className="text-slate-200" size={18} />
                   )}
                   {hunt.type === 'geolocation' ? 'Map-based' : 'Proximity'}
+                </span>
+                <span className="flex items-center gap-1 text-slate-300">
+                  <Icons.Treasure className="text-amber-300" size={18} />
+                  {formatObjectType(huntObjectType)}
                 </span>
                 {hunt.creator && (
                   <span className="flex items-center gap-1 text-slate-300">
