@@ -1926,6 +1926,68 @@ input[type="range"]::-moz-range-thumb {
   color: rgba(167, 243, 208, 0.65);
 }
 
+/* Validation Card */
+.validation-card {
+  position: relative;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: radial-gradient(circle at 0% 0%, rgba(251, 146, 60, 0.12), transparent 50%),
+              radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.08), transparent 50%),
+              rgba(30, 27, 75, 0.65);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+  box-shadow: 0 16px 32px -16px rgba(251, 146, 60, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.validation-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(251, 146, 60, 0.4), transparent);
+}
+
+.validation-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.validation-card__icon {
+  color: #fb923c;
+  flex-shrink: 0;
+}
+
+.validation-card__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fed7aa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.validation-card__list {
+  margin: 0;
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.validation-card__list li {
+  font-size: 0.8rem;
+  color: rgba(254, 215, 170, 0.85);
+  line-height: 1.4;
+  position: relative;
+}
+
+.validation-card__list li::marker {
+  color: rgba(251, 146, 60, 0.6);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .container-modern,

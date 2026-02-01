@@ -477,9 +477,12 @@ export default function ModernHome() {
           <div className="flex-shrink-0 p-6 border-t border-slate-600/40">
             {/* Validation Messages */}
             {hasValidationErrors && (
-              <div className="mb-3 p-3 bg-red-500/10 border border-red-400/30 rounded-lg">
-                <p className="text-xs text-red-300 mb-1 font-medium">Please complete the following:</p>
-                <ul className="text-xs text-red-200 space-y-1 ml-4 list-disc">
+              <div className="validation-card mb-3">
+                <div className="validation-card__header">
+                  <Icons.AlertCircle className="validation-card__icon" size={16} />
+                  <span className="validation-card__title">Required Fields</span>
+                </div>
+                <ul className="validation-card__list">
                   {isHuntNameMissing && <li>Enter a hunt name</li>}
                   {isUserNameMissing && <li>Enter your name</li>}
                   {isPhoneMissing && <li>Enter your phone number</li>}
