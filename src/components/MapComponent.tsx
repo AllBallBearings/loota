@@ -50,6 +50,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const containerResizeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentLootTypeRef = useRef<string>(currentLootType);
+  const hasInitialFitRef = useRef<boolean>(false); // Track if we've done the initial fit to markers
 
   // Keep ref in sync with prop
   useEffect(() => {
@@ -205,9 +206,12 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
     // Choose initialization strategy based on focusOnMarkers prop
     if (focusOnMarkers && initialMarkers.length > 0) {
-      // Focus on markers (hunt viewing mode)
+      // Focus on markers (hunt viewing mode) - only on initial load
       console.log("Focusing map on markers...");
-      setTimeout(() => fitMapToMarkers(initialMarkers), 100);
+      setTimeout(() => {
+        fitMapToMarkers(initialMarkers);
+        hasInitialFitRef.current = true;
+      }, 100);
     } else {
       // Focus on user location (creation mode)
       console.log("Focusing map on user location...");
@@ -479,8 +483,10 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         // Trigger resize if map already exists
         console.log("Triggering map resize...");
         window.google.maps.event.trigger(mapRef.current, 'resize');
-        if (focusOnMarkers && initialMarkers.length > 0) {
+        // Only fit to markers if we haven't done the initial fit yet
+        if (focusOnMarkers && initialMarkers.length > 0 && !hasInitialFitRef.current) {
           fitMapToMarkers(initialMarkers);
+          hasInitialFitRef.current = true;
         }
       }
     }, 100);
@@ -488,21 +494,18 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     return () => clearTimeout(timer);
   }, [initializeMap, focusOnMarkers, initialMarkers, fitMapToMarkers]);
 
-  // Handle window resize to trigger map resize
+  // Handle window resize to trigger map resize (without resetting user's zoom/pan)
   useEffect(() => {
     const handleResize = () => {
       if (mapRef.current && window.google) {
         window.google.maps.event.trigger(mapRef.current, 'resize');
-        // Re-center or re-fit bounds if needed
-        if (focusOnMarkers && initialMarkers.length > 0) {
-          setTimeout(() => fitMapToMarkers(initialMarkers), 100);
-        }
+        // Don't re-fit bounds on resize - respect user's current view
       }
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [focusOnMarkers, initialMarkers, fitMapToMarkers]);
+  }, []);
 
   // Cleanup effect
   useEffect(() => {
