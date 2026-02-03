@@ -505,6 +505,8 @@ p {
 .hunt-stage-card__body {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .hunt-stage-card__body .map-container-modern {

@@ -92,7 +92,7 @@ const MapContainer: React.FC<MapContainerProps> = ({ initialPins, onPinHighlight
   };
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative overflow-hidden">
       <MapComponent
         ref={mapComponentRef}
         initialMarkers={allMarkers}
