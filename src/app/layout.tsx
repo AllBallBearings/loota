@@ -1,24 +1,40 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Bricolage_Grotesque, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Expressive outdoor-gaming display face — chunky, joyful, high craft.
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
+  weight: ["600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Clean, friendly geometric UI body face.
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+// Outdoor GPS / trail telemetry monospace for coordinates, bearings, distances, IDs.
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Loota - AR Treasure Hunts",
-  description: "Create and participate in augmented reality treasure hunts. Join the adventure and discover hidden treasures in your world.",
-  keywords: "treasure hunt, augmented reality, AR, gaming, adventure, exploration",
+  title: "Loota — Real-World AR Treasure Hunts",
+  description:
+    "Drop hidden coins and gift cards in the real world. Share a hunt link or QR code and watch your crew race to claim the loot in AR.",
+  keywords: "treasure hunt, augmented reality, AR, outdoor game, social gaming, adventure, exploration",
   authors: [{ name: "Loota Team" }],
-  viewport: "width=device-width, initial-scale=1",
-  themeColor: "#2196f3",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#F3EFE3",
 };
 
 export default function RootLayout({
@@ -27,10 +43,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html
+      lang="en"
+      className={`${bricolage.variable} ${jakarta.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="antialiased">
         {children}
       </body>
     </html>

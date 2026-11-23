@@ -1,107 +1,81 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MapComponent, { MapMarker, MapComponentRef } from './MapComponent';
 import { PinData } from '../types/hunt';
 import { LoadingOverlay } from './LoadingOverlay';
 
 interface MapContainerProps {
   initialPins: PinData[];
-  onPinHighlight?: (pinId: string) => void;
+  onPinHighlight?: (pinId: string | null) => void;
   focusOnMarkers?: boolean;
+  mapRefExternal?: React.RefObject<MapComponentRef | null>;
 }
 
-const MapContainer: React.FC<MapContainerProps> = ({ initialPins, onPinHighlight, focusOnMarkers }) => {
-  const mapComponentRef = useRef<MapComponentRef>(null);
-  const [isMapLoading, setIsMapLoading] = useState(true);
-  const [isMarkersLoading, setIsMarkersLoading] = useState(false);
+const MapContainer: React.FC<MapContainerProps> = ({
+  initialPins,
+  onPinHighlight,
+  focusOnMarkers = true,
+  mapRefExternal,
+}) => {
+  const internalMapRef = useRef<MapComponentRef>(null);
+  const activeRef = mapRefExternal ?? internalMapRef;
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  const mappedMarkers = useMemo<MapMarker[]>(
+    () =>
+      initialPins
+        .filter((pin) => pin.lat !== undefined && pin.lng !== undefined)
+        .map((pin, index) => ({
+          lat: pin.lat!,
+          lng: pin.lng!,
+          id: pin.id,
+          isCollected: Boolean(pin.collectedByUserId),
+          title: `Loot #${index + 1}`,
+          description: `${pin.lat!.toFixed(5)}, ${pin.lng!.toFixed(5)}<br/>${
+            pin.collectedByUserId
+              ? `✓ Claimed by ${pin.collectedByUser?.name || 'Hunter'}`
+              : '★ Waiting to be discovered in AR'
+          }`,
+          objectType: pin.objectType || 'coin',
+        })),
+    [initialPins]
+  );
+
+  // Sync markers cleanly on every live poll WITHOUT duplicating pins or flashing overlays
+  useEffect(() => {
+    activeRef.current?.setMarkers(mappedMarkers);
+  }, [mappedMarkers, activeRef]);
 
   useEffect(() => {
-    const loadMarkers = async () => {
-      if (mapComponentRef.current && initialPins.length > 0) {
-        setIsMarkersLoading(true);
-
-        // Add a small delay to show loading state for loot
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const validMarkers: MapMarker[] = initialPins
-          .filter(pin => pin.lat !== undefined && pin.lng !== undefined)
-          .map((pin, index) => ({
-            lat: pin.lat!,
-            lng: pin.lng!,
-            id: pin.id,
-            isCollected: !!pin.collectedByUserId,
-            title: `Loot #${index + 1}`,
-            description: `📍 Lat: ${pin.lat!.toFixed(4)}, Lng: ${pin.lng!.toFixed(4)}${pin.collectedByUserId ? `<br/>✓ Collected by ${pin.collectedByUser?.name || 'Unknown'}` : '<br/>🎯 Available for collection'}`,
-            objectType: pin.objectType || 'coin'
-          }));
-        mapComponentRef.current.addMarkers(validMarkers);
-        setIsMarkersLoading(false);
-      }
-    };
-
-    loadMarkers();
-  }, [initialPins]);
-
-  // Simulate map loading completion
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMapLoading(false);
-    }, 1000);
-
+    const timer = setTimeout(() => setIsInitialLoading(false), 550);
     return () => clearTimeout(timer);
   }, []);
 
-  // Create markers for all pins (both collected and uncollected)
-  const allMarkers: MapMarker[] = initialPins
-    .filter(pin => pin.lat !== undefined && pin.lng !== undefined)
-    .map((pin, index) => ({
-      lat: pin.lat!,
-      lng: pin.lng!,
-      id: pin.id,
-      isCollected: !!pin.collectedByUserId,
-      title: `Loot #${index + 1}`,
-      description: `📍 Lat: ${pin.lat!.toFixed(4)}, Lng: ${pin.lng!.toFixed(4)}${pin.collectedByUserId ? `<br/>✓ Collected by ${pin.collectedByUser?.name || 'Unknown'}` : '<br/>🎯 Available for collection'}`,
-      objectType: pin.objectType || 'coin'
-    }));
-
-  // Expose highlight function to parent
-  const highlightPin = (pinId: string) => {
-    if (mapComponentRef.current) {
-      mapComponentRef.current.highlightPin(pinId);
-    }
-  };
-
-  // Forward the highlight function to parent if callback provided
+  // Register global helper so HuntViewerPage can always highlight a pin reliably
   useEffect(() => {
-    if (onPinHighlight) {
-      (window as unknown as { highlightMapPin: (pinId: string) => void }).highlightMapPin = highlightPin;
-    }
-  }, [onPinHighlight]);
+    const highlightFn = (pinId: string) => {
+      activeRef.current?.highlightPin(pinId);
+    };
+    (window as unknown as { highlightMapPin?: (pinId: string) => void }).highlightMapPin = highlightFn;
 
-  const getLoadingMessage = () => {
-    if (isMapLoading) return "Loading AR Hunt Map...";
-    if (isMarkersLoading) return "Loading Loot Locations...";
-    return "Loading...";
-  };
-
-  const getLoadingSubMessage = () => {
-    if (isMapLoading) return "Initializing map interface";
-    if (isMarkersLoading) return "Placing treasure markers";
-    return "";
-  };
+    return () => {
+      delete (window as unknown as { highlightMapPin?: (pinId: string) => void }).highlightMapPin;
+    };
+  }, [activeRef]);
 
   return (
     <div className="w-full h-full relative">
       <MapComponent
-        ref={mapComponentRef}
-        initialMarkers={allMarkers}
+        ref={activeRef}
+        initialMarkers={mappedMarkers}
         focusOnMarkers={focusOnMarkers}
+        onPinSelect={onPinHighlight}
       />
       <LoadingOverlay
-        isLoading={isMapLoading || isMarkersLoading}
-        message={getLoadingMessage()}
-        subMessage={getLoadingSubMessage()}
+        isLoading={isInitialLoading}
+        message="Loading Field Map…"
+        subMessage="Plotting live loot drops"
       />
     </div>
   );

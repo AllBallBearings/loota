@@ -8,13 +8,15 @@ interface JoinHuntButtonProps {
   currentUserId: string;
   onJoinSuccess?: () => void;
   onJoinError?: (error: string) => void;
+  compact?: boolean;
 }
 
 export const JoinHuntButton: React.FC<JoinHuntButtonProps> = ({
   huntId,
   currentUserId,
   onJoinSuccess,
-  onJoinError
+  onJoinError,
+  compact = false,
 }) => {
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
@@ -39,7 +41,6 @@ export const JoinHuntButton: React.FC<JoinHuntButtonProps> = ({
       if (!response.ok) {
         const errorData = await response.json();
 
-        // If user is already participating, treat as success
         if (response.status === 409) {
           setHasJoined(true);
           onJoinSuccess?.();
@@ -60,32 +61,32 @@ export const JoinHuntButton: React.FC<JoinHuntButtonProps> = ({
     }
   };
 
+  const sizeClass = compact ? 'btn--sm' : '';
+
   if (hasJoined) {
     return (
-      <button
-        className="btn btn-success flex items-center gap-2 cursor-default"
-        disabled
-      >
-        <Icons.Check className="text-emerald-900" size={18} />
-        <span>Joined Hunt</span>
+      <button type="button" className={`btn btn--ok ${sizeClass}`} disabled>
+        <Icons.Check size={16} weight="fill" />
+        <span>In the Hunt</span>
       </button>
     );
   }
 
   return (
     <button
+      type="button"
       onClick={handleJoinHunt}
       disabled={isJoining}
-      className={`btn btn-primary flex items-center gap-2 ${isJoining ? 'opacity-75 cursor-not-allowed' : ''}`}
+      className={`btn btn--primary ${sizeClass}`}
     >
       {isJoining ? (
         <>
-          <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
-          <span>Joining Hunt...</span>
+          <span className="spinner" style={{ width: 15, height: 15, borderTopColor: '#FFFDF8' }} />
+          <span>Joining…</span>
         </>
       ) : (
         <>
-          <Icons.Target className="text-slate-100" size={18} />
+          <Icons.Lightning size={16} weight="fill" />
           <span>Join Hunt</span>
         </>
       )}

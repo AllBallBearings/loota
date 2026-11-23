@@ -2,58 +2,70 @@
 
 import React from 'react';
 import { UniversalLinkGenerator } from '@/components/UniversalLinkGenerator';
+import { TopBar, Footer } from '@/components/AppShell';
+import { Icons } from '@/components/Icons';
+
+const SAMPLES = [
+  {
+    id: 'downtown-treasure-2025',
+    name: 'Treasure Hunt Downtown',
+    type: 'Geolocation (map-based)',
+    description: 'Find hidden treasures around the downtown area.',
+  },
+  {
+    id: 'campus-adventure-123',
+    name: 'Campus Adventure',
+    type: 'Proximity (relative to player)',
+    description: 'Explore the university campus and discover hidden gems.',
+  },
+];
 
 export default function DemoPage() {
   return (
-    <>
-      <header style={{ padding: '20px', backgroundColor: '#f8f9fa', borderBottom: '1px solid #dee2e6' }}>
-        <h1 style={{ margin: 0, color: '#007bff' }}>Loota Universal Links Demo</h1>
-      </header>
+    <div className="app">
+      <TopBar />
+      <main className="doc">
+        <p className="doc__eyebrow">Developers</p>
+        <h1 className="doc__title">Universal Links</h1>
+        <p className="doc__lede">
+          How hunt links behave across devices. Shared on iPhone, these open directly in the
+          Loota app when installed — otherwise they fall back to the browser.
+        </p>
 
-      <main style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '30px' }}>
-          <h2>Universal Link Generator Demo</h2>
-          <p>This demonstrates how Universal Links work for sharing Loota hunts. When shared on iPhone, these links will open directly in the Loota app if installed, or in Safari if not.</p>
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {SAMPLES.map(sample => (
+            <div key={sample.id} className="panel">
+              <div className="panel__head">
+                <Icons.Treasure size={15} className="text-[var(--volt)]" />
+                <span className="panel__title">{sample.name}</span>
+                <span className="panel__meta">{sample.id}</span>
+              </div>
+              <div className="panel__body">
+                <p style={{ marginBottom: '0.35rem', fontSize: '0.85rem' }}>{sample.description}</p>
+                <p style={{ marginBottom: '1rem', fontSize: '0.78rem', color: 'var(--ink-400)' }}>
+                  {sample.type}
+                </p>
+                <UniversalLinkGenerator huntId={sample.id} />
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div style={{ marginBottom: '40px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-          <h3>Sample Hunt: &quot;Treasure Hunt Downtown&quot;</h3>
-          <p><strong>Hunt ID:</strong> downtown-treasure-2025</p>
-          <p><strong>Type:</strong> Geolocation (Map-based)</p>
-          <p><strong>Description:</strong> Find hidden treasures around the downtown area!</p>
-          
-          <div style={{ marginTop: '20px' }}>
-            <h4>Share this Hunt:</h4>
-            <UniversalLinkGenerator huntId="downtown-treasure-2025" />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '40px', padding: '20px', backgroundColor: '#e8f5e8', borderRadius: '8px' }}>
-          <h3>Sample Hunt: &quot;Campus Adventure&quot;</h3>
-          <p><strong>Hunt ID:</strong> campus-adventure-123</p>
-          <p><strong>Type:</strong> Proximity (Relative to Player)</p>
-          <p><strong>Description:</strong> Explore the university campus and discover hidden gems!</p>
-          
-          <div style={{ marginTop: '20px' }}>
-            <h4>Share this Hunt:</h4>
-            <UniversalLinkGenerator huntId="campus-adventure-123" />
-          </div>
-        </div>
-
-        <div style={{ padding: '20px', backgroundColor: '#fff3cd', borderRadius: '8px', border: '1px solid #ffeaa7' }}>
-          <h3>How Universal Links Work</h3>
+        <div className="doc__body">
+          <h2>How universal links resolve</h2>
           <ul>
-            <li><strong>📱 On iPhone with Loota app:</strong> Links open directly in the app</li>
-            <li><strong>🌐 On iPhone without app:</strong> Links open in Safari with option to download app</li>
-            <li><strong>💻 On other devices:</strong> Links open in web browser</li>
-            <li><strong>🔗 Link format:</strong> https://www.loota.fun/hunt/[huntId]</li>
+            <li><strong>iPhone with the app installed</strong> — opens directly in Loota</li>
+            <li><strong>iPhone without the app</strong> — opens in Safari with a download prompt</li>
+            <li><strong>Any other device</strong> — opens in the web browser</li>
           </ul>
+          <p>
+            Link format: <code style={{ fontFamily: 'var(--font-data)', color: 'var(--volt-bright)' }}>
+              https://www.loota.fun/hunt/[huntId]
+            </code>
+          </p>
         </div>
       </main>
-
-      <footer style={{ padding: '20px', textAlign: 'center', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6', marginTop: '40px' }}>
-        <p>&copy; 2025 Loota</p>
-      </footer>
-    </>
+      <Footer />
+    </div>
   );
 }
