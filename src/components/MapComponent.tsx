@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-import Script from 'next/script'; // Import Script from next/script
+import Script from 'next/script';
 
 declare global {
   interface Window {
-    google: typeof google; // Use typeof google for better type inference
+    google: typeof google;
   }
 }
 
@@ -14,118 +14,146 @@ export interface MapMarker {
   lng: number;
   id?: string;
   isCollected?: boolean;
-  title?: string; // e.g., "Loot #1"
-  description?: string; // Additional info to show in bubble
-  objectType?: string; // Type of loot object (coin, giftCard, etc.)
+  title?: string;
+  description?: string;
+  objectType?: string;
 }
 
 export interface MapComponentRef {
   getMarkers: () => MapMarker[];
   addMarkers: (markers: MapMarker[]) => void;
+  setMarkers: (markers: MapMarker[]) => void;
+  removePinAt: (index: number) => void;
   deleteLastPin: () => void;
   clearAllPins: () => void;
   highlightPin: (pinId: string) => void;
   showInfoWindow: (pinId: string, title: string, description: string) => void;
+  recenterToUser: () => void;
+  fitAllPins: () => void;
 }
 
 interface MapComponentProps {
   initialMarkers?: MapMarker[];
   onMarkersChange?: (markers: MapMarker[]) => void;
-  focusOnMarkers?: boolean; // If true, zoom to fit all markers instead of user location
-  currentLootType?: string; // Current loot type to apply to new markers
+  focusOnMarkers?: boolean;
+  currentLootType?: string;
+  onPinSelect?: (pinId: string | null) => void;
+  onLocationError?: (message: string) => void;
 }
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "YOUR_GOOGLE_MAPS_API_KEY";
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+// Sunlit Outdoor Adventure basemap — Pokemon GO / National Park topo energy.
+const ADVENTURE_MAP_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: 'geometry', stylers: [{ color: '#f2eee2' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#fbf8f0' }, { weight: 3 }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#243b2e' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#16261d' }] },
+  { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#bde6a3' }] },
+  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#1d5e35' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#e5efd9' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#ebe6d7' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#ded6c1' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#4c6356' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#fffdf7' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ffe082' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#e0b443' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#6b4600' }] },
+  { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit.line', elementType: 'geometry', stylers: [{ color: '#d7cfb8' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#8ad2f5' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#135ca1' }] },
+];
 
 const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
-  { initialMarkers = [], onMarkersChange, focusOnMarkers = false, currentLootType = 'coin' },
+  {
+    initialMarkers = [],
+    onMarkersChange,
+    focusOnMarkers = false,
+    currentLootType = 'coin',
+    onPinSelect,
+    onLocationError,
+  },
   ref
 ) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-  const [markerData, setMarkerData] = useState<MapMarker[]>(initialMarkers); // Initialize with initialMarkers
+  const [markerData, setMarkerData] = useState<MapMarker[]>(initialMarkers);
   const currentGoogleMarkers = useRef<google.maps.Marker[]>([]);
   const markerPinMap = useRef<Map<string, google.maps.Marker>>(new Map());
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const containerResizeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentLootTypeRef = useRef<string>(currentLootType);
+  const hasAutoFittedRef = useRef(false);
 
-  // Keep ref in sync with prop
   useEffect(() => {
     currentLootTypeRef.current = currentLootType;
-    console.log("currentLootType updated to:", currentLootType);
   }, [currentLootType]);
 
-  console.log("MapComponent rendering with currentLootType:", currentLootType);
-
-  // Function to create custom pin icons (coin or gift card)
   const createPinIcon = useCallback((isCollected: boolean, isHighlighted: boolean, objectType?: string) => {
-    console.log('Creating pin icon with objectType:', objectType);
-    const baseColor = isCollected ? '#FF4444' : '#FFC107'; // Red for collected, gold for uncollected
-    const strokeColor = isHighlighted ? '#FF4444' : (isCollected ? '#CC0000' : '#B8860B'); // Red for highlighted, darker red for collected, dark gold for normal
-    const strokeWeight = isHighlighted ? 4 : 2;
-    const baseSizeMultiplier = isHighlighted ? 1.2 : 1; // Keep both shapes proportionally consistent
+    const isGift = objectType === 'giftCard';
+    const fillColor = isCollected
+      ? '#18A957' // Meadow Emerald for claimed
+      : isGift
+        ? '#8B5CF6' // Epic Purple for gift cards
+        : '#FFC21A'; // Treasure Gold for coins
 
-    // Create different shapes based on objectType
-    if (objectType === 'giftCard') {
-      // Create a rounded rectangle for gift card using simpler SVG path
-      // Card dimensions (will be scaled)
-      const w = 18 * baseSizeMultiplier;
-      const h = 12 * baseSizeMultiplier;
-      const r = 1.5 * baseSizeMultiplier;
+    const strokeColor = isHighlighted ? '#FF5428' : '#16261D';
+    const strokeWeight = isHighlighted ? 4 : 2.5;
+    const mult = isHighlighted ? 1.25 : 1;
 
-      // SVG path for rounded rectangle centered at origin
+    if (isGift) {
+      const w = 22 * mult;
+      const h = 15 * mult;
+      const r = 3.2 * mult;
       const path = `
-        M ${-w/2 + r} ${-h/2}
-        h ${w - 2*r}
+        M ${-w / 2 + r} ${-h / 2}
+        h ${w - 2 * r}
         a ${r} ${r} 0 0 1 ${r} ${r}
-        v ${h - 2*r}
+        v ${h - 2 * r}
         a ${r} ${r} 0 0 1 ${-r} ${r}
-        h ${-(w - 2*r)}
+        h ${-(w - 2 * r)}
         a ${r} ${r} 0 0 1 ${-r} ${-r}
-        v ${-(h - 2*r)}
+        v ${-(h - 2 * r)}
         a ${r} ${r} 0 0 1 ${r} ${-r}
         z
       `.replace(/\s+/g, ' ').trim();
 
       return {
-        path: path,
-        fillColor: baseColor,
+        path,
+        fillColor,
         fillOpacity: 1,
-        strokeColor: strokeColor,
-        strokeWeight: strokeWeight,
+        strokeColor,
+        strokeWeight,
         scale: 1,
-        anchor: new google.maps.Point(0, 0)
+        anchor: new google.maps.Point(0, 0),
       };
     }
 
-    // Default: Create a circular coin-like symbol
-    const coinScale = 9 * baseSizeMultiplier;
     return {
       path: google.maps.SymbolPath.CIRCLE,
-      fillColor: baseColor,
+      fillColor,
       fillOpacity: 1,
-      strokeColor: strokeColor,
-      strokeWeight: strokeWeight,
-      scale: coinScale,
-      anchor: new google.maps.Point(0, 0)
+      strokeColor,
+      strokeWeight,
+      scale: 10.5 * mult,
+      anchor: new google.maps.Point(0, 0),
     };
   }, []);
 
-  // Function to fit map bounds to show all markers
   const fitMapToMarkers = useCallback((markers: MapMarker[]) => {
     if (!mapRef.current || !window.google || markers.length === 0) return;
 
     const bounds = new window.google.maps.LatLngBounds();
-    markers.forEach(marker => {
+    markers.forEach((marker) => {
       bounds.extend(new window.google.maps.LatLng(marker.lat, marker.lng));
     });
 
-    // Fit the map to the bounds
-    mapRef.current.fitBounds(bounds);
-    
-    // Set a reasonable zoom limit (don't zoom in too much for single points)
+    mapRef.current.fitBounds(bounds, { top: 72, right: 48, bottom: 72, left: 48 });
+
     window.google.maps.event.addListenerOnce(mapRef.current, 'bounds_changed', () => {
       const zoom = mapRef.current?.getZoom();
       if (zoom && zoom > 18) {
@@ -136,10 +164,9 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
   const addMarker = useCallback((location: google.maps.LatLng) => {
     const lootType = currentLootTypeRef.current;
-    console.log('Adding marker with objectType:', lootType);
     setMarkerData((prevData) => [
       ...prevData,
-      { lat: location.lat(), lng: location.lng(), objectType: lootType }
+      { lat: location.lat(), lng: location.lng(), objectType: lootType },
     ]);
   }, []);
 
@@ -147,93 +174,105 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     setMarkerData((prevData) => [...prevData, ...markers]);
   }, []);
 
-  const handleLocationError = useCallback((browserHasGeolocation: boolean, infoWindow: google.maps.InfoWindow, pos: google.maps.LatLngLiteral) => {
-    infoWindow.setPosition(pos);
-    infoWindow.setContent(
-      browserHasGeolocation
-        ? 'Error: The Geolocation service failed.'
-        : "Error: Your browser doesn't support geolocation."
-    );
-    infoWindow.open(mapRef.current);
+  const setMarkers = useCallback((markers: MapMarker[]) => {
+    setMarkerData(markers);
+    if (focusOnMarkers && markers.length > 0 && !hasAutoFittedRef.current && mapRef.current) {
+      hasAutoFittedRef.current = true;
+      fitMapToMarkers(markers);
+    }
+  }, [focusOnMarkers, fitMapToMarkers]);
+
+  const removePinAt = useCallback((index: number) => {
+    setMarkerData((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const deleteLastPin = useCallback(() => {
+    setMarkerData((prevData) => (prevData.length > 0 ? prevData.slice(0, -1) : prevData));
+  }, []);
+
+  const clearAllPins = useCallback(() => {
+    setMarkerData([]);
+  }, []);
+
+  const recenterToUser = useCallback(() => {
+    if (!navigator.geolocation) {
+      onLocationError?.('Your browser does not support GPS geolocation.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const pos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        mapRef.current?.panTo(pos);
+        mapRef.current?.setZoom(17);
+      },
+      () => {
+        onLocationError?.('Could not get your current GPS location. Check browser location permissions.');
+      }
+    );
+  }, [onLocationError]);
+
+  const fitAllPins = useCallback(() => {
+    if (markerData.length > 0) {
+      fitMapToMarkers(markerData);
+    }
+  }, [markerData, fitMapToMarkers]);
+
   const initializeMap = useCallback(() => {
-    console.log("Attempting to initialize map...");
-    console.log("mapDivRef.current:", mapDivRef.current);
-    console.log("window.google:", window.google);
-    console.log("window.google.maps:", window.google?.maps);
-    
     if (!mapDivRef.current || !window.google || !window.google.maps) {
-      console.warn("Map div ref or Google Maps API not ready for initialization.");
       return;
     }
 
-    // Clear the loading message
     mapDivRef.current.innerHTML = '';
 
-    // Always reinitialize to handle component remounting
     if (mapRef.current) {
-      console.log("Cleaning up existing map instance...");
       mapRef.current = null;
-      currentGoogleMarkers.current.forEach(marker => marker.setMap(null));
+      currentGoogleMarkers.current.forEach((marker) => marker.setMap(null));
       currentGoogleMarkers.current = [];
     }
 
-    const defaultCenter = { lat: 40.7128, lng: -74.0060 };
+    const defaultCenter = { lat: 40.7128, lng: -74.006 };
 
     try {
       mapRef.current = new window.google.maps.Map(mapDivRef.current, {
-        zoom: 18,
+        zoom: 17,
         center: defaultCenter,
         disableDefaultUI: false,
         zoomControl: true,
-        streetViewControl: false
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+        clickableIcons: false,
+        backgroundColor: '#f2eee2',
+        styles: ADVENTURE_MAP_STYLE,
       });
 
       infoWindowRef.current = new window.google.maps.InfoWindow();
-      console.log("Map initialized successfully!");
-
-      // Force an initial resize so Google Maps paints even if the container changed late.
       window.google.maps.event.trigger(mapRef.current, 'resize');
     } catch (error) {
-      console.error("Error initializing map:", error);
-      if (mapDivRef.current) {
-        mapDivRef.current.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Error initializing map: ' + error + '</p>';
-      }
+      console.error('Error initializing map:', error);
       return;
     }
 
-    // Choose initialization strategy based on focusOnMarkers prop
     if (focusOnMarkers && initialMarkers.length > 0) {
-      // Focus on markers (hunt viewing mode)
-      console.log("Focusing map on markers...");
+      hasAutoFittedRef.current = true;
       setTimeout(() => fitMapToMarkers(initialMarkers), 100);
-    } else {
-      // Focus on user location (creation mode)
-      console.log("Focusing map on user location...");
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const pos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            mapRef.current?.setCenter(pos);
-          },
-          () => {
-            if (infoWindowRef.current) {
-              handleLocationError(true, infoWindowRef.current, mapRef.current?.getCenter()?.toJSON() || defaultCenter);
-            }
-          }
-        );
-      } else {
-        if (infoWindowRef.current) {
-          handleLocationError(false, infoWindowRef.current, mapRef.current?.getCenter()?.toJSON() || defaultCenter);
+    } else if (!focusOnMarkers && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          mapRef.current?.setCenter({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        () => {
+          // Stay smoothly on default center without noisy popup
         }
-      }
+      );
     }
 
-    // Only allow adding markers if not in "view only" mode (focusOnMarkers is a proxy for this)
     if (!focusOnMarkers) {
       mapRef.current?.addListener('click', (event: google.maps.MapMouseEvent) => {
         if (event.latLng) {
@@ -241,23 +280,16 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         }
       });
     }
-    console.log("Map setup completed with click listener.");
-  }, [addMarker, handleLocationError, focusOnMarkers, initialMarkers, fitMapToMarkers]);
+  }, [addMarker, focusOnMarkers, initialMarkers, fitMapToMarkers]);
 
-  // Ensure the map initializes (or resizes) once the container has real dimensions.
+  // Resize observer so Google Maps always paints cleanly on layout transitions
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!mapDivRef.current) return;
-    if (!('ResizeObserver' in window)) return;
+    if (typeof window === 'undefined' || !mapDivRef.current || !('ResizeObserver' in window)) return;
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (!entry) return;
+      if (!entry || entry.contentRect.width <= 0 || entry.contentRect.height <= 0) return;
 
-      const { width, height } = entry.contentRect;
-      if (width <= 0 || height <= 0) return;
-
-      // Debounce resize-triggered work to avoid hammering the Maps API.
       if (containerResizeTimeout.current) {
         clearTimeout(containerResizeTimeout.current);
       }
@@ -268,7 +300,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         } else if (window.google?.maps) {
           initializeMap();
         }
-      }, 120);
+      }, 100);
     });
 
     observer.observe(mapDivRef.current);
@@ -282,234 +314,174 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     };
   }, [initializeMap]);
 
-  useEffect(() => {
-    if (!mapRef.current || !window.google) return;
-
-    // Clear existing markers from the map
-    currentGoogleMarkers.current.forEach(marker => marker.setMap(null));
-    currentGoogleMarkers.current = []; // Clear the ref array
-    markerPinMap.current.clear(); // Clear the pin map
-
-    // Add new markers based on markerData
-    markerData.forEach(data => {
-      const isHighlighted = highlightedPinId === data.id;
-      const marker = new window.google.maps.Marker({
-        position: { lat: data.lat, lng: data.lng },
-        map: mapRef.current,
-        draggable: !focusOnMarkers, // Only allow dragging in creation mode
-        title: '', // Remove default tooltip
-        icon: createPinIcon(data.isCollected || false, isHighlighted, data.objectType)
-      });
-
-      // Store marker data on the marker for later reference
-      marker.set('markerData', data);
-
-      // Store marker in our pin map if it has an ID
-      if (data.id) {
-        markerPinMap.current.set(data.id, marker);
-      }
-
-      // Update markerData when a marker is dragged
-      marker.addListener('dragend', () => {
-        const newPosition = marker.getPosition();
-        if (newPosition) {
-          setMarkerData(prevData => prevData.map(m =>
-            m.lat === data.lat && m.lng === data.lng // Simple check, consider unique IDs for robust updates
-              ? { ...m, lat: newPosition.lat(), lng: newPosition.lng() }
-              : m
-          ));
-        }
-      });
-
-      // Remove click listener from markers - info window should only show from loot list clicks
-      // marker.addListener('click', () => {
-      //   if (data.title && data.description && data.id) {
-      //     showInfoWindow(data.id, data.title, data.description);
-      //   }
-      // });
-      
-      currentGoogleMarkers.current.push(marker);
-    });
-
-    if (onMarkersChange) {
-      onMarkersChange(markerData);
-    }
-  }, [markerData, onMarkersChange, highlightedPinId, createPinIcon, focusOnMarkers]);
-
-  const deleteLastPin = useCallback(() => {
-    setMarkerData((prevData) => {
-      if (prevData.length > 0) {
-        console.log("Last pin deleted.");
-        return prevData.slice(0, -1);
-      } else {
-        console.log("No pins to delete.");
-        return prevData;
-      }
-    });
-  }, []);
-
-  const clearAllPins = useCallback(() => {
-    setMarkerData([]);
-    console.log("All pins cleared.");
-  }, []);
-
   const showInfoWindow = useCallback((pinId: string, title: string, description: string) => {
     const marker = markerPinMap.current.get(pinId);
     if (marker && infoWindowRef.current) {
-      const markerData = marker.get('markerData') as MapMarker;
-      const isCollected = markerData?.isCollected;
-      
+      const data = marker.get('markerData') as MapMarker;
+      const isCollected = Boolean(data?.isCollected);
+      const isGift = data?.objectType === 'giftCard';
+
+      const pillBg = isCollected ? '#DCF7E7' : isGift ? '#EDE7FE' : '#FFF4CC';
+      const pillInk = isCollected ? '#0F7A3E' : isGift ? '#6232D6' : '#7C5200';
+      const pillBorder = isCollected ? '#18A957' : isGift ? '#8B5CF6' : '#C48700';
+
       const content = `
         <div style="
-          padding: 16px; 
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          min-width: 280px;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-          border: 1px solid #e2e8f0;
+          padding: 12px 2px 4px;
+          font-family: var(--font-ui, system-ui, sans-serif);
+          min-width: 230px;
+          color: #16261D;
         ">
           <div style="
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            margin-bottom: 12px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
           ">
             <h3 style="
-              margin: 0; 
-              color: #1e293b; 
-              font-size: 18px; 
-              font-weight: 700;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            ">
-              📍 ${title}
-            </h3>
+              margin: 0;
+              color: #16261D;
+              font-family: var(--font-display, system-ui, sans-serif);
+              font-size: 15px;
+              font-weight: 800;
+            ">${title}</h3>
             <span style="
-              background: ${isCollected ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #10b981, #059669)'};
-              color: white;
-              padding: 4px 12px;
-              border-radius: 20px;
-              font-size: 11px;
-              font-weight: 600;
+              color: ${pillInk};
+              border: 1.5px solid ${pillBorder};
+              background: ${pillBg};
+              padding: 2px 8px;
+              border-radius: 999px;
+              font-size: 10px;
+              font-weight: 800;
               text-transform: uppercase;
-              letter-spacing: 0.5px;
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            ">
-              ${isCollected ? '✓ COLLECTED' : '🎯 AVAILABLE'}
-            </span>
+              letter-spacing: 0.06em;
+              white-space: nowrap;
+            ">${isCollected ? 'Claimed' : isGift ? 'Gift Card' : 'Gold Coin'}</span>
           </div>
-          
+
           <div style="
-            color: #475569; 
-            font-size: 14px; 
-            line-height: 1.6;
-            background: #f1f5f9;
-            padding: 12px;
+            color: #31493B;
+            font-family: var(--font-data, monospace);
+            font-size: 11.5px;
+            font-weight: 600;
+            line-height: 1.55;
+            padding: 8px 10px;
             border-radius: 8px;
-            border-left: 4px solid ${isCollected ? '#f59e0b' : '#10b981'};
+            background: #F3EFE3;
+            border: 1.5px solid rgba(22, 38, 29, 0.14);
           ">
             ${description}
           </div>
-          
-          <div style="
-            margin-top: 12px;
-            padding-top: 8px;
-            border-top: 1px solid #e2e8f0;
-            font-size: 12px;
-            color: #64748b;
-            text-align: center;
-            font-style: italic;
-          ">
-            ${isCollected ? '🏆 This treasure has been claimed!' : '🗺️ Navigate to this location to collect!'}
-          </div>
         </div>
       `;
-      
+
       infoWindowRef.current.setContent(content);
       infoWindowRef.current.open(mapRef.current, marker);
     }
   }, []);
 
   const highlightPin = useCallback((pinId: string) => {
-    setHighlightedPinId(prevId => prevId === pinId ? null : pinId);
-    
-    // Update the marker icon to show highlight
+    const nextHighlighted = highlightedPinId === pinId ? null : pinId;
+    setHighlightedPinId(nextHighlighted);
+    onPinSelect?.(nextHighlighted);
+
     const marker = markerPinMap.current.get(pinId);
     if (marker) {
-      const markerData = marker.get('markerData') as MapMarker;
-      const isHighlighted = highlightedPinId !== pinId; // Will be the new state
-      marker.setIcon(createPinIcon(markerData.isCollected || false, isHighlighted, markerData.objectType));
-      
-      // Center the map on the highlighted pin and show info window
-      if (isHighlighted) {
+      const data = marker.get('markerData') as MapMarker;
+      if (nextHighlighted) {
         mapRef.current?.panTo(marker.getPosition()!);
-        mapRef.current?.setZoom(Math.max(mapRef.current.getZoom() || 18, 18));
-        
-        // Show info window with marker data
-        if (markerData.title && markerData.description) {
-          showInfoWindow(pinId, markerData.title, markerData.description);
+        const currentZoom = mapRef.current?.getZoom() || 17;
+        if (currentZoom < 17) mapRef.current?.setZoom(17);
+
+        if (data.title && data.description) {
+          showInfoWindow(pinId, data.title, data.description);
         }
-      } else if (infoWindowRef.current) {
-        // Close info window when unhighlighting
-        infoWindowRef.current.close();
+      } else {
+        infoWindowRef.current?.close();
       }
     }
-  }, [highlightedPinId, createPinIcon, showInfoWindow]);
+  }, [highlightedPinId, onPinSelect, showInfoWindow]);
+
+  // Sync Google Map markers whenever markerData or highlight changes
+  useEffect(() => {
+    if (!mapRef.current || !window.google) return;
+
+    currentGoogleMarkers.current.forEach((marker) => marker.setMap(null));
+    currentGoogleMarkers.current = [];
+    markerPinMap.current.clear();
+
+    markerData.forEach((data, idx) => {
+      const isHighlighted = Boolean(data.id && highlightedPinId === data.id);
+      const marker = new window.google.maps.Marker({
+        position: { lat: data.lat, lng: data.lng },
+        map: mapRef.current,
+        draggable: !focusOnMarkers,
+        title: data.title || `Loot #${idx + 1}`,
+        icon: createPinIcon(Boolean(data.isCollected), isHighlighted, data.objectType),
+        zIndex: isHighlighted ? 999 : idx + 1,
+      });
+
+      marker.set('markerData', data);
+
+      if (data.id) {
+        markerPinMap.current.set(data.id, marker);
+      }
+
+      if (!focusOnMarkers) {
+        marker.addListener('dragend', () => {
+          const newPosition = marker.getPosition();
+          if (newPosition) {
+            setMarkerData((prevData) =>
+              prevData.map((m, i) =>
+                i === idx
+                  ? { ...m, lat: newPosition.lat(), lng: newPosition.lng() }
+                  : m
+              )
+            );
+          }
+        });
+      } else if (data.id) {
+        marker.addListener('click', () => {
+          highlightPin(data.id!);
+        });
+      }
+
+      currentGoogleMarkers.current.push(marker);
+    });
+
+    onMarkersChange?.(markerData);
+  }, [markerData, onMarkersChange, highlightedPinId, createPinIcon, focusOnMarkers, highlightPin]);
 
   useImperativeHandle(ref, () => ({
     getMarkers: () => markerData,
-    addMarkers, // Expose addMarkers
+    addMarkers,
+    setMarkers,
+    removePinAt,
     deleteLastPin,
     clearAllPins,
     highlightPin,
     showInfoWindow,
+    recenterToUser,
+    fitAllPins,
   }));
 
-  // Effect to reinitialize map when component becomes visible again
   useEffect(() => {
     const timer = setTimeout(() => {
       if (window.google && mapDivRef.current && !mapRef.current) {
-        console.log("Reinitializing map after component switch...");
         initializeMap();
       } else if (mapRef.current && window.google) {
-        // Trigger resize if map already exists
-        console.log("Triggering map resize...");
         window.google.maps.event.trigger(mapRef.current, 'resize');
-        if (focusOnMarkers && initialMarkers.length > 0) {
-          fitMapToMarkers(initialMarkers);
-        }
       }
-    }, 100);
+    }, 80);
 
     return () => clearTimeout(timer);
-  }, [initializeMap, focusOnMarkers, initialMarkers, fitMapToMarkers]);
+  }, [initializeMap]);
 
-  // Handle window resize to trigger map resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (mapRef.current && window.google) {
-        window.google.maps.event.trigger(mapRef.current, 'resize');
-        // Re-center or re-fit bounds if needed
-        if (focusOnMarkers && initialMarkers.length > 0) {
-          setTimeout(() => fitMapToMarkers(initialMarkers), 100);
-        }
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [focusOnMarkers, initialMarkers, fitMapToMarkers]);
-
-  // Cleanup effect
   useEffect(() => {
     return () => {
       if (mapRef.current) {
-        console.log("Cleaning up map on unmount...");
-        currentGoogleMarkers.current.forEach(marker => marker.setMap(null));
+        currentGoogleMarkers.current.forEach((marker) => marker.setMap(null));
         currentGoogleMarkers.current = [];
         mapRef.current = null;
       }
@@ -518,52 +490,50 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
 
   return (
     <>
-      <div 
-        id="map" 
-        ref={mapDivRef} 
-        style={{ 
-          width: '100%', 
-          height: '100%', 
-          minHeight: '400px',
-          backgroundColor: '#f0f0f0',
-          border: '1px solid #ddd'
+      <div
+        id="map"
+        ref={mapDivRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#f2eee2',
         }}
       >
-        <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-          Loading Google Maps...
+        <div
+          style={{
+            height: '100%',
+            display: 'grid',
+            placeItems: 'center',
+            color: '#5B7365',
+            fontWeight: 700,
+            fontSize: '0.88rem',
+          }}
+        >
+          Loading field map…
         </div>
       </div>
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`}
         strategy="afterInteractive"
         onLoad={() => {
-          console.log('Google Maps Script loaded successfully!');
-          console.log('window.google available:', !!window.google);
-          console.log('mapDivRef.current available:', !!mapDivRef.current);
           if (window.google && mapDivRef.current) {
-            console.log('Initializing map...');
             initializeMap();
           } else {
-            console.warn("Map div ref or window.google not ready on script load.");
             setTimeout(() => {
-              console.log('Retrying map initialization...');
               if (window.google && mapDivRef.current) {
                 initializeMap();
               }
-            }, 1000);
+            }, 600);
           }
         }}
         onError={(e) => {
-          console.error("Failed to load Google Maps script:", e);
-          if (mapDivRef.current) {
-            mapDivRef.current.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Error: Failed to load Google Maps. Check the console for details.</p>';
-          }
+          console.error('Failed to load Google Maps script:', e);
         }}
       />
     </>
   );
 });
 
-MapComponent.displayName = 'MapComponent'; // Add display name for forwardRef
+MapComponent.displayName = 'MapComponent';
 
 export default MapComponent;

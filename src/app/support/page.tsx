@@ -1,14 +1,21 @@
+import { TopBar, Footer } from '@/components/AppShell';
+
 export default function SupportPage() {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Loota Support</h1>
-      <div className="prose prose-sm max-w-none space-y-6">
-        <p>Welcome to Loota support! Here you&apos;ll find answers to common questions and ways to contact us.</p>
+    <div className="app">
+      <TopBar current="/support" />
+      <main className="doc">
+        <p className="doc__eyebrow">Help</p>
+        <h1 className="doc__title">Support</h1>
+        <p className="doc__lede">
+          Answers to common questions, and how to reach a human when you need one.
+        </p>
+        <div className="doc__body">
 
         <section>
-          <h2 className="text-2xl font-semibold mt-8 mb-4">Frequently Asked Questions</h2>
+          <h2>Frequently Asked Questions</h2>
 
-          <h3 className="text-xl font-semibold mt-6 mb-3">General Questions</h3>
+          <h3>General Questions</h3>
 
           <div className="space-y-4">
             <div>
@@ -19,7 +26,7 @@ export default function SupportPage() {
             <div>
               <p className="font-semibold">Q: What devices are supported?</p>
               <p>A: Loota requires:</p>
-              <ul className="list-disc pl-6 space-y-1">
+              <ul>
                 <li>iPhone XS or newer (2018+ models)</li>
                 <li>iOS 18.0 or later</li>
                 <li>ARKit support</li>
@@ -33,7 +40,7 @@ export default function SupportPage() {
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mt-6 mb-3">Hunt Questions</h3>
+          <h3>Hunt Questions</h3>
 
           <div className="space-y-4">
             <div>
@@ -54,7 +61,7 @@ export default function SupportPage() {
             <div>
               <p className="font-semibold">Q: Why can&apos;t I see any treasures?</p>
               <p>A: Make sure you&apos;ve:</p>
-              <ul className="list-disc pl-6 space-y-1">
+              <ul>
                 <li>Granted camera and location permissions</li>
                 <li>Joined a hunt successfully</li>
                 <li>Are within range of treasure locations</li>
@@ -63,7 +70,7 @@ export default function SupportPage() {
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mt-6 mb-3">Prize Questions</h3>
+          <h3>Prize Questions</h3>
 
           <div className="space-y-4">
             <div>
@@ -87,7 +94,7 @@ export default function SupportPage() {
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mt-6 mb-3">Account &amp; Privacy</h3>
+          <h3>Account &amp; Privacy</h3>
 
           <div className="space-y-4">
             <div>
@@ -97,7 +104,7 @@ export default function SupportPage() {
 
             <div>
               <p className="font-semibold">Q: How is my contact information used?</p>
-              <p>A: When you win a hunt, your name and phone number are shared with the hunt creator so they can contact you about any prizes they may offer. See our <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a> for full details.</p>
+              <p>A: When you win a hunt, your name and phone number are shared with the hunt creator so they can contact you about any prizes they may offer. See our <a href="/privacy" className="text-[var(--treasure-gold-bright)] hover:underline">Privacy Policy</a> for full details.</p>
             </div>
 
             <div>
@@ -111,13 +118,13 @@ export default function SupportPage() {
             </div>
           </div>
 
-          <h3 className="text-xl font-semibold mt-6 mb-3">Technical Issues</h3>
+          <h3>Technical Issues</h3>
 
           <div className="space-y-4">
             <div>
               <p className="font-semibold">Q: The app crashes or freezes. What should I do?</p>
               <p>A: Try these steps:</p>
-              <ol className="list-decimal pl-6 space-y-1">
+              <ol>
                 <li>Force quit the app and reopen it</li>
                 <li>Restart your iPhone</li>
                 <li>Check for iOS updates</li>
@@ -129,7 +136,7 @@ export default function SupportPage() {
             <div>
               <p className="font-semibold">Q: AR objects aren&apos;t appearing in the right locations</p>
               <p>A: Make sure you&apos;ve:</p>
-              <ul className="list-disc pl-6 space-y-1">
+              <ul>
                 <li>Granted location permissions</li>
                 <li>Are in an area with good GPS signal</li>
                 <li>Have calibrated your compass by moving in a figure-8 pattern</li>
@@ -150,14 +157,14 @@ export default function SupportPage() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mt-8 mb-4">Contact Support</h2>
+          <h2>Contact Support</h2>
 
-          <h3 className="text-xl font-semibold mt-6 mb-3">For Technical Issues</h3>
+          <h3>For Technical Issues</h3>
           <p><strong>Email</strong>: support@loota.fun</p>
           <p><strong>Subject</strong>: Technical Support - [Brief description]</p>
           <p><strong>Response Time</strong>: 24-48 hours</p>
           <p><strong>Please include</strong>:</p>
-          <ul className="list-disc pl-6 space-y-1">
+          <ul>
             <li>Device model (e.g., iPhone 15 Pro)</li>
             <li>iOS version</li>
             <li>Description of the issue</li>
@@ -165,29 +172,29 @@ export default function SupportPage() {
             <li>Screenshots (if applicable)</li>
           </ul>
 
-          <h3 className="text-xl font-semibold mt-6 mb-3">For Privacy &amp; Data Requests</h3>
+          <h3>For Privacy &amp; Data Requests</h3>
           <p><strong>Email</strong>: privacy@loota.fun</p>
           <p><strong>Subject</strong>: Data Request - [Access/Deletion/Correction]</p>
           <p><strong>Response Time</strong>: 7-14 days</p>
 
-          <h3 className="text-xl font-semibold mt-6 mb-3">For General Inquiries</h3>
+          <h3>For General Inquiries</h3>
           <p><strong>Email</strong>: hello@loota.fun</p>
           <p><strong>Response Time</strong>: 48-72 hours</p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mt-8 mb-4">Additional Resources</h2>
-          <ul className="list-disc pl-6 space-y-2">
-            <li><a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a></li>
-            <li><a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a></li>
-            <li><a href="https://apps.apple.com/app/loota" className="text-blue-600 hover:underline">App Store Page</a> <em>(update with actual link)</em></li>
+          <h2>Additional Resources</h2>
+          <ul>
+            <li><a href="/privacy" className="text-[var(--treasure-gold-bright)] hover:underline">Privacy Policy</a></li>
+            <li><a href="/terms" className="text-[var(--treasure-gold-bright)] hover:underline">Terms of Service</a></li>
+            <li><a href="https://apps.apple.com/app/loota" className="text-[var(--treasure-gold-bright)] hover:underline">App Store Page</a> <em>(update with actual link)</em></li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-2xl font-semibold mt-8 mb-4">Community Guidelines</h2>
+          <h2>Community Guidelines</h2>
           <p>When using Loota, please:</p>
-          <ul className="list-none pl-6 space-y-1">
+          <ul className="doc__list-plain">
             <li>✓ Be respectful to other users</li>
             <li>✓ Create hunts in safe, public locations</li>
             <li>✓ Follow local laws and regulations</li>
@@ -196,10 +203,12 @@ export default function SupportPage() {
           <p className="mt-4"><strong>Report Issues</strong>: Email support@loota.fun with &quot;Report Issue&quot; in the subject.</p>
         </section>
 
-        <div className="border-t pt-6 mt-8 text-center">
-          <p className="font-semibold">Need more help? Email us at support@loota.fun and we&apos;ll get back to you as soon as possible!</p>
+          <div className="doc__callout">
+            <p><strong>Need more help?</strong> Email <a href="mailto:support@loota.fun">support@loota.fun</a> and we&apos;ll get back to you as soon as possible.</p>
+          </div>
         </div>
-      </div>
+      </main>
+      <Footer />
     </div>
   );
 }

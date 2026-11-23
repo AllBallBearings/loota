@@ -24,6 +24,22 @@ import {
   UserCircle,
   XCircle,
   Phone,
+  CaretDown,
+  CaretRight,
+  ArrowSquareOut,
+  Gift,
+  Coins,
+  QrCode,
+  Crown,
+  SlidersHorizontal,
+  SidebarSimple,
+  Lightning,
+  FlagCheckered,
+  WarningCircle,
+  NavigationArrow,
+  ArrowsOutSimple,
+  ArrowsInSimple,
+  ArrowLeft,
 } from 'phosphor-react';
 
 type IconComponent = React.FC<IconProps>;
@@ -31,8 +47,8 @@ type IconComponent = React.FC<IconProps>;
 const withDefaults = (Component: IconComponent) => {
   const Wrapped: IconComponent = ({ size, weight, className, ...rest }) => (
     <Component
-      size={size ?? 22}
-      weight={weight ?? 'duotone'}
+      size={size ?? 20}
+      weight={weight ?? 'bold'}
       className={className}
       {...rest}
     />
@@ -66,6 +82,22 @@ export const Icons = {
   Refresh: withDefaults(ClockClockwise),
   Phone: withDefaults(Phone),
   Email: withDefaults(EnvelopeSimple),
+  Caret: withDefaults(CaretDown),
+  CaretRight: withDefaults(CaretRight),
+  External: withDefaults(ArrowSquareOut),
+  Gift: withDefaults(Gift),
+  Coin: withDefaults(Coins),
+  Qr: withDefaults(QrCode),
+  Crown: withDefaults(Crown),
+  Sliders: withDefaults(SlidersHorizontal),
+  Sidebar: withDefaults(SidebarSimple),
+  Lightning: withDefaults(Lightning),
+  Flag: withDefaults(FlagCheckered),
+  Warning: withDefaults(WarningCircle),
+  Locate: withDefaults(NavigationArrow),
+  Expand: withDefaults(ArrowsOutSimple),
+  Collapse: withDefaults(ArrowsInSimple),
+  Back: withDefaults(ArrowLeft),
 };
 
 export type { IconProps } from 'phosphor-react';

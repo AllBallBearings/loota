@@ -7,107 +7,110 @@ import { PinData } from '../types/hunt';
 interface LootLocationsListProps {
   pins: PinData[];
   onPinClick?: (pinId: string) => void;
+  selectedPinId?: string | null;
+  bare?: boolean;
   modalMode?: boolean;
   fixedHeight?: boolean;
 }
 
-const LootLocationsList: React.FC<LootLocationsListProps> = ({ pins, onPinClick, modalMode = false, fixedHeight = false }) => {
+const LootLocationsList: React.FC<LootLocationsListProps> = ({
+  pins,
+  onPinClick,
+  selectedPinId = null,
+  bare = false,
+  modalMode = false,
+}) => {
   const formatCoordinate = (value?: number) =>
-    typeof value === 'number' ? value.toFixed(4) : 'N/A';
+    typeof value === 'number' ? value.toFixed(4) : '—';
 
   const formatProximity = (pin: PinData) => {
     if (typeof pin.distanceFt !== 'number' || !pin.directionStr) return null;
-    return `${pin.distanceFt.toFixed(1)}ft, ${pin.directionStr}`;
+    return `${pin.distanceFt.toFixed(1)}ft ${pin.directionStr}`;
   };
 
-  const listContent = (
-    <>
-      {pins.length === 0 ? (
-        <div className="text-center text-slate-400 py-8">
-          No loot locations found in this hunt.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {pins.map((pin, index) => (
-            <div 
-              key={pin.id} 
-              className={[
-                'loot-location-card',
-                modalMode ? 'loot-location-card--compact' : '',
-                pin.collectedByUserId ? 'loot-location-card--collected' : 'loot-location-card--available'
-              ].join(' ')}
-              onClick={() => onPinClick && onPinClick(pin.id)}
+  const collectedCount = pins.filter((p) => p.collectedByUserId).length;
+
+  const content =
+    pins.length === 0 ? (
+      <div className="empty">
+        <span className="empty__icon">
+          <Icons.Treasure size={20} weight="fill" />
+        </span>
+        <span className="empty__title">No loot stashed yet</span>
+        <span className="empty__text">This hunt doesn&apos;t have any active loot drops.</span>
+      </div>
+    ) : (
+      <div style={{ display: 'grid', gap: '0.45rem' }}>
+        {pins.map((pin, index) => {
+          const collected = Boolean(pin.collectedByUserId);
+          const isGift = pin.objectType === 'giftCard';
+          const isSelected = selectedPinId === pin.id;
+          const proximity = formatProximity(pin);
+
+          return (
+            <button
+              key={pin.id}
+              type="button"
+              className={`loot-row ${collected ? 'loot-row--collected' : ''} ${
+                isGift ? 'loot-row--gift' : ''
+              } ${isSelected ? 'loot-row--selected' : ''}`}
+              onClick={() => onPinClick?.(pin.id)}
             >
-              <div className="loot-location-card__row">
-                <div className="loot-location-card__title text-base">
-                  <span className="text-slate-200">Loot #{index + 1}</span>
-                </div>
-                <span className={`loot-pill ${pin.collectedByUserId ? 'loot-pill--collected' : 'loot-pill--available'}`}>
-                  {pin.collectedByUserId ? (
-                    <>
-                      <Icons.Check size={14} className="text-amber-200" />
-                      Collected
-                    </>
-                  ) : (
-                    <>
-                      <Icons.Target size={14} className="text-emerald-200" />
-                      Available
-                    </>
-                  )}
-                </span>
-              </div>
-              <div className="loot-location-card__coords">
-                {formatProximity(pin) ? (
-                  <>
-                    <Icons.Proximity size={16} className="inline text-cyan-200 mr-1 align-middle" />
-                    <span className="align-middle">{formatProximity(pin)}</span>
-                  </>
+              <span className="loot-row__marker">
+                {collected ? (
+                  <Icons.Check size={15} weight="fill" />
                 ) : (
-                  <>
-                    <Icons.Pin size={16} className="inline text-rose-200 mr-1 align-middle" />
-                    <span className="align-middle">
-                      {formatCoordinate(pin.lat)}, {formatCoordinate(pin.lng)}
-                    </span>
-                  </>
+                  index + 1
                 )}
-              </div>
-              
-              {pin.collectedByUserId && (
-                <div className="loot-location-card__meta space-y-1">
-                  <p className="text-amber-200 font-medium">
-                    Collected by {pin.collectedByUser?.name || 'Unknown'}
-                  </p>
-                  <p className="loot-meta-muted">
-                    {pin.collectedAt ? new Date(pin.collectedAt).toLocaleString() : 'Time unknown'}
-                  </p>
-                </div>
-              )}
+              </span>
 
-              {!pin.collectedByUserId && (
-                <div className="loot-meta-muted">
-                  Waiting to be claimed
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
+              <span className="loot-row__body">
+                <span className="loot-row__top">
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', minWidth: 0 }}>
+                    {isGift ? (
+                      <Icons.Gift size={14} weight="fill" style={{ color: 'var(--epic-dark)', flexShrink: 0 }} />
+                    ) : (
+                      <Icons.Coin size={14} weight="fill" style={{ color: 'var(--gold-dark)', flexShrink: 0 }} />
+                    )}
+                    <span className="loot-row__coord">
+                      {proximity ?? `${formatCoordinate(pin.lat)}, ${formatCoordinate(pin.lng)}`}
+                    </span>
+                  </span>
+                  <span className="loot-row__status">{collected ? 'Claimed' : 'Open'}</span>
+                </span>
+                <span className="loot-row__sub">
+                  {collected
+                    ? `Claimed by ${pin.collectedByUser?.name || 'Hunter'}${
+                        pin.collectedAt
+                          ? ` · ${new Date(pin.collectedAt).toLocaleTimeString([], {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}`
+                          : ''
+                      }`
+                    : `${isGift ? 'Rare Gift Card' : 'Gold Coin'} · Tap to locate`}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
 
-  if (modalMode) {
-    return <div className="space-y-3 p-4">{listContent}</div>;
+  if (bare || modalMode) {
+    return content;
   }
 
   return (
-    <div className={`card card-panel ${fixedHeight ? 'loot-list-card loot-list-card--fixed' : ''}`}>
-      <div className="card-section card-section--divider card-section--header">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Icons.Target className="text-emerald-200" size={20} />
-          Loot Locations ({pins.length})
-        </h3>
+    <div className="panel">
+      <div className="panel__head">
+        <Icons.Treasure size={16} weight="fill" style={{ color: 'var(--gold-dark)' }} />
+        <span className="panel__title">Loot Stashes</span>
+        <span className="panel__meta">
+          {collectedCount}/{pins.length}
+        </span>
       </div>
-      <div className={`card-section ${fixedHeight ? 'loot-list-scroll loot-list-scroll--sync' : ''}`}>{listContent}</div>
+      <div className="panel__body panel__body--flush">{content}</div>
     </div>
   );
 };

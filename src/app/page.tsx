@@ -4,48 +4,120 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import MapComponent, { MapComponentRef, MapMarker } from '../components/MapComponent';
 import ProximityComponent, { ProximityComponentRef, ProximityMarkerData } from '../components/ProximityComponent';
 import { Icons } from '../components/Icons';
+import { TopBar } from '../components/AppShell';
+import { LootToken3D } from '../components/LootToken3D';
+import { QRCodeSvg } from '../components/QRCodeSvg';
+import { ToastStack, ToastItem } from '../components/ToastStack';
 
-export default function ModernHome() {
+const PROXIMITY_RADIUS_OPTIONS = [
+  { ft: 10, label: 'Tight', sub: 'Room / Patio' },
+  { ft: 50, label: 'Medium', sub: 'Yard / Plaza' },
+  { ft: 100, label: 'Wide', sub: 'Park / Field' },
+] as const;
+
+const CONFETTI_PIECES = [
+  { left: '8%', color: '#FFC21A', delay: '0s' },
+  { left: '18%', color: '#FF5428', delay: '0.15s' },
+  { left: '31%', color: '#18A957', delay: '0.08s' },
+  { left: '44%', color: '#1E88E5', delay: '0.22s' },
+  { left: '58%', color: '#8B5CF6', delay: '0.05s' },
+  { left: '70%', color: '#FFC21A', delay: '0.18s' },
+  { left: '82%', color: '#FF5428', delay: '0.1s' },
+  { left: '91%', color: '#18A957', delay: '0.25s' },
+];
+
+type AccordionKey = 'mode' | 'details' | 'contact';
+
+export default function HuntCreatorStudio() {
   const [currentHuntType, setCurrentHuntType] = useState<'geolocation' | 'proximity'>('geolocation');
   const [currentLootType, setCurrentLootType] = useState<string>('coin');
   const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
+  const [proximityMarkers, setProximityMarkers] = useState<ProximityMarkerData[]>([]);
   const [huntName, setHuntName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [creatorPhone, setCreatorPhone] = useState<string>('');
   const [creatorEmail, setCreatorEmail] = useState<string>('');
   const [preferredContactMethod, setPreferredContactMethod] = useState<'phone' | 'email'>('phone');
-  const [existingUserData, setExistingUserData] = useState<{phone?: string; email?: string} | null>(null);
+  const [existingUserData, setExistingUserData] = useState<{ phone?: string; email?: string } | null>(null);
   const [useExistingContact, setUseExistingContact] = useState<boolean>(true);
   const [generatedUrl, setGeneratedUrl] = useState<string>('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isLoading, setIsLoading] = useState(false);
   const [proximityRadiusFt, setProximityRadiusFt] = useState(100);
-  const proximityRadiusOptions = [10, 50, 100] as const;
-  const proximityRadiusIndex = Math.max(0, proximityRadiusOptions.indexOf(proximityRadiusFt as (typeof proximityRadiusOptions)[number]));
-  const proximityRadiusPercent = (proximityRadiusIndex / (proximityRadiusOptions.length - 1)) * 100;
+  const [dockOpen, setDockOpen] = useState(true);
+  const [mobilePane, setMobilePane] = useState<'canvas' | 'setup'>('canvas');
+
+  // Smart collapsible accordion state: Mode + Details open, Contact auto-collapses once saved
+  const [openSteps, setOpenSteps] = useState<Record<AccordionKey, boolean>>({
+    mode: true,
+    details: true,
+    contact: false,
+  });
+
+  // Only show validation errors after a field is touched or the user attempts to launch
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+  // In-app toast stack (replaces window.alert)
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastIdRef = useRef(0);
+
+  const pushToast = useCallback((message: string, tone: ToastItem['tone'] = 'info') => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev.slice(-2), { id, message, tone }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3800);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const mapComponentRef = useRef<MapComponentRef>(null);
   const proximityComponentRef = useRef<ProximityComponentRef>(null);
+
+  const activePinCount = currentHuntType === 'geolocation' ? mapMarkers.length : proximityMarkers.length;
   const isPhoneMissing = !creatorPhone.trim();
   const isEmailMissing = !creatorEmail.trim();
   const isHuntNameMissing = !huntName.trim();
   const isUserNameMissing = !userName.trim();
-  const isContactInfoIncomplete = isPhoneMissing || isEmailMissing;
-  const hasValidationErrors = isContactInfoIncomplete || isHuntNameMissing || isUserNameMissing;
-  const encourageButtonDisabled = isLoading || isContactInfoIncomplete;
+  const isContactIncomplete = isPhoneMissing || isEmailMissing;
 
-  // Check for existing user data on component mount
+  const detailsDone = !isHuntNameMissing && !isUserNameMissing;
+  const contactDone = !isContactIncomplete;
+  const pinsDone = activePinCount > 0;
+
+  const readyStepsCount = [true, detailsDone, contactDone, pinsDone].filter(Boolean).length;
+  const readinessPct = Math.round((readyStepsCount / 4) * 100);
+
+  const showError = (field: string, missing: boolean) =>
+    missing && (attemptedSubmit || Boolean(touched[field]));
+
+  const toggleStep = (key: AccordionKey) => {
+    setOpenSteps((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const focusStep = (key: AccordionKey, inputId?: string) => {
+    setMobilePane('setup');
+    setOpenSteps((prev) => ({ ...prev, [key]: true }));
+    if (inputId) {
+      setTimeout(() => {
+        document.getElementById(inputId)?.focus();
+      }, 60);
+    }
+  };
+
+  // Load saved creator contact on mount
   useEffect(() => {
     const checkExistingUser = async () => {
-      const creatorId = "a1b2c3d4-e5f6-7890-1234-000000000001"; // Same ID used in generateLootLink
-      
+      const creatorId = 'a1b2c3d4-e5f6-7890-1234-000000000001';
       try {
         const response = await fetch(`/api/users/${creatorId}`, {
           headers: {
             'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
           },
         });
-        
         if (response.ok) {
           const userData = await response.json();
           if (userData.phone || userData.email) {
@@ -53,159 +125,108 @@ export default function ModernHome() {
               phone: userData.phone,
               email: userData.email,
             });
-            
-            // Pre-populate form with existing data if user chooses to use it
             if (userData.phone) setCreatorPhone(userData.phone);
             if (userData.email) setCreatorEmail(userData.email);
+            if (userData.name && userData.name !== 'Anonymous Creator') {
+              setUserName((prev) => prev || userData.name);
+            }
+            // Keep Contact neatly collapsed when saved contact info is loaded
+            setOpenSteps((prev) => ({ ...prev, contact: false }));
           }
         }
       } catch (error) {
-        console.log('No existing user data found or error fetching:', error);
+        console.log('No existing user data found:', error);
       }
     };
-
     checkExistingUser();
   }, []);
 
   const handleContactMethodToggle = (useExisting: boolean) => {
     setUseExistingContact(useExisting);
-    
     if (useExisting && existingUserData) {
-      // Use existing contact information
       if (existingUserData.phone) setCreatorPhone(existingUserData.phone);
       if (existingUserData.email) setCreatorEmail(existingUserData.email);
     } else {
-      // Clear form for new contact information
       setCreatorPhone('');
       setCreatorEmail('');
     }
   };
 
-  const renderContactFields = () => (
-    <div className="space-y-3">
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">
-          Phone *
-          {isPhoneMissing && (
-            <span className="text-red-400 ml-2 text-xs">Required</span>
-          )}
-        </label>
-        <input
-          type="tel"
-          value={creatorPhone}
-          onChange={(e) => setCreatorPhone(e.target.value)}
-          placeholder="(555) 123-4567"
-          className={`input text-sm ${isPhoneMissing ? 'border-red-400/50' : ''}`}
-          readOnly={useExistingContact && Boolean(existingUserData?.phone)}
-          required
-        />
-        {isPhoneMissing && <p className="mt-1 text-xs text-red-300">Add a phone number so we can text you loot updates.</p>}
-      </div>
-
-      <div>
-        <label className="block text-xs text-slate-400 mb-1">
-          Email *
-          {isEmailMissing && (
-            <span className="text-red-400 ml-2 text-xs">Required</span>
-          )}
-        </label>
-        <input
-          type="email"
-          value={creatorEmail}
-          onChange={(e) => setCreatorEmail(e.target.value)}
-          placeholder="your@email.com"
-          className={`input text-sm ${isEmailMissing ? 'border-red-400/50' : ''}`}
-          readOnly={useExistingContact && Boolean(existingUserData?.email)}
-          required
-        />
-        {isEmailMissing && <p className="mt-1 text-xs text-red-300">Add an email so we can send you the loot link.</p>}
-      </div>
-    </div>
-  );
-
   const handleHuntTypeChange = (type: 'geolocation' | 'proximity') => {
     setCurrentHuntType(type);
-    // Reset generated URL when switching hunt types
     setGeneratedUrl('');
     setCopyStatus('idle');
   };
 
-  const copyToClipboard = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyStatus('copied');
-      setTimeout(() => setCopyStatus('idle'), 2000);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-      setCopyStatus('error');
-      setTimeout(() => setCopyStatus('idle'), 2000);
-    }
-  }, []);
+  const copyToClipboard = useCallback(
+    async (text: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopyStatus('copied');
+        pushToast('Hunt link copied to clipboard!', 'ok');
+        setTimeout(() => setCopyStatus('idle'), 2000);
+      } catch (err) {
+        console.error('Failed to copy text:', err);
+        setCopyStatus('error');
+        pushToast('Could not copy automatically — select the link manually.', 'warn');
+        setTimeout(() => setCopyStatus('idle'), 2000);
+      }
+    },
+    [pushToast]
+  );
 
   const generateLootLink = useCallback(async () => {
-    setIsLoading(true);
-    setGeneratedUrl('');
+    setAttemptedSubmit(true);
 
-    // Validate required fields
-    if (!huntName.trim()) {
-      alert("Please provide a hunt name.");
-      setIsLoading(false);
+    if (isHuntNameMissing || isUserNameMissing) {
+      focusStep('details', isHuntNameMissing ? 'hunt-name' : 'user-name');
+      pushToast(
+        isHuntNameMissing ? 'Give your hunt a name first.' : 'Add your host name so players know who dropped it.',
+        'warn'
+      );
       return;
     }
 
-    if (!userName.trim()) {
-      alert("Please provide your name.");
-      setIsLoading(false);
+    if (isContactIncomplete) {
+      focusStep('contact', isPhoneMissing ? 'creator-phone' : 'creator-email');
+      pushToast('Add both phone and email so winners can claim their prize.', 'warn');
       return;
     }
 
-    // Validate required contact information
-    if (!creatorPhone.trim() || !creatorEmail.trim()) {
-      alert("Please provide both phone number and email address.");
-      setIsLoading(false);
-      return;
-    }
-
-    let huntData: MapMarker[] | ProximityMarkerData[] | null = null;
-
+    let huntData: MapMarker[] | ProximityMarkerData[] = [];
     if (currentHuntType === 'geolocation') {
       huntData = mapComponentRef.current?.getMarkers() || [];
       if (huntData.length === 0) {
-        alert("Please drop at least one loota pin on the map first!");
-        setIsLoading(false);
+        setMobilePane('canvas');
+        pushToast('Tap anywhere on the map to drop your first loot pin!', 'warn');
         return;
       }
-    } else if (currentHuntType === 'proximity') {
+    } else {
       huntData = proximityComponentRef.current?.getMarkers() || [];
       if (huntData.length === 0) {
-        alert("Please place at least one proximity marker first!");
-        setIsLoading(false);
+        setMobilePane('canvas');
+        pushToast('Tap inside the sonar ring to place your first proximity drop!', 'warn');
         return;
       }
     }
 
-    if (huntData === null) {
-      alert("No hunt data available to create a link.");
-      setIsLoading(false);
-      return;
-    }
+    setIsLoading(true);
+    setGeneratedUrl('');
 
-    const creatorId = "a1b2c3d4-e5f6-7890-1234-000000000001";
+    const creatorId = 'a1b2c3d4-e5f6-7890-1234-000000000001';
 
     try {
       const response = await fetch('/api/hunts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: huntName.trim() || null,
           type: currentHuntType,
-          creatorId: creatorId,
+          creatorId,
           creatorName: userName.trim() || 'Anonymous Creator',
           creatorPhone: creatorPhone.trim(),
           creatorEmail: creatorEmail.trim(),
-          preferredContactMethod: preferredContactMethod,
+          preferredContactMethod,
           pins: huntData,
           proximityRadiusFt: currentHuntType === 'proximity' ? proximityRadiusFt : null,
         }),
@@ -218,520 +239,833 @@ export default function ModernHome() {
 
       const { huntId } = await response.json();
       const fullUrl = `${window.location.origin}/hunt/${huntId}`;
-      
       setGeneratedUrl(fullUrl);
-      console.log("Generated Loota URL:", fullUrl);
+      pushToast('Supply drop is LIVE! Share the link or QR code.', 'ok');
     } catch (error) {
-      console.error("Error generating loot link:", error);
-      alert(`Error: ${(error as Error).message}`);
+      console.error('Error generating loot link:', error);
+      pushToast((error as Error).message || 'Could not publish hunt.', 'danger');
     } finally {
       setIsLoading(false);
     }
-  }, [currentHuntType, huntName, userName, creatorPhone, creatorEmail, preferredContactMethod, proximityRadiusFt]);
+  }, [
+    isHuntNameMissing,
+    isUserNameMissing,
+    isContactIncomplete,
+    isPhoneMissing,
+    currentHuntType,
+    huntName,
+    userName,
+    creatorPhone,
+    creatorEmail,
+    preferredContactMethod,
+    proximityRadiusFt,
+    pushToast,
+  ]);
+
+  const shareHunt = useCallback(async () => {
+    if (!generatedUrl) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: huntName ? `Join "${huntName}" on Loota!` : 'Join my Loota Hunt!',
+          text: 'Jump into this real-world AR treasure hunt!',
+          url: generatedUrl,
+        });
+        return;
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    }
+    copyToClipboard(generatedUrl);
+  }, [generatedUrl, huntName, copyToClipboard]);
+
+  const undoLastPin = () => {
+    if (currentHuntType === 'geolocation') {
+      mapComponentRef.current?.deleteLastPin();
+    } else {
+      proximityComponentRef.current?.deleteLastProximityMarker();
+    }
+  };
+
+  const clearPins = () => {
+    if (currentHuntType === 'geolocation') {
+      mapComponentRef.current?.clearAllPins();
+    } else {
+      proximityComponentRef.current?.clearAllProximityMarkers();
+    }
+    pushToast('Cleared all pins on canvas.', 'info');
+  };
+
+  const removePinAt = (idx: number) => {
+    if (currentHuntType === 'geolocation') {
+      mapComponentRef.current?.removePinAt(idx);
+    } else {
+      proximityComponentRef.current?.removeMarkerAt(idx);
+    }
+  };
 
   return (
-    <div className="main-layout">
-      {/* Modern Header */}
-      <header className="nav-header">
-        <div className="container-modern">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-3">
-              <Icons.Adventure className="text-accent-cyan" size={28} />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col items-center">
-                  <span className="mb-1 h-5 w-5 rounded-full bg-red-500 shadow-[0_0_12px_rgba(248,113,113,0.9)]" />
-                  <h1 className="text-2xl md:text-3xl font-bold">
-                    Loota
-                  </h1>
-                </div>
-                <div className="text-reel">
-                  <div className="text-reel-content">
-                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">&nbsp;</span>
-                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">dollar</span>
-                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">dubloon</span>
-                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">dream</span>
-                    <span className="text-2xl md:text-3xl font-bold text-yellow-400">&nbsp;</span>
-                  </div>
-                </div>
+    <div className="app app--locked">
+      <TopBar
+        reel
+        current="/"
+        centerSlot={
+          <span className="badge badge--meadow">
+            <span className="live-dot" />
+            {currentHuntType === 'geolocation'
+              ? 'GPS Field Mode'
+              : `Sonar Radar · ${proximityRadiusFt}ft`}
+          </span>
+        }
+      />
+
+      {/* Mobile-only quick switcher between Map/Radar and Setup */}
+      <div className="mobile-view-switch" role="tablist" aria-label="Studio view">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobilePane === 'canvas'}
+          className={`btn btn--sm ${mobilePane === 'canvas' ? 'btn--gold' : 'btn--ghost'}`}
+          onClick={() => setMobilePane('canvas')}
+        >
+          {currentHuntType === 'geolocation' ? <Icons.Map size={15} /> : <Icons.Proximity size={15} />}
+          {currentHuntType === 'geolocation' ? 'Map' : 'Radar'} ({activePinCount})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobilePane === 'setup'}
+          className={`btn btn--sm ${mobilePane === 'setup' ? 'btn--gold' : 'btn--ghost'}`}
+          onClick={() => setMobilePane('setup')}
+        >
+          <Icons.Sliders size={15} />
+          Setup ({readyStepsCount}/4)
+        </button>
+      </div>
+
+      <div className="studio">
+        {/* ---------------- Left Inspector Rail (Collapsible Steps) ---------------- */}
+        <aside
+          className={`inspector ${mobilePane === 'canvas' ? 'mobile-hidden' : ''}`}
+          aria-label="Hunt setup"
+        >
+          <div className="inspector__top">
+            <div className="inspector__top-row">
+              <div>
+                <p className="inspector__eyebrow">Field Drop Studio</p>
+                <h1 className="inspector__title">Hide the Loot</h1>
               </div>
+              <LootToken3D type={currentLootType} size="sm" />
             </div>
-            <div className="hidden md:flex items-center gap-4">
-              <div className="text-sm text-slate-300">
-                Tue, 07 June 2022
+
+            <div className="readiness" title={`${readyStepsCount} of 4 setup steps ready`}>
+              <div className="readiness__track">
+                <div className="readiness__fill" style={{ width: `${readinessPct}%` }} />
               </div>
-              <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg hover:bg-white/10 transition-colors text-slate-200">
-                  <Icons.Bell size={20} className="text-slate-200" />
-                </button>
-                <button className="p-2 rounded-lg hover:bg-white/10 transition-colors text-slate-200">
-                  <Icons.User size={20} className="text-slate-200" />
-                </button>
-              </div>
+              <span className="readiness__label">{readyStepsCount}/4 ready</span>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Two-Panel Layout */}
-      <main className="flex-1 flex flex-col lg:flex-row">
-        {/* Left Sidebar - Hunt Configuration */}
-        <div className="filter-sidebar flex flex-col overflow-hidden w-full lg:w-80">
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Icons.Target className="text-slate-200" size={22} />
-              <h2 className="text-lg font-semibold text-white">Hunt Configuration</h2>
-            </div>
-
-            {/* Hunt Type Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Hunt Type
-              </label>
-              <div className="space-y-3">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="huntType"
-                    value="geolocation"
-                    checked={currentHuntType === 'geolocation'}
-                    onChange={(e) => handleHuntTypeChange(e.target.value as 'geolocation' | 'proximity')}
-                    className="w-4 h-4"
-                    style={{ accentColor: 'var(--accent-violet)' }}
-                  />
-                  <span className="ml-3 text-slate-300 flex items-center gap-2">
-                    <Icons.Map className="text-slate-200" size={18} />
-                    Location-based Hunt
+          <div className="inspector__scroll">
+            {/* STEP 1 — Mode & Loot */}
+            <section className={`step-card ${openSteps.mode ? 'step-card--active' : ''}`}>
+              <button
+                type="button"
+                className="step-card__head"
+                onClick={() => toggleStep('mode')}
+                aria-expanded={openSteps.mode}
+              >
+                <span className="step-card__num step-card__num--done">1</span>
+                <span className="step-card__title-wrap">
+                  <span className="step-card__title">Mode &amp; Loot</span>
+                  <span className="step-card__summary">
+                    {currentHuntType === 'geolocation' ? 'GPS Map' : `Proximity (${proximityRadiusFt}ft)`} ·{' '}
+                    {currentLootType === 'giftCard' ? 'Gift Card' : 'Gold Coin'}
                   </span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="huntType"
-                    value="proximity"
-                    checked={currentHuntType === 'proximity'}
-                    onChange={(e) => handleHuntTypeChange(e.target.value as 'geolocation' | 'proximity')}
-                    className="w-4 h-4"
-                    style={{ accentColor: 'var(--accent-violet)' }}
-                  />
-                  <span className="ml-3 text-slate-300 flex items-center gap-2">
-                    <Icons.Proximity className="text-slate-200" size={18} />
-                    Proximity Hunt
-                  </span>
-                </label>
-              </div>
-            </div>
+                </span>
+                <Icons.Caret
+                  size={16}
+                  className={`step-card__chevron ${openSteps.mode ? 'step-card__chevron--open' : ''}`}
+                />
+              </button>
 
-            {/* Loot Type Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Loot Type
-              </label>
-              <div className="space-y-3">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="lootType"
-                    value="coin"
-                    checked={currentLootType === 'coin'}
-                    onChange={(e) => setCurrentLootType(e.target.value)}
-                    className="w-4 h-4"
-                    style={{ accentColor: 'var(--accent-violet)' }}
-                  />
-                  <span className="ml-3 text-slate-300 flex items-center gap-2">
-                    <Icons.Treasure className="text-amber-300" size={18} />
-                    Coin
-                  </span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="lootType"
-                    value="giftCard"
-                    checked={currentLootType === 'giftCard'}
-                    onChange={(e) => setCurrentLootType(e.target.value)}
-                    className="w-4 h-4"
-                    style={{ accentColor: 'var(--accent-violet)' }}
-                  />
-                  <span className="ml-3 text-slate-300 flex items-center gap-2">
-                    <Icons.Sparkle className="text-emerald-300" size={18} />
-                    Gift Card
-                  </span>
-                </label>
-              </div>
-            </div>
+              {openSteps.mode && (
+                <div className="step-card__body">
+                  <div className="segmented" role="group" aria-label="Hunt format" style={{ marginTop: '0.55rem' }}>
+                    <button
+                      type="button"
+                      className="segmented__opt"
+                      aria-pressed={currentHuntType === 'geolocation'}
+                      onClick={() => handleHuntTypeChange('geolocation')}
+                    >
+                      <Icons.Map size={16} />
+                      GPS Map
+                    </button>
+                    <button
+                      type="button"
+                      className="segmented__opt"
+                      aria-pressed={currentHuntType === 'proximity'}
+                      onClick={() => handleHuntTypeChange('proximity')}
+                    >
+                      <Icons.Proximity size={16} />
+                      Proximity
+                    </button>
+                  </div>
 
-            {/* Hunt Details */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Hunt Name *
-              </label>
-              <input
-                type="text"
-                value={huntName}
-                onChange={(e) => setHuntName(e.target.value)}
-                placeholder="Enter hunt name..."
-                className="input text-sm"
-                maxLength={100}
-                required
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Your Name *
-              </label>
-              <input
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                placeholder="Your name..."
-                className="input text-sm"
-                maxLength={100}
-                required
-              />
-            </div>
-
-            {/* Contact Information */}
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
-                <Icons.User className="text-slate-200" size={20} />
-                Contact Information
-              </h4>
-
-              {/* Existing Contact Information Toggle */}
-              <div className="space-y-4">
-                {existingUserData && (existingUserData.phone || existingUserData.email) ? (
-                  <div className="contact-card">
-                    <div className="contact-card__header">
-                      <div className="contact-card__title">
-                        <Icons.Users className="contact-card__icon text-accent-cyan" size={20} />
-                        Save Contact Info
-                      </div>
-                      <span className="contact-card__badge">Auto-fill ready</span>
+                  {currentHuntType === 'proximity' && (
+                    <div className="radius-grid" role="group" aria-label="Proximity radius">
+                      {PROXIMITY_RADIUS_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.ft}
+                          type="button"
+                          className="radius-pill"
+                          aria-pressed={proximityRadiusFt === opt.ft}
+                          onClick={() => setProximityRadiusFt(opt.ft)}
+                        >
+                          <span className="radius-pill__ft">{opt.ft}ft</span>
+                          <span className="radius-pill__tag">{opt.sub}</span>
+                        </button>
+                      ))}
                     </div>
-                    <div className="contact-card__actions">
+                  )}
+
+                  <div className="loot-picker" role="group" aria-label="Loot brush type">
+                    <button
+                      type="button"
+                      className="loot-tile"
+                      aria-pressed={currentLootType === 'coin'}
+                      onClick={() => setCurrentLootType('coin')}
+                    >
+                      <span className="loot-tile__badge">CASH</span>
+                      <LootToken3D type="coin" size="md" />
+                      <span className="loot-tile__name">Gold Coin</span>
+                      <span className="loot-tile__desc">Cash &amp; bounty drops</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="loot-tile loot-tile--epic"
+                      aria-pressed={currentLootType === 'giftCard'}
+                      onClick={() => setCurrentLootType('giftCard')}
+                    >
+                      <span className="loot-tile__badge">EPIC</span>
+                      <LootToken3D type="giftCard" size="md" />
+                      <span className="loot-tile__name">Gift Card</span>
+                      <span className="loot-tile__desc">Tickets, swag &amp; perks</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* STEP 2 — Hunt Details */}
+            <section className={`step-card ${openSteps.details ? 'step-card--active' : ''}`}>
+              <button
+                type="button"
+                className="step-card__head"
+                onClick={() => toggleStep('details')}
+                aria-expanded={openSteps.details}
+              >
+                <span className={`step-card__num ${detailsDone ? 'step-card__num--done' : ''}`}>
+                  {detailsDone ? <Icons.Check size={14} weight="fill" /> : '2'}
+                </span>
+                <span className="step-card__title-wrap">
+                  <span className="step-card__title">Hunt Identity</span>
+                  <span className="step-card__summary">
+                    {detailsDone ? `${huntName} · by ${userName}` : 'Name your quest & host tag'}
+                  </span>
+                </span>
+                <Icons.Caret
+                  size={16}
+                  className={`step-card__chevron ${openSteps.details ? 'step-card__chevron--open' : ''}`}
+                />
+              </button>
+
+              {openSteps.details && (
+                <div className="step-card__body">
+                  <div className="field">
+                    <label className="field__label" htmlFor="hunt-name">
+                      <span>
+                        Hunt name <span className="field__req">*</span>
+                      </span>
+                    </label>
+                    <input
+                      id="hunt-name"
+                      type="text"
+                      value={huntName}
+                      onChange={(e) => setHuntName(e.target.value)}
+                      onBlur={() => setTouched((prev) => ({ ...prev, huntName: true }))}
+                      placeholder="Central Park Sunset Cash Run"
+                      className={`input ${showError('huntName', isHuntNameMissing) ? 'input--invalid' : ''}`}
+                      maxLength={100}
+                    />
+                    {showError('huntName', isHuntNameMissing) && (
+                      <p className="field__error">Give your treasure hunt an exciting name.</p>
+                    )}
+                  </div>
+
+                  <div className="field">
+                    <label className="field__label" htmlFor="user-name">
+                      <span>
+                        Host name <span className="field__req">*</span>
+                      </span>
+                    </label>
+                    <input
+                      id="user-name"
+                      type="text"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      onBlur={() => setTouched((prev) => ({ ...prev, userName: true }))}
+                      placeholder="Your player tag"
+                      className={`input ${showError('userName', isUserNameMissing) ? 'input--invalid' : ''}`}
+                      maxLength={100}
+                    />
+                    {showError('userName', isUserNameMissing) && (
+                      <p className="field__error">Shown to players joining your hunt.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* STEP 3 — Winner Contact (Smart Auto-Collapse) */}
+            <section className={`step-card ${openSteps.contact ? 'step-card--active' : ''}`}>
+              <button
+                type="button"
+                className="step-card__head"
+                onClick={() => toggleStep('contact')}
+                aria-expanded={openSteps.contact}
+              >
+                <span className={`step-card__num ${contactDone ? 'step-card__num--done' : ''}`}>
+                  {contactDone ? <Icons.Check size={14} weight="fill" /> : '3'}
+                </span>
+                <span className="step-card__title-wrap">
+                  <span className="step-card__title">Winner Contact</span>
+                  <span className="step-card__summary">
+                    {contactDone
+                      ? `${preferredContactMethod === 'phone' ? creatorPhone : creatorEmail}`
+                      : 'How winners reach you for prizes'}
+                  </span>
+                </span>
+                <span className="step-card__status">
+                  {contactDone ? (
+                    <span className="badge badge--meadow">Saved</span>
+                  ) : (
+                    <span className="badge badge--gold">Required</span>
+                  )}
+                  <Icons.Caret
+                    size={16}
+                    className={`step-card__chevron ${openSteps.contact ? 'step-card__chevron--open' : ''}`}
+                  />
+                </span>
+              </button>
+
+              {openSteps.contact && (
+                <div className="step-card__body">
+                  {existingUserData && (existingUserData.phone || existingUserData.email) && (
+                    <div
+                      className="segmented"
+                      role="group"
+                      aria-label="Contact source"
+                      style={{ marginTop: '0.6rem' }}
+                    >
                       <button
                         type="button"
+                        className="segmented__opt"
+                        aria-pressed={useExistingContact}
                         onClick={() => handleContactMethodToggle(true)}
-                        className={`contact-card__button ${useExistingContact ? 'is-active' : ''}`}
                       >
-                        Use Saved
+                        Saved profile
                       </button>
                       <button
                         type="button"
+                        className="segmented__opt"
+                        aria-pressed={!useExistingContact}
                         onClick={() => handleContactMethodToggle(false)}
-                        className={`contact-card__button ${!useExistingContact ? 'is-active' : ''}`}
                       >
-                        Clear & Edit
+                        Custom
                       </button>
                     </div>
-                    <div className="mt-4">
-                      {renderContactFields()}
+                  )}
+
+                  <div className="field">
+                    <label className="field__label" htmlFor="creator-phone">
+                      <span>
+                        Phone <span className="field__req">*</span>
+                      </span>
+                    </label>
+                    <input
+                      id="creator-phone"
+                      type="tel"
+                      value={creatorPhone}
+                      onChange={(e) => setCreatorPhone(e.target.value)}
+                      onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
+                      placeholder="(555) 123-4567"
+                      className={`input ${showError('phone', isPhoneMissing) ? 'input--invalid' : ''}`}
+                      readOnly={useExistingContact && Boolean(existingUserData?.phone)}
+                    />
+                    {showError('phone', isPhoneMissing) && (
+                      <p className="field__error">Required for SMS hunt &amp; winner alerts.</p>
+                    )}
+                  </div>
+
+                  <div className="field">
+                    <label className="field__label" htmlFor="creator-email">
+                      <span>
+                        Email <span className="field__req">*</span>
+                      </span>
+                    </label>
+                    <input
+                      id="creator-email"
+                      type="email"
+                      value={creatorEmail}
+                      onChange={(e) => setCreatorEmail(e.target.value)}
+                      onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
+                      placeholder="you@example.com"
+                      className={`input ${showError('email', isEmailMissing) ? 'input--invalid' : ''}`}
+                      readOnly={useExistingContact && Boolean(existingUserData?.email)}
+                    />
+                    {showError('email', isEmailMissing) && (
+                      <p className="field__error">Required to receive your hunt link.</p>
+                    )}
+                  </div>
+
+                  <div className="field">
+                    <span className="field__label">Preferred winner contact</span>
+                    <div className="radio-row">
+                      <button
+                        type="button"
+                        className="radio-chip"
+                        aria-pressed={preferredContactMethod === 'phone'}
+                        onClick={() => setPreferredContactMethod('phone')}
+                      >
+                        <Icons.Phone size={14} />
+                        Phone
+                      </button>
+                      <button
+                        type="button"
+                        className="radio-chip"
+                        aria-pressed={preferredContactMethod === 'email'}
+                        onClick={() => setPreferredContactMethod('email')}
+                      >
+                        <Icons.Email size={14} />
+                        Email
+                      </button>
                     </div>
                   </div>
-                ) : (
-                  renderContactFields()
-                )}
-
-                <div>
-                  <label className="block text-xs text-slate-400 mb-2">Preferred Contact</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="preferredContactMethod"
-                        value="phone"
-                        checked={preferredContactMethod === 'phone'}
-                        onChange={(e) => setPreferredContactMethod(e.target.value as 'phone')}
-                        className="w-3 h-3"
-                        style={{ accentColor: 'var(--accent-violet)' }}
-                      />
-                      <span className="ml-2 text-xs text-slate-300 flex items-center gap-1">
-                        <Icons.Phone className="text-slate-300" size={14} />
-                        Phone
-                      </span>
-                    </label>
-                    
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="preferredContactMethod"
-                        value="email"
-                        checked={preferredContactMethod === 'email'}
-                        onChange={(e) => setPreferredContactMethod(e.target.value as 'email')}
-                        className="w-3 h-3"
-                        style={{ accentColor: 'var(--accent-violet)' }}
-                      />
-                      <span className="ml-2 text-xs text-slate-300 flex items-center gap-1">
-                        <Icons.Email className="text-slate-300" size={14} />
-                        Email
-                      </span>
-                    </label>
-                  </div>
                 </div>
-              </div>
-            </div>
+              )}
+            </section>
           </div>
 
-          {/* Bottom Action Button - Fixed at bottom */}
-          <div className="flex-shrink-0 p-6 border-t border-slate-600/40">
-            {/* Validation Messages */}
-            {hasValidationErrors && (
-              <div className="mb-3 p-3 bg-red-500/10 border border-red-400/30 rounded-lg">
-                <p className="text-xs text-red-300 mb-1 font-medium">Please complete the following:</p>
-                <ul className="text-xs text-red-200 space-y-1 ml-4 list-disc">
-                  {isHuntNameMissing && <li>Enter a hunt name</li>}
-                  {isUserNameMissing && <li>Enter your name</li>}
-                  {isPhoneMissing && <li>Enter your phone number</li>}
-                  {isEmailMissing && <li>Enter your email address</li>}
-                </ul>
+          {/* Sticky Publish Footer */}
+          <div className="actionbar">
+            {readyStepsCount < 4 && (
+              <div className="todo-chips" aria-label="Remaining steps">
+                {!pinsDone && (
+                  <button
+                    type="button"
+                    className="todo-chip"
+                    onClick={() => {
+                      setMobilePane('canvas');
+                      pushToast(
+                        currentHuntType === 'geolocation'
+                          ? 'Click anywhere on the map to drop loot!'
+                          : 'Click inside the green sonar ring to drop loot!',
+                        'info'
+                      );
+                    }}
+                  >
+                    <Icons.Pin size={12} weight="fill" />
+                    Drop 1+ pin
+                  </button>
+                )}
+                {!detailsDone && (
+                  <button
+                    type="button"
+                    className="todo-chip"
+                    onClick={() => focusStep('details', isHuntNameMissing ? 'hunt-name' : 'user-name')}
+                  >
+                    <Icons.Sparkle size={12} weight="fill" />
+                    {isHuntNameMissing ? 'Name hunt' : 'Add host name'}
+                  </button>
+                )}
+                {!contactDone && (
+                  <button
+                    type="button"
+                    className="todo-chip"
+                    onClick={() => focusStep('contact', isPhoneMissing ? 'creator-phone' : 'creator-email')}
+                  >
+                    <Icons.Phone size={12} weight="fill" />
+                    Add contact
+                  </button>
+                )}
               </div>
             )}
 
             <button
-              className={`btn btn-primary w-full text-base py-3 justify-center gap-2 ${encourageButtonDisabled ? 'opacity-75 cursor-not-allowed' : ''}`}
+              type="button"
+              className="btn btn--primary btn--lg btn--block"
               onClick={generateLootLink}
-              disabled={encourageButtonDisabled}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <div className="spinner" style={{ width: '22px', height: '22px' }} />
-                  Generating Hunt...
+                  <span className="spinner" style={{ width: 16, height: 16, borderTopColor: '#FFFDF8' }} />
+                  Launching Drop…
                 </>
               ) : (
                 <>
-                  <Icons.Sparkle className="text-slate-100" size={20} />
-                  Encourage Looting
+                  <Icons.Lightning size={19} weight="fill" />
+                  Drop Hunt Live
                 </>
               )}
             </button>
-
-            {/* Result Area */}
-            {generatedUrl && (
-              <div className="mt-4 card p-4">
-                <h4 className="text-sm font-medium text-slate-100 mb-3 flex items-center gap-2">
-                  <Icons.Check className="text-emerald-300" size={18} />
-                  Hunt Ready!
-                </h4>
-                
-                <div className="bg-black/30 rounded-lg p-3 mb-3 border border-white/10">
-                  <div className="text-xs text-slate-400 mb-1 uppercase tracking-wide">Share this link:</div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <a
-                      href={generatedUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-slate-100 hover:text-accent-cyan font-mono break-all flex-1 underline"
-                    >
-                      {generatedUrl}
-                    </a>
-                    <button
-                      onClick={() => copyToClipboard(generatedUrl)}
-                      className={`px-2 py-1 rounded text-xs transition-colors flex items-center justify-center ${copyStatus === 'copied' ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40' : 'bg-white/10 text-slate-200 border border-white/10 hover:bg-white/20'}`}
-                      disabled={copyStatus === 'copied'}
-                    >
-                      {copyStatus === 'copied' ? (
-                        <Icons.Check className="text-emerald-200" size={16} />
-                      ) : (
-                        <Icons.Copy className="text-slate-200" size={16} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="text-xs text-slate-400">
-                  Share with friends to join your hunt!
-                </div>
-              </div>
-            )}
           </div>
-        </div>
+        </aside>
 
-        {/* Right Panel - Hunt Interface and Locations */}
-        <div className="flex-1 flex flex-col">
+        {/* ---------------- Full-Bleed Interactive Field Canvas ---------------- */}
+        <section
+          className={`canvas ${mobilePane === 'setup' ? 'mobile-hidden' : ''}`}
+          aria-label="Loot placement canvas"
+        >
+          {/* Floating Top HUD */}
+          <div className="canvas__bar">
+            <div className="hud">
+              <Icons.Pin size={16} weight="fill" style={{ color: 'var(--blaze)' }} />
+              <span className="hud__count">{activePinCount}</span>
+              <span>{activePinCount === 1 ? 'drop' : 'drops'}</span>
+              <span className="hud__sep" />
+              <span className="hud__hint">
+                {currentHuntType === 'geolocation'
+                  ? 'Click map to drop · Drag pins to fine-tune'
+                  : `Click inside the ${proximityRadiusFt}ft sonar ring`}
+              </span>
+            </div>
+
+            {/* Instant Canvas Loot Brush Toggle */}
+            <div className="brush-pill" role="group" aria-label="Active loot brush">
+              <button
+                type="button"
+                className="brush-pill__btn brush-pill__btn--coin"
+                aria-pressed={currentLootType === 'coin'}
+                onClick={() => setCurrentLootType('coin')}
+              >
+                <Icons.Coin size={15} weight="fill" style={{ color: 'var(--gold-dark)' }} />
+                Coin
+              </button>
+              <button
+                type="button"
+                className="brush-pill__btn brush-pill__btn--gift"
+                aria-pressed={currentLootType === 'giftCard'}
+                onClick={() => setCurrentLootType('giftCard')}
+              >
+                <Icons.Gift size={15} weight="fill" style={{ color: 'var(--epic-dark)' }} />
+                Gift Card
+              </button>
+            </div>
+
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
+              {currentHuntType === 'geolocation' && (
+                <button
+                  type="button"
+                  className="btn btn--subtle btn--sm"
+                  onClick={() => mapComponentRef.current?.recenterToUser()}
+                  title="Jump to my current GPS location"
+                >
+                  <Icons.Locate size={15} weight="fill" style={{ color: 'var(--sky)' }} />
+                  My GPS
+                </button>
+              )}
+              {activePinCount > 0 && (
+                <button
+                  type="button"
+                  className="btn btn--subtle btn--sm"
+                  onClick={undoLastPin}
+                  title="Undo last placed pin"
+                >
+                  <Icons.Refresh size={15} />
+                  Undo
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive Stage */}
           {currentHuntType === 'geolocation' ? (
-            <div className="flex-1 flex flex-col lg:flex-row">
-              {/* Locations List */}
-              <div className="results-list overflow-y-auto w-full lg:w-80 lg:max-h-full order-2 lg:order-1">
-                <div className="p-4">
-                  <h4 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
-                    <Icons.Treasure className="text-amber-300" size={22} />
-                    Loot Locations
-                    <span className="text-sm text-slate-400">({mapMarkers.length})</span>
-                  </h4>
-
-                  {mapMarkers.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 flex flex-col items-center gap-2">
-                      <Icons.Target className="text-slate-500" size={28} />
-                      <p className="mt-2 text-sm">Click on the map to place your first treasure location!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {mapMarkers.map((marker, index) => (
-                        <div key={index} className="result-card p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="font-medium text-slate-100 flex items-center gap-2">
-                              <Icons.Pin className="text-slate-300" size={16} />
-                              Location #{index + 1}
-                            </div>
-                            <span
-                              className={`status-badge ${
-                                marker.objectType === 'giftCard' ? 'status-badge--gift' : 'status-badge--coin'
-                              }`}
-                            >
-                              <span
-                                className="status-badge__icon"
-                                role="img"
-                                aria-label={marker.objectType === 'giftCard' ? 'Gift card loot' : 'Coin loot'}
-                              >
-                                {marker.objectType === 'giftCard' ? '🎁' : '🪙'}
-                              </span>
-                              <span className="status-badge__text">
-                                {marker.objectType === 'giftCard' ? 'Gift Card' : 'Coin'}
-                              </span>
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-300 font-mono">
-                            {marker.lat.toFixed(6)}, {marker.lng.toFixed(6)}
-                          </div>
-                        </div>
-                      ))}
-                      
-                      <div className="pt-3 border-t border-white/10">
-                        <div className="flex gap-2">
-                          <button 
-                            className="btn btn-secondary flex-1 text-sm py-2 justify-center gap-2"
-                            onClick={() => mapComponentRef.current?.deleteLastPin()}
-                          >
-                            <Icons.Trash className="text-slate-200" size={18} />
-                            Delete Last
-                          </button>
-                          <button 
-                            className="btn btn-danger flex-1 text-sm py-2 justify-center gap-2"
-                            onClick={() => mapComponentRef.current?.clearAllPins()}
-                          >
-                            <Icons.Close className="text-slate-100" size={18} />
-                            Clear All
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Hunt Interface */}
-              <div className="flex-1 map-panel relative min-h-[500px] order-1 lg:order-2">
-                <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
-                  <MapComponent ref={mapComponentRef} onMarkersChange={setMapMarkers} currentLootType={currentLootType} />
-                </div>
-              </div>
+            <div className="canvas__stage">
+              <MapComponent
+                ref={mapComponentRef}
+                onMarkersChange={setMapMarkers}
+                currentLootType={currentLootType}
+                onLocationError={(msg) => pushToast(msg, 'warn')}
+              />
             </div>
           ) : (
-            <div className="flex-1 flex">
-              <div className="flex-1 map-panel relative min-h-[500px]">
-                <div
-                  className="h-full w-full overflow-auto px-4 py-6"
-                  style={{
-                    background: 'radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.18), transparent 60%), radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.16), transparent 55%), rgba(9, 14, 32, 0.85)',
-                    borderRadius: 'inherit'
-                  }}
-                >
-                  <div className="proximity-stack">
-                    <div className="proximity-radius-align">
-                      <div className="proximity-radius-panel">
-                        <div className="card card-panel mb-4 proximity-radius-card">
-                          <div className="card-section card-section--compact">
-                            <div className="flex flex-col gap-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <p className="text-xs uppercase tracking-wide text-slate-400">Placement Radius</p>
-                                  <p className="mt-1 text-sm text-slate-100">
-                                    <span className="font-semibold">{proximityRadiusFt}</span> ft
-                                    <span className="ml-2 text-xs text-slate-400">closer = harder</span>
-                                  </p>
-                                </div>
-                                <span className="proximity-radius__badge">
-                                  {proximityRadiusFt === 10 ? 'Tight' : proximityRadiusFt === 50 ? 'Medium' : 'Wide'}
-                                </span>
-                              </div>
-
-                              <div className="proximity-radius">
-                                <input
-                                  className="proximity-radius__range"
-                                  type="range"
-                                  min={0}
-                                  max={proximityRadiusOptions.length - 1}
-                                  step={1}
-                                  value={proximityRadiusIndex}
-                                  style={{ '--percent': `${proximityRadiusPercent}%` } as React.CSSProperties}
-                                  onChange={(event) => {
-                                    const nextIndex = Number(event.target.value);
-                                    const nextValue = proximityRadiusOptions[nextIndex] ?? 100;
-                                    setProximityRadiusFt(nextValue);
-                                  }}
-                                  aria-label="Proximity placement radius"
-                                  aria-valuetext={`${proximityRadiusFt} feet`}
-                                />
-                                <div className="proximity-radius__ticks" aria-hidden="true">
-                                  {proximityRadiusOptions.map((radius) => (
-                                    <button
-                                      key={radius}
-                                      type="button"
-                                      className={`proximity-radius__tick ${proximityRadiusFt === radius ? 'is-active' : ''}`}
-                                      onClick={() => setProximityRadiusFt(radius)}
-                                    >
-                                      {radius} ft
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <ProximityComponent
-                      ref={proximityComponentRef}
-                      currentLootType={currentLootType}
-                      proximityRadiusFt={proximityRadiusFt}
-                    />
-                  </div>
-                  <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                    <button
-                      className="btn btn-secondary w-full justify-center gap-2"
-                      onClick={() => proximityComponentRef.current?.deleteLastProximityMarker()}
-                    >
-                      <Icons.Trash className="text-slate-200" size={18} />
-                      Delete Last Marker
-                    </button>
-                    <button
-                      className="btn btn-danger w-full justify-center gap-2"
-                      onClick={() => proximityComponentRef.current?.clearAllProximityMarkers()}
-                    >
-                      <Icons.Close className="text-slate-100" size={18} />
-                      Clear All Markers
-                    </button>
-                  </div>
-                </div>
+            <div className="canvas__stage">
+              <div className="canvas__proximity-frame">
+                <ProximityComponent
+                  ref={proximityComponentRef}
+                  currentLootType={currentLootType}
+                  proximityRadiusFt={proximityRadiusFt}
+                  onMarkersChange={setProximityMarkers}
+                  onOutOfBounds={(r) =>
+                    pushToast(`Tap inside the ${r}ft sonar ring to drop loot.`, 'warn')
+                  }
+                />
               </div>
             </div>
           )}
-        </div>
-      </main>
 
-      {/* Original Hunt Configuration (Hidden for now) */}
-      <div className="hidden">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Hunt Configuration Panel */}
-          <div className="card p-4">
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <Icons.Target className="text-slate-200" size={20} />
-              Hunt Configuration
-            </h3>
+          {/* Collapsible Floating Loot Manifest Drawer (Works for BOTH Map & Proximity!) */}
+          <div className="dock">
+            <div
+              className="dock__head"
+              onClick={() => setDockOpen((o) => !o)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setDockOpen((o) => !o);
+                }
+              }}
+              aria-expanded={dockOpen}
+            >
+              <Icons.Treasure size={16} weight="fill" style={{ color: 'var(--gold-dark)' }} />
+              <span className="dock__title">Loot Stash</span>
+              <span className="dock__badge">{activePinCount}</span>
+              <span className="dock__toggle" aria-hidden="true">
+                <Icons.Caret
+                  size={15}
+                  style={{
+                    transform: dockOpen ? 'none' : 'rotate(180deg)',
+                    transition: 'transform 0.2s',
+                  }}
+                />
+              </span>
+            </div>
+
+            {dockOpen && (
+              <>
+                <div className="dock__body">
+                  {activePinCount === 0 ? (
+                    <div className="empty" style={{ padding: '1.1rem 0.75rem' }}>
+                      <span className="empty__icon" style={{ width: 36, height: 36 }}>
+                        <Icons.Target size={18} />
+                      </span>
+                      <span className="empty__title" style={{ fontSize: '0.86rem' }}>
+                        No loot placed yet
+                      </span>
+                      <span className="empty__text" style={{ fontSize: '0.73rem' }}>
+                        {currentHuntType === 'geolocation'
+                          ? 'Click anywhere on the map to hide your first coin or gift card.'
+                          : 'Click inside the radar dish to place loot relative to players.'}
+                      </span>
+                    </div>
+                  ) : currentHuntType === 'geolocation' ? (
+                    mapMarkers.map((marker, index) => {
+                      const isGift = marker.objectType === 'giftCard';
+                      return (
+                        <div key={index} className="manifest-row">
+                          <span
+                            className={`manifest-row__idx ${isGift ? 'manifest-row__idx--gift' : ''}`}
+                          >
+                            {index + 1}
+                          </span>
+                          <span className="manifest-row__main">
+                            <span className="manifest-row__coord">
+                              {marker.lat.toFixed(5)}, {marker.lng.toFixed(5)}
+                            </span>
+                            <span className="manifest-row__sub">
+                              {isGift ? 'Rare Gift Card' : 'Gold Coin'}
+                            </span>
+                          </span>
+                          {isGift ? (
+                            <Icons.Gift size={15} weight="fill" style={{ color: 'var(--epic-dark)' }} />
+                          ) : (
+                            <Icons.Coin size={15} weight="fill" style={{ color: 'var(--gold-dark)' }} />
+                          )}
+                          <button
+                            type="button"
+                            className="manifest-row__del"
+                            onClick={() => removePinAt(index)}
+                            aria-label={`Remove pin ${index + 1}`}
+                            title="Remove pin"
+                          >
+                            <Icons.Trash size={14} />
+                          </button>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    proximityMarkers.map((marker, index) => {
+                      const isGift = marker.objectType === 'giftCard';
+                      return (
+                        <div key={index} className="manifest-row">
+                          <span
+                            className={`manifest-row__idx ${isGift ? 'manifest-row__idx--gift' : ''}`}
+                          >
+                            {index + 1}
+                          </span>
+                          <span className="manifest-row__main">
+                            <span className="manifest-row__coord">
+                              {marker.distanceFt.toFixed(1)}ft · {marker.directionStr}
+                            </span>
+                            <span className="manifest-row__sub">
+                              {isGift ? 'Rare Gift Card' : 'Gold Coin'}
+                            </span>
+                          </span>
+                          {isGift ? (
+                            <Icons.Gift size={15} weight="fill" style={{ color: 'var(--epic-dark)' }} />
+                          ) : (
+                            <Icons.Coin size={15} weight="fill" style={{ color: 'var(--gold-dark)' }} />
+                          )}
+                          <button
+                            type="button"
+                            className="manifest-row__del"
+                            onClick={() => removePinAt(index)}
+                            aria-label={`Remove marker ${index + 1}`}
+                            title="Remove marker"
+                          >
+                            <Icons.Trash size={14} />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {activePinCount > 0 && (
+                  <div className="dock__foot">
+                    <button type="button" className="btn btn--subtle btn--xs btn--block" onClick={undoLastPin}>
+                      <Icons.Refresh size={13} />
+                      Undo last
+                    </button>
+                    <button type="button" className="btn btn--danger btn--xs btn--block" onClick={clearPins}>
+                      <Icons.Trash size={13} />
+                      Clear all
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* ---------------- Celebratory Hunt Launch Modal with Scannable QR ---------------- */}
+      {generatedUrl && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Hunt published"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setGeneratedUrl('');
+              setCopyStatus('idle');
+            }
+          }}
+        >
+          <div className="modal-card">
+            <div className="launch__hero">
+              <div className="confetti-burst" aria-hidden="true">
+                {CONFETTI_PIECES.map((c, i) => (
+                  <span
+                    key={i}
+                    className="confetti-piece"
+                    style={{ left: c.left, background: c.color, animationDelay: c.delay }}
+                  />
+                ))}
+              </div>
+              <LootToken3D type={currentLootType} size="lg" />
+              <h2 className="launch__title">Your Drop is Live!</h2>
+              <p className="launch__sub">
+                {huntName ? `"${huntName}"` : 'Your hunt'} has {activePinCount}{' '}
+                {activePinCount === 1 ? 'hidden stash' : 'hidden stashes'} waiting to be claimed.
+              </p>
+            </div>
+
+            <div className="launch__body">
+              <div className="launch__grid">
+                <div className="qr-pass__frame">
+                  <QRCodeSvg value={generatedUrl} size={132} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: 0 }}>
+                  <span className="badge badge--meadow" style={{ alignSelf: 'flex-start' }}>
+                    <Icons.Qr size={13} />
+                    Scan on iPhone
+                  </span>
+                  <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink-2)' }}>
+                    Point an iPhone camera at this code to jump straight into the Loota AR app, or share the link below.
+                  </p>
+                </div>
+              </div>
+
+              <div className="linkbox">
+                <Icons.Share size={15} style={{ color: 'var(--ink-3)', flexShrink: 0 }} />
+                <a
+                  href={generatedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="linkbox__url"
+                >
+                  {generatedUrl}
+                </a>
+                <button
+                  type="button"
+                  className="btn btn--subtle btn--xs"
+                  onClick={() => copyToClipboard(generatedUrl)}
+                >
+                  {copyStatus === 'copied' ? (
+                    <>
+                      <Icons.Check size={13} weight="fill" style={{ color: 'var(--meadow-dark)' }} />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Icons.Copy size={13} />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="launch__actions">
+                <button type="button" className="btn btn--primary" onClick={shareHunt}>
+                  <Icons.Share size={16} />
+                  Share with Crew
+                </button>
+                <a
+                  className="btn btn--gold"
+                  href={generatedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Icons.External size={16} />
+                  Open Command Center
+                </a>
+              </div>
+
+              <div style={{ textAlign: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--xs"
+                  onClick={() => {
+                    setGeneratedUrl('');
+                    setCopyStatus('idle');
+                  }}
+                >
+                  Keep editing in studio
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
