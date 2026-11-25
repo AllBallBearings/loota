@@ -2,9 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  env: {
-    NEXT_PUBLIC_API_KEY_SECRET: process.env.API_KEY_SECRET,
-  },
   async headers() {
     return [
       {
@@ -22,6 +19,15 @@ const nextConfig: NextConfig = {
           {
             key: 'Content-Type',
             value: 'application/json',
+          },
+        ],
+      },
+      {
+        source: '/external/xr/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
           },
         ],
       },

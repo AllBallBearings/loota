@@ -113,11 +113,7 @@ export default function HuntCreatorStudio() {
     const checkExistingUser = async () => {
       const creatorId = 'a1b2c3d4-e5f6-7890-1234-000000000001';
       try {
-        const response = await fetch(`/api/users/${creatorId}`, {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
-          },
-        });
+        const response = await fetch(`/api/users/${creatorId}`);
         if (response.ok) {
           const userData = await response.json();
           if (userData.phone || userData.email) {

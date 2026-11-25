@@ -27,11 +27,10 @@ export const JoinHuntButton: React.FC<JoinHuntButtonProps> = ({
     setIsJoining(true);
 
     try {
-      const response = await fetch(`/api/hunts/${huntId}/participants`, {
+      const response = await fetch(`/api/client/hunts/${huntId}/participants`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_SECRET || '',
         },
         body: JSON.stringify({
           userId: currentUserId,
