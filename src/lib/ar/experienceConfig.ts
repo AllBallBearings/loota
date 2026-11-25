@@ -77,6 +77,7 @@ export const AR_GAMEPLAY_CONFIG = {
     "gpsWarmupMaxMs": 3500,
     "gpsMaxAcceptableAccuracyMeters": 25,
     "localLockRadiusMeters": 15,
+    "farBeaconMinDistanceMeters": 30.48,
     "farBeaconMaxRenderDistanceMeters": 250,
     "walkCalibrationMinDistanceMeters": 8,
     "offscreenNudgeMinDeltaMeters": 3.5,

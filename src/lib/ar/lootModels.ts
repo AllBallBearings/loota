@@ -319,33 +319,183 @@ export function createTrailheadGiftCardMesh(): THREE.Group {
   return root;
 }
 
+function createSoftBeaconTexture(rgb: [number, number, number]): THREE.CanvasTexture {
+  const w = 256;
+  const h = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const img = ctx.createImageData(w, h);
+    const data = img.data;
+    const [r, g, b] = rgb;
+
+    // Smooth 2D Gaussian-feathered vertical light veil:
+    //  - Horizontal falloff dissolves cleanly to 0 before left/right edges
+    //  - Vertical falloff softly blooms around the lower-middle core and fades out at top & bottom
+    for (let y = 0; y < h; y++) {
+      const ny = y / (h - 1); // 0 = top, 1 = bottom
+      // Vertical envelope: smooth rise from bottom (1 -> 0.58) and gentle sky fade toward top (0.58 -> 0)
+      const vBottom = Math.min(1, Math.max(0, (1 - ny) / 0.22));
+      const vTop = Math.min(1, Math.max(0, ny / 0.72));
+      const vSmooth =
+        (vBottom * vBottom * (3 - 2 * vBottom)) *
+        Math.pow(vTop * vTop * (3 - 2 * vTop), 1.35);
+
+      // Soft warm core boost near center-lower region where distance pill sits
+      const coreDist = (ny - 0.56) / 0.24;
+      const coreBoost = 0.65 + 0.55 * Math.exp(-coreDist * coreDist);
+
+      for (let x = 0; x < w; x++) {
+        const nx = (x / (w - 1)) * 2 - 1; // -1..1
+        // Gaussian horizontal feathering (reaches ~0 well before |nx| = 1)
+        const hGauss = Math.exp(-5.2 * nx * nx);
+        // Edge clamp to guarantee exact zero alpha at canvas border
+        const edgeFade = Math.max(0, 1 - Math.pow(Math.abs(nx), 4));
+        const alpha = Math.min(1, vSmooth * hGauss * edgeFade * coreBoost);
+
+        const idx = (y * w + x) * 4;
+        // Brighten core slightly toward sunlit white for a natural atmospheric glow
+        const coreWhite = Math.min(1, alpha * 0.55);
+        data[idx] = Math.round(r + (255 - r) * coreWhite);
+        data[idx + 1] = Math.round(g + (255 - g) * coreWhite);
+        data[idx + 2] = Math.round(b + (255 - b) * coreWhite);
+        data[idx + 3] = Math.round(alpha * 225);
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+export function createFarDistanceLabelSprite(isEpic: boolean): {
+  sprite: THREE.Sprite;
+  updateText: (text: string) => void;
+} {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 96;
+  const ctx = canvas.getContext('2d');
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+
+  let lastText = '';
+
+  const updateText = (text: string) => {
+    if (!ctx || text === lastText) return;
+    lastText = text;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const padX = 18;
+    const padY = 16;
+    const pillW = canvas.width - padX * 2;
+    const pillH = canvas.height - padY * 2;
+
+    // Soft outer glow behind pill
+    ctx.save();
+    ctx.shadowColor = isEpic ? 'rgba(139, 92, 246, 0.55)' : 'rgba(255, 194, 26, 0.65)';
+    ctx.shadowBlur = 18;
+    drawRoundedRect(ctx, padX, padY, pillW, pillH, pillH / 2);
+    ctx.fillStyle = 'rgba(255, 253, 248, 0.92)';
+    ctx.fill();
+    ctx.restore();
+
+    // Trailhead crisp Deep Pine keyline
+    drawRoundedRect(ctx, padX, padY, pillW, pillH, pillH / 2);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = DESIGN_TOKENS.colors.ink;
+    ctx.stroke();
+
+    // Accent dot on left
+    ctx.beginPath();
+    ctx.arc(padX + 28, canvas.height / 2, 8, 0, Math.PI * 2);
+    ctx.fillStyle = isEpic ? DESIGN_TOKENS.colors.epic : DESIGN_TOKENS.colors.gold;
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = DESIGN_TOKENS.colors.ink;
+    ctx.stroke();
+
+    // Crisp monospace distance label
+    ctx.fillStyle = DESIGN_TOKENS.colors.ink;
+    ctx.font = '800 32px "JetBrains Mono", ui-monospace, SFMono-Regular, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, canvas.width / 2 + 12, canvas.height / 2 + 1);
+
+    tex.needsUpdate = true;
+  };
+
+  updateText('100 ft');
+
+  const mat = new THREE.SpriteMaterial({
+    map: tex,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    depthTest: false,
+  });
+  const sprite = new THREE.Sprite(mat);
+  sprite.visible = false;
+  return { sprite, updateText };
+}
+
 export interface LootEntityBundle {
   root: THREE.Group;
   visual: THREE.Group;
   groundShadow: THREE.Mesh;
   focusRing: THREE.Mesh;
   farBeacon: THREE.Mesh;
+  farDistanceSprite: THREE.Sprite;
+  updateFarDistanceText: (text: string) => void;
 }
 
 let sharedShadowTexture: THREE.CanvasTexture | null = null;
+let sharedGoldBeaconTexture: THREE.CanvasTexture | null = null;
+let sharedEpicBeaconTexture: THREE.CanvasTexture | null = null;
 
 /**
  * Builds the complete AR loot entity with:
  *  - Animated visual mesh (Coin or Epic Gift Card)
  *  - Projected soft ground light-pool shadow for spatial stability cues
  *  - Pulsing focus halo ring (shown when targeted in summon hotspot)
- *  - Subtle distant vertical light shaft (shown when pin is >15m away)
+ *  - Soft Gaussian-feathered distant glow + centered distance label (shown >30m in middle third)
  */
 export function createLootEntityBundle(
   objectType: LootObjectType,
   coinStyle: CoinStyle = 'classic'
 ): LootEntityBundle {
   const root = new THREE.Group();
+  const isEpic = objectType === 'giftCard';
 
-  const visual =
-    objectType === 'giftCard'
-      ? createTrailheadGiftCardMesh()
-      : createTrailheadCoinMesh(coinStyle);
+  const visual = isEpic
+    ? createTrailheadGiftCardMesh()
+    : createTrailheadCoinMesh(coinStyle);
   root.add(visual);
 
   // Soft projected ground shadow / glow disc
@@ -368,10 +518,9 @@ export function createLootEntityBundle(
   root.add(groundShadow);
 
   // Focus halo ring (Trailhead Blaze Orange / Gold ring)
-  const ringColor =
-    objectType === 'giftCard'
-      ? DESIGN_TOKENS.colors.epicBright
-      : DESIGN_TOKENS.colors.goldBright;
+  const ringColor = isEpic
+    ? DESIGN_TOKENS.colors.epicBright
+    : DESIGN_TOKENS.colors.goldBright;
   const focusRing = new THREE.Mesh(
     new THREE.RingGeometry(0.32, 0.38, 40),
     new THREE.MeshBasicMaterial({
@@ -384,25 +533,41 @@ export function createLootEntityBundle(
   );
   root.add(focusRing);
 
-  // Distant horizon light shaft (visible when pin is >15m away)
-  const beaconColor =
-    objectType === 'giftCard'
-      ? DESIGN_TOKENS.colors.epic
-      : DESIGN_TOKENS.colors.gold;
+  // Soft Gaussian-feathered vertical glow plane (billboarded around Y in ARViewport)
+  if (!sharedGoldBeaconTexture) {
+    sharedGoldBeaconTexture = createSoftBeaconTexture([255, 198, 42]);
+  }
+  if (!sharedEpicBeaconTexture) {
+    sharedEpicBeaconTexture = createSoftBeaconTexture([167, 139, 250]);
+  }
   const farBeacon = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.55, 16, 16, 1, true),
+    new THREE.PlaneGeometry(1, 2.4),
     new THREE.MeshBasicMaterial({
-      color: new THREE.Color(beaconColor),
+      map: isEpic ? sharedEpicBeaconTexture : sharedGoldBeaconTexture,
       transparent: true,
       opacity: 0.0,
+      blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       depthWrite: false,
     })
   );
-  farBeacon.position.y = 7.0;
+  farBeacon.visible = false;
   root.add(farBeacon);
 
-  return { root, visual, groundShadow, focusRing, farBeacon };
+  // Distance badge centered cleanly inside the soft glow
+  const { sprite: farDistanceSprite, updateText: updateFarDistanceText } =
+    createFarDistanceLabelSprite(isEpic);
+  root.add(farDistanceSprite);
+
+  return {
+    root,
+    visual,
+    groundShadow,
+    focusRing,
+    farBeacon,
+    farDistanceSprite,
+    updateFarDistanceText,
+  };
 }
 
 /**
