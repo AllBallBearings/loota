@@ -28,7 +28,14 @@ interface XR8Global {
       enableLighting?: boolean;
     }) => void;
     pipelineModule: () => unknown;
+    updateCameraProjectionMatrix?: (opts: {
+      origin: THREE.Vector3;
+      facing: THREE.Quaternion;
+    }) => void;
     recenter: () => void;
+  };
+  FullWindowCanvas?: {
+    pipelineModule: () => unknown;
   };
   GlTextureRenderer: {
     pipelineModule: () => unknown;
@@ -111,6 +118,7 @@ export class EighthWallProvider implements ARTrackingProvider {
   private xr8: XR8Global | null = null;
   private running = false;
   private lastFrameMs = 0;
+  private resizeCleanup: (() => void) | null = null;
 
   public async start(params: {
     container: HTMLElement;
@@ -122,8 +130,39 @@ export class EighthWallProvider implements ARTrackingProvider {
       renderer: THREE.WebGLRenderer;
     }) => void;
   }): Promise<void> {
-    const { canvas, callbacks, onSceneReady } = params;
+    const { container, canvas, callbacks, onSceneReady } = params;
     callbacks.onStatusChange?.('initializing', 'Loading 8th Wall 6DoF SLAM runtime…');
+
+    // Size canvas drawing buffer & CSS to fill the full viewport BEFORE XR8 initializes
+    // (otherwise HTML canvas defaults to 300x150 and XR8 renders into the top-left corner).
+    const syncCanvasDimensions = () => {
+      const w = container.clientWidth || window.innerWidth;
+      const h = container.clientHeight || window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const targetW = Math.max(1, Math.round(w * dpr));
+      const targetH = Math.max(1, Math.round(h * dpr));
+
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+
+      const xrScene = this.xr8?.Threejs?.xrScene?.();
+      if (xrScene?.renderer) {
+        xrScene.renderer.setSize(targetW, targetH, false);
+      }
+    };
+
+    syncCanvasDimensions();
+    const onWindowResize = () => syncCanvasDimensions();
+    window.addEventListener('resize', onWindowResize);
+    window.addEventListener('orientationchange', onWindowResize);
+    this.resizeCleanup = () => {
+      window.removeEventListener('resize', onWindowResize);
+      window.removeEventListener('orientationchange', onWindowResize);
+    };
 
     window.THREE = THREE;
     const XR8 = await loadSelfHostedXR8();
@@ -148,10 +187,15 @@ export class EighthWallProvider implements ARTrackingProvider {
     const customLootaModule = {
       name: 'loota-world-tracking',
       onStart: () => {
+        syncCanvasDimensions();
         const xrScene = XR8.Threejs.xrScene();
         if (!xrScene) return;
         const { scene, camera, renderer } = xrScene;
         camera.position.set(0, 1.6, 0);
+        XR8.XrController.updateCameraProjectionMatrix?.({
+          origin: camera.position,
+          facing: camera.quaternion,
+        });
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.1;
 
@@ -160,6 +204,9 @@ export class EighthWallProvider implements ARTrackingProvider {
           onSceneReady({ scene, camera, renderer });
         }
         callbacks.onStatusChange?.('tracking', '6DoF SLAM active (Absolute Scale)');
+      },
+      onCanvasSizeChange: () => {
+        syncCanvasDimensions();
       },
       onUpdate: () => {
         if (!this.running) return;
@@ -179,12 +226,18 @@ export class EighthWallProvider implements ARTrackingProvider {
       },
     };
 
-    XR8.addCameraPipelineModules([
+    const modules: unknown[] = [];
+    if (XR8.FullWindowCanvas && typeof XR8.FullWindowCanvas.pipelineModule === 'function') {
+      modules.push(XR8.FullWindowCanvas.pipelineModule());
+    }
+    modules.push(
       XR8.GlTextureRenderer.pipelineModule(),
       XR8.Threejs.pipelineModule(),
       XR8.XrController.pipelineModule(),
-      customLootaModule,
-    ]);
+      customLootaModule
+    );
+
+    XR8.addCameraPipelineModules(modules);
 
     this.running = true;
 
@@ -221,6 +274,8 @@ export class EighthWallProvider implements ARTrackingProvider {
 
   public stop(): void {
     this.running = false;
+    this.resizeCleanup?.();
+    this.resizeCleanup = null;
     if (this.xr8) {
       try {
         this.xr8.stop();

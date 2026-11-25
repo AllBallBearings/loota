@@ -50,7 +50,7 @@ function createGeoDemoHuntAround(origin: { lat: number; lng: number }): Pick<Hun
     { east: 0, north: 4.5, type: 'coin' },
     { east: 6.5, north: 5.5, type: 'giftCard' },
     { east: -8.0, north: 9.0, type: 'coin' },
-    { east: 3.0, north: 22.0, type: 'coin' }, // Starts in FAR phase (>15m) to test Local Lock transition!
+    { east: 3.0, north: 38.0, type: 'coin' }, // Starts >30m (~125ft) to test middle-third fading glow & distance label!
   ];
 
   return {

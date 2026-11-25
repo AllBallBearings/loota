@@ -16,7 +16,7 @@ import {
   setupLootLighting,
   type LootEntityBundle,
 } from '@/lib/ar/lootModels';
-import { lerpAngleRad } from '@/lib/ar/geoMath';
+import { formatDistanceFeet, lerpAngleRad } from '@/lib/ar/geoMath';
 import type { SensorHub } from '@/lib/ar/sensorHub';
 import { EighthWallProvider } from '@/lib/ar/providers/eighthWallProvider';
 import { SensorFusionProvider } from '@/lib/ar/providers/sensorFusionProvider';
@@ -54,6 +54,7 @@ interface ActiveEntityRecord {
   summonStartPos: THREE.Vector3 | null;
   summonInitialDist: number;
   summonProgress: number;
+  farBeaconOpacity: number;
 }
 
 export const ARViewport: React.FC<ARViewportProps> = ({
@@ -275,6 +276,7 @@ export const ARViewport: React.FC<ARViewportProps> = ({
             summonStartPos: null,
             summonInitialDist: 0,
             summonProgress: 0,
+            farBeaconOpacity: 0,
           };
           entities.set(anchor.pinId, rec);
         }
@@ -347,13 +349,65 @@ export const ARViewport: React.FC<ARViewportProps> = ({
           );
         }
 
-        // Show subtle distant light pillar when pin is > 15m away
-        const beaconMat = rec.bundle.farBeacon.material as THREE.MeshBasicMaterial;
-        beaconMat.opacity = anchor.phase === 'far' ? 0.24 : 0.0;
-        rec.bundle.groundShadow.visible = anchor.phase === 'locked' && !isBeingSummoned;
-
         // Distance from live camera
         const dist = rec.bundle.root.position.distanceTo(camera.position);
+
+        // Soft fading distant glow + distance badge:
+        // Only appears for truly distant outdoor pins (> 30.48m / 100 ft)
+        // AND only when the pin is inside the middle third of the AR viewport (sx in [1/3, 2/3]).
+        const farMinDist = AR_GAMEPLAY_CONFIG.tracking.farBeaconMinDistanceMeters;
+        let targetBeaconOpacity = 0;
+
+        if (dist > farMinDist) {
+          toEntity.subVectors(rec.basePos, camera.position).normalize();
+          if (camForward.dot(toEntity) > 0.15) {
+            projected.copy(rec.basePos).project(camera);
+            const sx = (projected.x + 1) * 0.5;
+            if (sx >= 1 / 3 && sx <= 2 / 3) {
+              // Smooth edge feathering over 5% inside the middle third so the glow softly blooms in/out
+              const leftFeather = Math.min(1, (sx - 1 / 3) / 0.05);
+              const rightFeather = Math.min(1, (2 / 3 - sx) / 0.05);
+              const edgeFactor = Math.min(leftFeather, rightFeather);
+              targetBeaconOpacity = 0.82 * edgeFactor;
+            }
+          }
+        }
+
+        const fadeRate = Math.min(1, dt * 8);
+        rec.farBeaconOpacity += (targetBeaconOpacity - rec.farBeaconOpacity) * fadeRate;
+
+        const beaconMat = rec.bundle.farBeacon.material as THREE.MeshBasicMaterial;
+        const labelMat = rec.bundle.farDistanceSprite.material as THREE.SpriteMaterial;
+        const showFarGlow = rec.farBeaconOpacity > 0.02;
+
+        rec.bundle.farBeacon.visible = showFarGlow;
+        rec.bundle.farDistanceSprite.visible = showFarGlow;
+
+        if (showFarGlow) {
+          // Scale proportionally to distance so the soft veil & distance pill stay crisp at 100ft–500ft
+          const scaledWidth = Math.max(2.4, dist * 0.12);
+          rec.bundle.farBeacon.scale.set(scaledWidth, scaledWidth, 1);
+          rec.bundle.farBeacon.position.y = scaledWidth * 0.65;
+          // Cylindrical billboard: stays upright while facing the camera horizontally
+          const yawToCam = Math.atan2(
+            camera.position.x - rec.bundle.root.position.x,
+            camera.position.z - rec.bundle.root.position.z
+          );
+          rec.bundle.farBeacon.rotation.set(0, yawToCam, 0);
+          beaconMat.opacity = rec.farBeaconOpacity;
+
+          // Distance readout centered cleanly inside the glowing core
+          const labelW = Math.max(1.8, dist * 0.095);
+          rec.bundle.farDistanceSprite.scale.set(labelW, labelW * (96 / 256), 1);
+          rec.bundle.farDistanceSprite.position.y = scaledWidth * 0.45;
+          rec.bundle.updateFarDistanceText(formatDistanceFeet(dist));
+          labelMat.opacity = Math.min(1, rec.farBeaconOpacity * 1.25);
+        } else {
+          beaconMat.opacity = 0;
+          labelMat.opacity = 0;
+        }
+
+        rec.bundle.groundShadow.visible = anchor.phase === 'locked' && !isBeingSummoned;
 
         if (dist < nearestDist) {
           nearestDist = dist;
