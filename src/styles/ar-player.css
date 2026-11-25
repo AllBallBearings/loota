@@ -23,10 +23,11 @@
 }
 
 .ar-canvas {
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
   z-index: 2;
 }
 
@@ -221,6 +222,7 @@
   box-shadow: 0 3px 0 var(--loota-ar-ink);
   font-size: 12.5px;
   font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
   transition: transform 100ms ease, box-shadow 100ms ease;
 }
@@ -298,6 +300,7 @@
   font-family: var(--font-jetbrains-mono, monospace);
   font-size: 13px;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .ar-compass-3d-stage {
@@ -397,7 +400,7 @@
 .ar-miniradar {
   position: fixed;
   right: 14px;
-  top: calc(max(14px, env(safe-area-inset-top)) + 60px);
+  top: calc(max(14px, env(safe-area-inset-top)) + 70px);
   z-index: 22;
   width: 132px;
   height: 132px;
