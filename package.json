@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "sync:experience": "node scripts/sync-experience.mjs",
+    "sync:xr": "node scripts/sync-xr-assets.mjs",
+    "predev": "node scripts/sync-xr-assets.mjs",
+    "prebuild": "node scripts/sync-experience.mjs && node scripts/sync-xr-assets.mjs",
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
@@ -11,13 +15,16 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@8thwall/engine-binary": "^1.0.0",
     "@prisma/client": "^6.9.0",
+    "@types/three": "^0.187.0",
     "next": "^15.5.7",
     "phosphor-react": "^1.4.1",
     "prisma": "^6.9.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "swagger-ui-react": "^5.29.4"
+    "swagger-ui-react": "^5.29.4",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

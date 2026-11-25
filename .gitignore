@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# self-hosted 8th Wall SLAM binaries (copied from node_modules via sync:xr)
+/public/external/xr/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

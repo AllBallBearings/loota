@@ -1,0 +1,597 @@
+/* Trailhead Arcade Mobile Web AR Player Styles */
+@import './trailhead-ar-tokens.css';
+
+.ar-stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--loota-ar-ink);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: var(--font-plus-jakarta, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+.ar-canvas-wrap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.ar-canvas {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+/* Pulsing screen-edge summon aura when loot is locked in focus hotspot */
+.ar-edge-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  border: 5px solid var(--loota-ar-gold);
+  box-shadow:
+    inset 0 0 28px rgba(255, 194, 26, 0.7),
+    inset 0 0 64px rgba(255, 84, 40, 0.4);
+  animation: ar-edge-pulse 1.15s ease-in-out infinite alternate;
+}
+
+.ar-edge-glow--epic {
+  border-color: var(--loota-ar-epic-bright);
+  box-shadow:
+    inset 0 0 28px rgba(167, 139, 250, 0.75),
+    inset 0 0 64px rgba(236, 72, 153, 0.42);
+}
+
+@keyframes ar-edge-pulse {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Center focus aiming reticle */
+.ar-reticle {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  width: 76px;
+  height: 76px;
+  z-index: 14;
+  pointer-events: none;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+  opacity: 0.45;
+}
+
+.ar-reticle--locked {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+.ar-reticle__corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--loota-ar-surface);
+  filter: drop-shadow(0 2px 0 var(--loota-ar-ink));
+}
+
+.ar-reticle--locked .ar-reticle__corner {
+  border-color: var(--loota-ar-gold);
+}
+
+.ar-reticle__corner--tl {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 8px;
+}
+
+.ar-reticle__corner--tr {
+  top: 0;
+  right: 0;
+  border-left: none;
+  border-bottom: none;
+  border-top-right-radius: 8px;
+}
+
+.ar-reticle__corner--bl {
+  bottom: 0;
+  left: 0;
+  border-right: none;
+  border-top: none;
+  border-bottom-left-radius: 8px;
+}
+
+.ar-reticle__corner--br {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 8px;
+}
+
+/* HUD overlay container */
+.ar-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+}
+
+.ar-hud__interactive {
+  pointer-events: auto;
+}
+
+.ar-hud-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Trailhead tactile HUD card */
+.ar-card {
+  background: var(--loota-ar-surface);
+  color: var(--loota-ar-ink);
+  border: 2px solid var(--loota-ar-ink);
+  border-radius: var(--loota-ar-radius-card);
+  box-shadow: 0 4px 0 var(--loota-ar-ink), 0 12px 24px rgba(22, 38, 29, 0.24);
+}
+
+.ar-progress-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ar-progress-pill--bounce {
+  transform: scale(1.1);
+}
+
+.ar-progress-stat {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.ar-progress-stat__label {
+  font-family: var(--font-jetbrains-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--loota-ar-ink3);
+}
+
+.ar-progress-stat__val {
+  font-family: var(--font-bricolage, system-ui, sans-serif);
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--loota-ar-ink);
+}
+
+.ar-progress-divider {
+  width: 2px;
+  height: 24px;
+  background: rgba(22, 38, 29, 0.14);
+  border-radius: 2px;
+}
+
+.ar-status-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.ar-status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ar-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 11px;
+  background: var(--loota-ar-surface);
+  color: var(--loota-ar-ink);
+  border: 2px solid var(--loota-ar-ink);
+  border-radius: 12px;
+  box-shadow: 0 3px 0 var(--loota-ar-ink);
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.ar-pill-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--loota-ar-ink);
+}
+
+.ar-pill-btn--live {
+  background: var(--loota-ar-meadow-soft);
+  color: var(--loota-ar-meadow-dark);
+}
+
+.ar-pill-btn--warn {
+  background: var(--loota-ar-gold-soft);
+  color: var(--loota-ar-gold-text);
+}
+
+.ar-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--loota-ar-meadow);
+  box-shadow: 0 0 0 3px rgba(24, 169, 87, 0.25);
+  animation: ar-dot-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes ar-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
+}
+
+/* Bottom HUD layout */
+.ar-hud-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ar-hud-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 3D-tilted Trailhead Compass (matches loota-mobile's 55-deg perspective compass) */
+.ar-compass-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ar-distance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  background: var(--loota-ar-surface);
+  color: var(--loota-ar-ink);
+  border: 2px solid var(--loota-ar-ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--loota-ar-ink);
+  font-family: var(--font-jetbrains-mono, monospace);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ar-compass-3d-stage {
+  perspective: 360px;
+  width: 118px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ar-compass-disc {
+  width: 102px;
+  height: 102px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at center,
+    var(--loota-ar-radar-center) 0%,
+    var(--loota-ar-radar-mid) 58%,
+    var(--loota-ar-radar-edge) 100%
+  );
+  border: 4px solid var(--loota-ar-surface);
+  outline: 2.5px solid var(--loota-ar-ink);
+  box-shadow: 0 8px 0 var(--loota-ar-ink), 0 18px 28px rgba(22, 38, 29, 0.45);
+  transform: rotateX(55deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.ar-compass-needle {
+  width: 68px;
+  height: 68px;
+  transition: transform 80ms linear;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.45));
+}
+
+/* Chunky circular Hold-to-Summon button */
+.ar-summon-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ar-summon-btn {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--loota-ar-blaze-bright) 0%, var(--loota-ar-blaze) 100%);
+  color: var(--loota-ar-surface);
+  border: 3px solid var(--loota-ar-ink);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.35),
+    0 6px 0 var(--loota-ar-ink),
+    0 16px 32px rgba(22, 38, 29, 0.42);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  touch-action: none;
+  transition: transform 90ms ease, box-shadow 90ms ease;
+}
+
+.ar-summon-btn--active,
+.ar-summon-btn:active {
+  transform: translateY(4px) scale(0.97);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    0 2px 0 var(--loota-ar-ink),
+    0 8px 20px rgba(255, 84, 40, 0.45);
+}
+
+.ar-summon-btn__ring {
+  position: absolute;
+  inset: -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 16px);
+  pointer-events: none;
+  transform: rotate(-90deg);
+}
+
+.ar-summon-btn__label {
+  font-family: var(--font-bricolage, system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  text-shadow: 0 1.5px 0 rgba(22, 38, 29, 0.45);
+}
+
+/* Collapsible Mini Sonar Radar */
+.ar-miniradar {
+  position: fixed;
+  right: 14px;
+  top: calc(max(14px, env(safe-area-inset-top)) + 60px);
+  z-index: 22;
+  width: 132px;
+  height: 132px;
+  border-radius: 26px;
+  background: var(--loota-ar-surface);
+  border: 2.5px solid var(--loota-ar-ink);
+  box-shadow: 0 4px 0 var(--loota-ar-ink), 0 12px 24px rgba(22, 38, 29, 0.28);
+  padding: 7px;
+  pointer-events: auto;
+}
+
+.ar-miniradar__dish {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at center,
+    var(--loota-ar-radar-center) 0%,
+    var(--loota-ar-radar-mid) 60%,
+    var(--loota-ar-radar-edge) 100%
+  );
+  border: 2px solid var(--loota-ar-ink);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Debug Drawer */
+.ar-debug-panel {
+  position: fixed;
+  left: 14px;
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 54px);
+  z-index: 26;
+  width: min(320px, calc(100vw - 28px));
+  max-height: 52dvh;
+  overflow-y: auto;
+  padding: 12px;
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.ar-debug-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ar-debug-chip {
+  background: var(--loota-ar-surface-alt);
+  border: 1.5px solid rgba(22, 38, 29, 0.25);
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-family: var(--font-jetbrains-mono, monospace);
+  font-size: 10.5px;
+}
+
+.ar-debug-chip strong {
+  display: block;
+  color: var(--loota-ar-ink3);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Fullscreen modal backdrop (Splash / Join / Victory Podium) */
+.ar-overlay-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--loota-ar-bg);
+  background-image: radial-gradient(rgba(22, 38, 29, 0.07) 1px, transparent 1px);
+  background-size: 20px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.ar-overlay-screen--translucent {
+  background: rgba(22, 38, 29, 0.62);
+  backdrop-filter: blur(6px);
+  background-image: none;
+}
+
+.ar-sheet {
+  width: min(440px, 100%);
+  background: var(--loota-ar-surface);
+  color: var(--loota-ar-ink);
+  border: 2.5px solid var(--loota-ar-ink);
+  border-radius: var(--loota-ar-radius-modal);
+  box-shadow: 0 8px 0 var(--loota-ar-ink), 0 28px 60px rgba(22, 38, 29, 0.35);
+  padding: 20px;
+}
+
+.ar-sheet--victory {
+  background: linear-gradient(180deg, var(--loota-ar-gold-soft) 0%, var(--loota-ar-surface) 44%);
+}
+
+.ar-input {
+  width: 100%;
+  padding: 11px 13px;
+  background: var(--loota-ar-surface-alt);
+  color: var(--loota-ar-ink);
+  border: 2px solid var(--loota-ar-ink);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  outline: none;
+}
+
+.ar-input:focus {
+  background: var(--loota-ar-surface);
+  box-shadow: 0 0 0 3px var(--loota-ar-sky-soft);
+}
+
+.ar-cta {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  border-radius: var(--loota-ar-radius-button);
+  border: 2px solid var(--loota-ar-ink);
+  font-family: var(--font-plus-jakarta, system-ui, sans-serif);
+  font-size: 15.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--loota-ar-ink);
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.ar-cta:active:not(:disabled) {
+  transform: translateY(2.5px);
+  box-shadow: 0 1.5px 0 var(--loota-ar-ink);
+}
+
+.ar-cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ar-cta--blaze {
+  background: linear-gradient(180deg, var(--loota-ar-blaze-bright) 0%, var(--loota-ar-blaze) 100%);
+  color: var(--loota-ar-surface);
+}
+
+.ar-cta--gold {
+  background: linear-gradient(180deg, var(--loota-ar-gold-bright) 0%, var(--loota-ar-gold) 100%);
+  color: var(--loota-ar-ink);
+}
+
+.ar-cta--subtle {
+  background: var(--loota-ar-surface-alt);
+  color: var(--loota-ar-ink);
+}
+
+.ar-cta--meadow {
+  background: linear-gradient(180deg, var(--loota-ar-meadow-bright) 0%, var(--loota-ar-meadow) 100%);
+  color: var(--loota-ar-surface);
+}
+
+/* Simulator on-screen directional pad */
+.ar-sim-controls {
+  position: fixed;
+  right: 14px;
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 16px);
+  z-index: 24;
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(2, 40px);
+  gap: 5px;
+  pointer-events: auto;
+}
+
+.ar-sim-key {
+  background: var(--loota-ar-surface);
+  color: var(--loota-ar-ink);
+  border: 2px solid var(--loota-ar-ink);
+  border-radius: 10px;
+  box-shadow: 0 3px 0 var(--loota-ar-ink);
+  font-family: var(--font-jetbrains-mono, monospace);
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.ar-sim-key:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--loota-ar-ink);
+  background: var(--loota-ar-gold-soft);
+}

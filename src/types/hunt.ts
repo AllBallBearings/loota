@@ -1,5 +1,6 @@
 export interface PinData {
   id: string;
+  order?: number;
   lat?: number;
   lng?: number;
   distanceFt?: number;
@@ -50,4 +51,8 @@ export interface HuntData {
   isCompleted?: boolean;
   completedAt?: string;
   winnerId?: string | null;
+  winner?: {
+    id: string;
+    name: string;
+  } | null;
 }

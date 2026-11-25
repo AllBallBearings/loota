@@ -6,6 +6,7 @@ import { LootaLogoMark } from './LootaLogo';
 
 const NAV = [
   { href: '/', label: 'Drop Studio' },
+  { href: '/ar-lab', label: 'AR Lab' },
   { href: '/swagger', label: 'API' },
   { href: '/support', label: 'Support' },
 ];

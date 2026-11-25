@@ -135,6 +135,15 @@ export async function POST(
             collectedAt: null,
           },
         });
+
+        await prisma.hunt.update({
+          where: { id: huntId },
+          data: {
+            isCompleted: false,
+            completedAt: null,
+            winnerId: null,
+          },
+        });
       }
     });
 

@@ -1,0 +1,48 @@
+{
+  "version": "2026.1.0",
+  "coinStyle": "classic",
+  "tracking": {
+    "gpsWarmupMaxMs": 3500,
+    "gpsMaxAcceptableAccuracyMeters": 25,
+    "localLockRadiusMeters": 15,
+    "farBeaconMaxRenderDistanceMeters": 250,
+    "walkCalibrationMinDistanceMeters": 8,
+    "offscreenNudgeMinDeltaMeters": 3.5,
+    "offscreenNudgeFactor": 0.35,
+    "compassLowGainBlendPerSec": 0.02,
+    "compassSmoothingFactor": 0.4,
+    "guaranteedDiscoveryMinRadiusMeters": 6,
+    "guaranteedDiscoverySpawnDistanceMeters": 4.2,
+    "eyeLevelHoverMeters": 1.25
+  },
+  "gameplay": {
+    "focusRangeMeters": 5.0,
+    "degradedGpsFocusRangeMeters": 7.5,
+    "degradedGpsThresholdMeters": 10.0,
+    "focusHotspot": {
+      "xMin": 0.4,
+      "xMax": 0.6,
+      "yMin": 0.05,
+      "yMax": 0.65
+    },
+    "walkUpCollectMeters": 0.25,
+    "summonCollectMeters": 0.8,
+    "summonSpeedMinMps": 0.3,
+    "summonSpeedMaxMps": 4.0,
+    "summonScaleMax": 3.0,
+    "bobAmplitudeMeters": 0.1524,
+    "bobPeriodSec": 2.0,
+    "spinPeriodSec": 2.0,
+    "completionPollIntervalMs": 5000
+  },
+  "copy": {
+    "brandName": "Loota",
+    "splashTagline": "Real-World AR Treasure Hunt",
+    "summonButtonLabel": "Hold to Summon",
+    "summoningLabel": "Pulling In…",
+    "nearestLootLabel": "Nearest Loot",
+    "everythingsLootedTitle": "Everything's Looted!",
+    "totallyLootedTitle": "Totally Looted!",
+    "prizeDisclaimer": "Prizes are offered and fulfilled directly by the hunt host. Your phone number is shared with the host only if you win so they can send your prize."
+  }
+}

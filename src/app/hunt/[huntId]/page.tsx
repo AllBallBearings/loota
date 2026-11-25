@@ -371,6 +371,17 @@ export default function HuntViewerPage() {
 
         {/* Action Buttons */}
         <div className="command-strip__actions">
+          {!allLootCollected && (
+            <Link
+              href={`/hunt/${hunt.id}/play`}
+              className="btn btn--primary btn--sm"
+              data-testid="play-in-ar-link"
+            >
+              <Icons.Lightning size={15} weight="fill" />
+              Play in AR
+            </Link>
+          )}
+
           {!hasUserJoined && !isHuntCreator && (
             <JoinHuntButton
               huntId={hunt.id}
