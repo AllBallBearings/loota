@@ -34,9 +34,6 @@ interface XR8Global {
     }) => void;
     recenter: () => void;
   };
-  FullWindowCanvas?: {
-    pipelineModule: () => unknown;
-  };
   GlTextureRenderer: {
     pipelineModule: () => unknown;
   };
@@ -133,9 +130,18 @@ export class EighthWallProvider implements ARTrackingProvider {
     const { container, canvas, callbacks, onSceneReady } = params;
     callbacks.onStatusChange?.('initializing', 'Loading 8th Wall 6DoF SLAM runtime…');
 
-    // Size canvas drawing buffer & CSS to fill the full viewport BEFORE XR8 initializes
-    // (otherwise HTML canvas defaults to 300x150 and XR8 renders into the top-left corner).
-    const syncCanvasDimensions = () => {
+    const keepCanvasCssFull = () => {
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+    };
+
+    // Size the WebGL drawing buffer to match the full viewport container at up to 2x DPR.
+    // IMPORTANT: Never call this inside XR8's onCanvasSizeChange callback — XR8 detects
+    // canvas.width/height changes on the next frame and propagates onCanvasSizeChange in
+    // lockstep to GlTextureRenderer, Threejs, and XrController. Mutating canvas.width inside
+    // onCanvasSizeChange causes XR8 to cache the new width without notifying GlTextureRenderer,
+    // leaving the camera feed stuck in a sub-rectangle of the screen.
+    const syncCanvasBuffer = () => {
       const w = container.clientWidth || window.innerWidth;
       const h = container.clientHeight || window.innerHeight;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -146,22 +152,52 @@ export class EighthWallProvider implements ARTrackingProvider {
         canvas.width = targetW;
         canvas.height = targetH;
       }
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-
-      const xrScene = this.xr8?.Threejs?.xrScene?.();
-      if (xrScene?.renderer) {
-        xrScene.renderer.setSize(targetW, targetH, false);
-      }
+      keepCanvasCssFull();
     };
 
-    syncCanvasDimensions();
-    const onWindowResize = () => syncCanvasDimensions();
-    window.addEventListener('resize', onWindowResize);
-    window.addEventListener('orientationchange', onWindowResize);
+    syncCanvasBuffer();
+
+    let orientationTimer: number | null = null;
+    let rafResizeId: number | null = null;
+    const scheduleSyncCanvasBuffer = () => {
+      syncCanvasBuffer();
+      if (rafResizeId !== null) window.cancelAnimationFrame(rafResizeId);
+      rafResizeId = window.requestAnimationFrame(() => {
+        rafResizeId = null;
+        syncCanvasBuffer();
+      });
+    };
+    const onOrientationChange = () => {
+      scheduleSyncCanvasBuffer();
+      if (orientationTimer !== null) window.clearTimeout(orientationTimer);
+      orientationTimer = window.setTimeout(() => {
+        orientationTimer = null;
+        syncCanvasBuffer();
+      }, 180);
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => scheduleSyncCanvasBuffer())
+        : null;
+    resizeObserver?.observe(container);
+    window.addEventListener('resize', scheduleSyncCanvasBuffer);
+    window.addEventListener('orientationchange', onOrientationChange);
+    window.visualViewport?.addEventListener('resize', scheduleSyncCanvasBuffer);
+
     this.resizeCleanup = () => {
-      window.removeEventListener('resize', onWindowResize);
-      window.removeEventListener('orientationchange', onWindowResize);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', scheduleSyncCanvasBuffer);
+      window.removeEventListener('orientationchange', onOrientationChange);
+      window.visualViewport?.removeEventListener('resize', scheduleSyncCanvasBuffer);
+      if (orientationTimer !== null) {
+        window.clearTimeout(orientationTimer);
+        orientationTimer = null;
+      }
+      if (rafResizeId !== null) {
+        window.cancelAnimationFrame(rafResizeId);
+        rafResizeId = null;
+      }
     };
 
     window.THREE = THREE;
@@ -172,6 +208,9 @@ export class EighthWallProvider implements ARTrackingProvider {
       callbacks.onStatusChange?.('initializing', 'Initializing SLAM world tracker…');
       await XR8.loadChunk('slam');
     }
+
+    // Re-sync right before XR8.run in case mobile browser bars / layout shifted during script load
+    syncCanvasBuffer();
 
     XR8.XrController.configure({
       scale: 'absolute',
@@ -184,10 +223,42 @@ export class EighthWallProvider implements ARTrackingProvider {
     let sceneInitialized = false;
     this.lastFrameMs = performance.now();
 
+    // Clear the full color buffer before GlTextureRenderer draws the camera feed each frame.
+    // Because XR8.Threejs sets renderer.autoClear = false and only clears depth (relying on
+    // GlTextureRenderer to overwrite the entire color buffer), this guarantees zero frame
+    // ghosting / "burn-in" even during viewport resizes or dropped camera frames.
+    let drawGlCtx: WebGLRenderingContext | WebGL2RenderingContext | null = null;
+    const preClearModule = {
+      name: 'loota-pre-clear',
+      onAttach: ({ GLctx }: { GLctx?: WebGLRenderingContext | WebGL2RenderingContext }) => {
+        drawGlCtx = GLctx ?? null;
+      },
+      onDetach: () => {
+        drawGlCtx = null;
+      },
+      onRender: () => {
+        if (!drawGlCtx) return;
+        const scissorWasEnabled = drawGlCtx.isEnabled(drawGlCtx.SCISSOR_TEST);
+        if (scissorWasEnabled) {
+          drawGlCtx.disable(drawGlCtx.SCISSOR_TEST);
+        }
+        drawGlCtx.bindFramebuffer(drawGlCtx.FRAMEBUFFER, null);
+        drawGlCtx.colorMask(true, true, true, true);
+        drawGlCtx.clearColor(0.086, 0.149, 0.114, 1.0);
+        drawGlCtx.clear(drawGlCtx.COLOR_BUFFER_BIT);
+        if (scissorWasEnabled) {
+          drawGlCtx.enable(drawGlCtx.SCISSOR_TEST);
+        }
+      },
+    };
+
     const customLootaModule = {
       name: 'loota-world-tracking',
       onStart: () => {
-        syncCanvasDimensions();
+        // XR8.Threejs.onStart calls renderer.setSize(w, h) with updateStyle=true,
+        // writing physical pixel dimensions onto canvas.style — restore 100% CSS fill.
+        keepCanvasCssFull();
+
         const xrScene = XR8.Threejs.xrScene();
         if (!xrScene) return;
         const { scene, camera, renderer } = xrScene;
@@ -202,11 +273,17 @@ export class EighthWallProvider implements ARTrackingProvider {
         if (!sceneInitialized) {
           sceneInitialized = true;
           onSceneReady({ scene, camera, renderer });
+          renderer.setRenderTarget(null);
         }
+
+        // Schedule a next-frame buffer check in case the viewport resized during startup
+        scheduleSyncCanvasBuffer();
         callbacks.onStatusChange?.('tracking', '6DoF SLAM active (Absolute Scale)');
       },
       onCanvasSizeChange: () => {
-        syncCanvasDimensions();
+        // XR8.Threejs.onCanvasSizeChange calls renderer.setSize(w, h) with updateStyle=true.
+        // Only restore CSS 100% fill here; never mutate canvas.width/height inside this callback.
+        keepCanvasCssFull();
       },
       onUpdate: () => {
         if (!this.running) return;
@@ -226,18 +303,16 @@ export class EighthWallProvider implements ARTrackingProvider {
       },
     };
 
-    const modules: unknown[] = [];
-    if (XR8.FullWindowCanvas && typeof XR8.FullWindowCanvas.pipelineModule === 'function') {
-      modules.push(XR8.FullWindowCanvas.pipelineModule());
-    }
-    modules.push(
+    // Note: Do NOT add deprecated XR8.FullWindowCanvas.pipelineModule().
+    // Its onAttach reparents our React <canvas> onto document.body (breaking HUD z-order)
+    // and shrinks canvas.width/height to 1x CSS pixels.
+    XR8.addCameraPipelineModules([
+      preClearModule,
       XR8.GlTextureRenderer.pipelineModule(),
       XR8.Threejs.pipelineModule(),
       XR8.XrController.pipelineModule(),
-      customLootaModule
-    );
-
-    XR8.addCameraPipelineModules(modules);
+      customLootaModule,
+    ]);
 
     this.running = true;
 
