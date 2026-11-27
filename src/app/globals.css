@@ -1382,6 +1382,18 @@ a {
   color: var(--epic-dark);
 }
 
+.brush-pill__btn--map[aria-pressed='true'] {
+  background: var(--meadow-soft);
+  border-color: var(--outline);
+  color: var(--meadow-dark);
+}
+
+.brush-pill__btn--sat[aria-pressed='true'] {
+  background: var(--sky-soft);
+  border-color: var(--outline);
+  color: var(--sky-dark);
+}
+
 /* Floating Collapsible Manifest Drawer (bottom-left of canvas) */
 .dock {
   position: absolute;

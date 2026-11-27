@@ -44,6 +44,7 @@ export default function HuntCreatorStudio() {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isLoading, setIsLoading] = useState(false);
   const [proximityRadiusFt, setProximityRadiusFt] = useState(100);
+  const [mapView, setMapView] = useState<'roadmap' | 'satellite'>('roadmap');
   const [dockOpen, setDockOpen] = useState(true);
   const [mobilePane, setMobilePane] = useState<'canvas' | 'setup'>('canvas');
 
@@ -761,17 +762,42 @@ export default function HuntCreatorStudio() {
               </button>
             </div>
 
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.4rem' }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
               {currentHuntType === 'geolocation' && (
-                <button
-                  type="button"
-                  className="btn btn--subtle btn--sm"
-                  onClick={() => mapComponentRef.current?.recenterToUser()}
-                  title="Jump to my current GPS location"
-                >
-                  <Icons.Locate size={15} weight="fill" style={{ color: 'var(--sky)' }} />
-                  My GPS
-                </button>
+                <>
+                  <div className="brush-pill" role="group" aria-label="Map layer view">
+                    <button
+                      type="button"
+                      className="brush-pill__btn brush-pill__btn--map"
+                      aria-pressed={mapView === 'roadmap'}
+                      onClick={() => setMapView('roadmap')}
+                      title="Street map with building outlines"
+                    >
+                      <Icons.Map size={14} weight="fill" />
+                      Map
+                    </button>
+                    <button
+                      type="button"
+                      className="brush-pill__btn brush-pill__btn--sat"
+                      aria-pressed={mapView === 'satellite'}
+                      onClick={() => setMapView('satellite')}
+                      title="Aerial satellite view with street labels"
+                    >
+                      <Icons.Satellite size={14} weight="fill" />
+                      Satellite
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn--subtle btn--sm"
+                    onClick={() => mapComponentRef.current?.recenterToUser()}
+                    title="Jump to my current GPS location"
+                  >
+                    <Icons.Locate size={15} weight="fill" style={{ color: 'var(--sky)' }} />
+                    My GPS
+                  </button>
+                </>
               )}
               {activePinCount > 0 && (
                 <button
@@ -794,6 +820,7 @@ export default function HuntCreatorStudio() {
                 ref={mapComponentRef}
                 onMarkersChange={setMapMarkers}
                 currentLootType={currentLootType}
+                mapView={mapView}
                 onLocationError={(msg) => pushToast(msg, 'warn')}
               />
             </div>
