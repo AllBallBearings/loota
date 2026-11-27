@@ -40,6 +40,13 @@ import {
   ArrowsOutSimple,
   ArrowsInSimple,
   ArrowLeft,
+  ShieldCheck,
+  ChartBar,
+  FunnelSimple,
+  Eye,
+  LockKey,
+  Activity,
+  ArrowsClockwise,
 } from 'phosphor-react';
 
 type IconComponent = React.FC<IconProps>;
@@ -98,6 +105,13 @@ export const Icons = {
   Expand: withDefaults(ArrowsOutSimple),
   Collapse: withDefaults(ArrowsInSimple),
   Back: withDefaults(ArrowLeft),
+  Shield: withDefaults(ShieldCheck),
+  Chart: withDefaults(ChartBar),
+  Filter: withDefaults(FunnelSimple),
+  Eye: withDefaults(Eye),
+  Lock: withDefaults(LockKey),
+  Activity: withDefaults(Activity),
+  Sync: withDefaults(ArrowsClockwise),
 };
 
 export type { IconProps } from 'phosphor-react';
