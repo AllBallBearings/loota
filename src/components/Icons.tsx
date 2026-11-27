@@ -47,6 +47,7 @@ import {
   LockKey,
   Activity,
   ArrowsClockwise,
+  GlobeHemisphereWest,
 } from 'phosphor-react';
 
 type IconComponent = React.FC<IconProps>;
@@ -112,6 +113,7 @@ export const Icons = {
   Lock: withDefaults(LockKey),
   Activity: withDefaults(Activity),
   Sync: withDefaults(ArrowsClockwise),
+  Satellite: withDefaults(GlobeHemisphereWest),
 };
 
 export type { IconProps } from 'phosphor-react';

@@ -37,13 +37,15 @@ interface MapComponentProps {
   onMarkersChange?: (markers: MapMarker[]) => void;
   focusOnMarkers?: boolean;
   currentLootType?: string;
+  mapView?: 'roadmap' | 'satellite';
   onPinSelect?: (pinId: string | null) => void;
   onLocationError?: (message: string) => void;
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
-// Sunlit Outdoor Adventure basemap — Pokemon GO / National Park topo energy.
+// Sunlit Outdoor Adventure basemap — Pokemon GO / National Park topo energy
+// with crisp house and building footprints enabled for accurate pin drops.
 const ADVENTURE_MAP_STYLE: google.maps.MapTypeStyle[] = [
   { elementType: 'geometry', stylers: [{ color: '#f2eee2' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#fbf8f0' }, { weight: 3 }] },
@@ -53,7 +55,17 @@ const ADVENTURE_MAP_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#bde6a3' }] },
   { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#1d5e35' }] },
   { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#e5efd9' }] },
-  { featureType: 'landscape.man_made', elementType: 'geometry.fill', stylers: [{ color: '#ebe6d7' }] },
+  // Explicit house & building footprints + outlines (visible at neighborhood zoom levels)
+  {
+    featureType: 'landscape.man_made',
+    elementType: 'geometry.fill',
+    stylers: [{ visibility: 'on' }, { color: '#dfd6c0' }],
+  },
+  {
+    featureType: 'landscape.man_made',
+    elementType: 'geometry.stroke',
+    stylers: [{ visibility: 'on' }, { color: '#8a7e64' }, { weight: 1.6 }],
+  },
   { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
   { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#ded6c1' }] },
   { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#4c6356' }] },
@@ -73,6 +85,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     onMarkersChange,
     focusOnMarkers = false,
     currentLootType = 'coin',
+    mapView = 'roadmap',
     onPinSelect,
     onLocationError,
   },
@@ -87,11 +100,27 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const containerResizeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentLootTypeRef = useRef<string>(currentLootType);
+  const mapViewRef = useRef<'roadmap' | 'satellite'>(mapView);
   const hasAutoFittedRef = useRef(false);
 
   useEffect(() => {
     currentLootTypeRef.current = currentLootType;
   }, [currentLootType]);
+
+  // Switch cleanly between Sunlit Map (with building outlines) and Satellite Hybrid without losing pins
+  useEffect(() => {
+    mapViewRef.current = mapView;
+    if (!mapRef.current || !window.google?.maps) return;
+    const targetType =
+      mapView === 'satellite'
+        ? window.google.maps.MapTypeId.HYBRID
+        : window.google.maps.MapTypeId.ROADMAP;
+    mapRef.current.setMapTypeId(targetType);
+    mapRef.current.setOptions({
+      styles: mapView === 'satellite' ? null : ADVENTURE_MAP_STYLE,
+      tilt: 0,
+    });
+  }, [mapView]);
 
   const createPinIcon = useCallback((isCollected: boolean, isHighlighted: boolean, objectType?: string) => {
     const isGift = objectType === 'giftCard';
@@ -101,7 +130,8 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         ? '#8B5CF6' // Epic Purple for gift cards
         : '#FFC21A'; // Treasure Gold for coins
 
-    const strokeColor = isHighlighted ? '#FF5428' : '#16261D';
+    const defaultStroke = mapView === 'satellite' ? '#FFFDF8' : '#16261D';
+    const strokeColor = isHighlighted ? '#FF5428' : defaultStroke;
     const strokeWeight = isHighlighted ? 4 : 2.5;
     const mult = isHighlighted ? 1.25 : 1;
 
@@ -142,7 +172,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
       scale: 10.5 * mult,
       anchor: new google.maps.Point(0, 0),
     };
-  }, []);
+  }, [mapView]);
 
   const fitMapToMarkers = useCallback((markers: MapMarker[]) => {
     if (!mapRef.current || !window.google || markers.length === 0) return;
@@ -206,7 +236,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
           lng: position.coords.longitude,
         };
         mapRef.current?.panTo(pos);
-        mapRef.current?.setZoom(17);
+        mapRef.current?.setZoom(18);
       },
       () => {
         onLocationError?.('Could not get your current GPS location. Check browser location permissions.');
@@ -236,9 +266,14 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
     const defaultCenter = { lat: 40.7128, lng: -74.006 };
 
     try {
+      const initialIsSat = mapViewRef.current === 'satellite';
       mapRef.current = new window.google.maps.Map(mapDivRef.current, {
-        zoom: 17,
+        zoom: 18,
         center: defaultCenter,
+        mapTypeId: initialIsSat
+          ? window.google.maps.MapTypeId.HYBRID
+          : window.google.maps.MapTypeId.ROADMAP,
+        tilt: 0,
         disableDefaultUI: false,
         zoomControl: true,
         streetViewControl: false,
@@ -246,7 +281,7 @@ const MapComponent = forwardRef<MapComponentRef, MapComponentProps>((
         fullscreenControl: false,
         clickableIcons: false,
         backgroundColor: '#f2eee2',
-        styles: ADVENTURE_MAP_STYLE,
+        styles: initialIsSat ? null : ADVENTURE_MAP_STYLE,
       });
 
       infoWindowRef.current = new window.google.maps.InfoWindow();
