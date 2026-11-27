@@ -209,17 +209,38 @@ export class SensorHub {
   }
 
   private ingestGpsFix(fix: GpsFix): void {
+    const refTime = fix.timestamp || Date.now();
+    const maxAcceptable = AR_GAMEPLAY_CONFIG.tracking.gpsMaxAcceptableAccuracyMeters;
+
+    // Reject physically impossible single-fix GPS teleports (> 12 m/s and > max(15m, accuracy))
+    // unless our buffer is empty or the last fix is stale (> 12s old).
+    if (this.latestGpsFix && this.gpsBuffer.length > 0) {
+      const dtSec = Math.max(0.05, (refTime - this.latestGpsFix.timestamp) / 1000);
+      if (dtSec < 12) {
+        const latRad = degreesToRadians(this.latestGpsFix.lat);
+        const mPerLat = 111132.92 - 559.82 * Math.cos(2 * latRad);
+        const mPerLon = 111412.84 * Math.cos(latRad);
+        const stepMeters = Math.hypot(
+          (fix.lat - this.latestGpsFix.lat) * mPerLat,
+          (fix.lng - this.latestGpsFix.lng) * mPerLon
+        );
+        const impliedSpeedMps = stepMeters / dtSec;
+        if (impliedSpeedMps > 12 && stepMeters > Math.max(15, fix.accuracy)) {
+          return;
+        }
+      }
+    }
+
     this.latestGpsFix = fix;
 
-    const maxAcceptable = AR_GAMEPLAY_CONFIG.tracking.gpsMaxAcceptableAccuracyMeters;
-    // Keep a rolling window of recent fixes (last 8s, max 10 samples)
-    const now = Date.now();
-    this.gpsBuffer = this.gpsBuffer.filter((s) => now - s.timestamp < 8000);
+    // Keep a short, responsive rolling window (last 4s, max 5 samples) so turning
+    // while walking doesn't introduce 4-second phase lag into GPS estimates.
+    this.gpsBuffer = this.gpsBuffer.filter((s) => refTime - s.timestamp < 4000);
 
     // Accept if within accuracy budget OR if buffer is still empty
     if (fix.accuracy <= maxAcceptable || this.gpsBuffer.length === 0) {
       this.gpsBuffer.push(fix);
-      if (this.gpsBuffer.length > 10) {
+      if (this.gpsBuffer.length > 5) {
         this.gpsBuffer.shift();
       }
     }
@@ -257,6 +278,42 @@ export class SensorHub {
     }
   }
 
+  /**
+   * Computes a gimbal-lock-free compass azimuth (0 = North, 90 = East) from
+   * W3C DeviceOrientation Euler angles (alpha, beta, gamma) by projecting the
+   * rear-camera look axis (-Z) onto the horizontal East-North plane.
+   */
+  private extract3DCompassHeadingDeg(alphaDeg: number, betaDeg: number, gammaDeg: number): number {
+    const a = degreesToRadians(alphaDeg);
+    const b = degreesToRadians(betaDeg);
+    const g = degreesToRadians(gammaDeg);
+
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    const cb = Math.cos(b);
+    const sb = Math.sin(b);
+    const cg = Math.cos(g);
+    const sg = Math.sin(g);
+
+    // Rear camera looks along device -Z in Earth ENU frame
+    const camEast = -(ca * sg + sa * sb * cg);
+    const camNorth = -(sa * sg - ca * sb * cg);
+    const horizLen = Math.hypot(camEast, camNorth);
+
+    if (horizLen >= 0.2) {
+      return normalizeCompassDeg(radiansToDegrees(Math.atan2(camEast, camNorth)));
+    }
+
+    // Fallback when phone is held nearly flat: project device +Y (top edge) onto East-North
+    const topEast = -sa * cb;
+    const topNorth = ca * cb;
+    if (Math.hypot(topEast, topNorth) >= 0.05) {
+      return normalizeCompassDeg(radiansToDegrees(Math.atan2(topEast, topNorth)));
+    }
+
+    return normalizeCompassDeg(360 - alphaDeg);
+  }
+
   private startOrientationAndMotion(): void {
     if (typeof window === 'undefined') return;
 
@@ -277,6 +334,10 @@ export class SensorHub {
         let isTrueNorth = false;
 
         if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading)) {
+          // On iOS, webkitCompassAccuracy < 0 (-1) indicates an uncalibrated/invalid reading
+          if (typeof e.webkitCompassAccuracy === 'number' && (e.webkitCompassAccuracy < 0 || e.webkitCompassAccuracy > 50)) {
+            return;
+          }
           headingDeg = normalizeCompassDeg(e.webkitCompassHeading);
           accuracyDeg =
             typeof e.webkitCompassAccuracy === 'number' && e.webkitCompassAccuracy > 0
@@ -284,11 +345,11 @@ export class SensorHub {
               : 15;
           isTrueNorth = true;
         } else if (e.absolute || rawEvent.type === 'deviceorientationabsolute') {
-          headingDeg = normalizeCompassDeg(360 - e.alpha);
+          headingDeg = this.extract3DCompassHeadingDeg(e.alpha, e.beta, e.gamma);
           accuracyDeg = 18;
           isTrueNorth = true;
         } else {
-          headingDeg = normalizeCompassDeg(360 - e.alpha);
+          headingDeg = this.extract3DCompassHeadingDeg(e.alpha, e.beta, e.gamma);
           accuracyDeg = 45;
           isTrueNorth = false;
         }
@@ -352,13 +413,13 @@ export class SensorHub {
   private ingestHeading(sample: HeadingSample): void {
     const now = sample.timestamp;
     this.latestHeading = sample;
-    this.headingBuffer = this.headingBuffer.filter((h) => now - h.timestamp < 2500);
+    this.headingBuffer = this.headingBuffer.filter((h) => now - h.timestamp < 2000);
 
     // Reject compass spikes when user is spinning fast (> 35 deg/s)
     const yawRate = Math.abs(this.latestMotion?.alphaRateDeg ?? 0);
     if (yawRate < 35) {
       this.headingBuffer.push(sample);
-      if (this.headingBuffer.length > 25) {
+      if (this.headingBuffer.length > 20) {
         this.headingBuffer.shift();
       }
     }
@@ -368,8 +429,70 @@ export class SensorHub {
     }
   }
 
+  /**
+   * Flushes stale buffered GPS/compass samples and requests a fresh high-accuracy fix
+   * for on-screen map realignment without refreshing the page.
+   */
+  public async requestFreshGpsFix(timeoutMs = 3000): Promise<GpsFix | null> {
+    this.gpsBuffer = [];
+    this.headingBuffer = [];
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      return this.latestGpsFix;
+    }
+
+    return new Promise<GpsFix | null>((resolve) => {
+      let settled = false;
+      const timer = window.setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          resolve(this.latestGpsFix);
+        }
+      }, timeoutMs);
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timer);
+          const fresh: GpsFix = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : 25,
+            timestamp: pos.timestamp || Date.now(),
+            speed: pos.coords.speed,
+            heading: pos.coords.heading,
+          };
+          // Bypass teleport rejection during explicit user-triggered map realignment
+          this.latestGpsFix = fresh;
+          this.gpsBuffer = [fresh];
+          this.weightedGpsFix = fresh;
+          for (const listener of this.gpsListeners) {
+            listener(fresh);
+          }
+          resolve(fresh);
+        },
+        () => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timer);
+          resolve(this.latestGpsFix);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: timeoutMs,
+        }
+      );
+    });
+  }
+
   public getWeightedGpsFix(): GpsFix | null {
     return this.weightedGpsFix ?? this.latestGpsFix;
+  }
+
+  public getLatestRawGpsFix(): GpsFix | null {
+    return this.latestGpsFix;
   }
 
   public getLatestHeading(): HeadingSample | null {

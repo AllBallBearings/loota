@@ -12,6 +12,9 @@ export class WebXRProvider implements ARTrackingProvider {
   private renderer: THREE.WebGLRenderer | null = null;
   private session: XRSession | null = null;
   private lastTimeMs = 0;
+  private contextLost = false;
+  private stopRequested = false;
+  private contextLostCleanup: (() => void) | null = null;
 
   public async start(params: {
     container: HTMLElement;
@@ -30,6 +33,18 @@ export class WebXRProvider implements ARTrackingProvider {
     }
 
     callbacks.onStatusChange?.('initializing', 'Starting Android WebXR 6DoF session…');
+    this.contextLost = false;
+    this.stopRequested = false;
+
+    const onContextLost = (e: Event) => {
+      e.preventDefault();
+      this.contextLost = true;
+      if (!this.stopRequested) {
+        callbacks.onCameraInterrupted?.('AR graphics context paused after screen lock.');
+      }
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost, false);
+    this.contextLostCleanup = () => canvas.removeEventListener('webglcontextlost', onContextLost, false);
 
     const renderer = new THREE.WebGLRenderer({
       canvas,
@@ -66,7 +81,11 @@ export class WebXRProvider implements ARTrackingProvider {
     const session = await navigator.xr.requestSession('immersive-ar', sessionInit);
     this.session = session;
     session.addEventListener('end', () => {
+      this.session = null;
       callbacks.onStatusChange?.('idle', 'WebXR session ended');
+      if (!this.stopRequested) {
+        callbacks.onCameraInterrupted?.('AR camera session ended after screen lock.');
+      }
     });
 
     await renderer.xr.setSession(session);
@@ -83,11 +102,19 @@ export class WebXRProvider implements ARTrackingProvider {
     });
   }
 
+  public isCameraHealthy(): boolean {
+    if (this.contextLost || !this.session) return false;
+    return performance.now() - this.lastTimeMs <= 2200;
+  }
+
   public recenter(): void {
     // WebXR local-floor tracks physical ground; GeoAnchorEngine handles logical recenter
   }
 
   public stop(): void {
+    this.stopRequested = true;
+    this.contextLostCleanup?.();
+    this.contextLostCleanup = null;
     if (this.renderer) {
       this.renderer.setAnimationLoop(null);
       this.renderer.dispose();
