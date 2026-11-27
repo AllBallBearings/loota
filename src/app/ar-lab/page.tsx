@@ -23,6 +23,7 @@ import {
   type EnvironmentCapabilities,
 } from '@/lib/ar/sensorHub';
 import type {
+  ARAlignmentController,
   ARPinAnchorState,
   ARTelemetry,
   ARTrackingMode,
@@ -78,6 +79,7 @@ export default function ARLabPage() {
   if (!audioRef.current) {
     audioRef.current = new LootaAudioManager();
   }
+  const alignmentRef = useRef<ARAlignmentController | null>(null);
   const simulatorInputRef = useRef<SimulatorInput>({
     moveForward: 0,
     moveRight: 0,
@@ -97,6 +99,9 @@ export default function ARLabPage() {
   const [showHorizon, setShowHorizon] = useState(true);
   const [isSummoning, setIsSummoning] = useState(false);
   const [recenterNonce, setRecenterNonce] = useState(0);
+  const [cameraRestartNonce, setCameraRestartNonce] = useState(0);
+  const [cameraFrozen, setCameraFrozen] = useState(false);
+  const [cameraFrozenReason, setCameraFrozenReason] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [bounceScore, setBounceScore] = useState(false);
 
@@ -122,6 +127,20 @@ export default function ARLabPage() {
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
+
+  const handleCameraFrozenChange = useCallback((frozen: boolean, reason?: string) => {
+    setCameraFrozen(frozen);
+    setCameraFrozenReason(frozen ? reason ?? null : null);
+  }, []);
+
+  const handleReloadCamera = useCallback(() => {
+    setCameraFrozen(false);
+    setCameraFrozenReason(null);
+    void audioRef.current?.unlock();
+    void sensorHubRef.current?.requestFreshGpsFix(1500);
+    setCameraRestartNonce((n) => n + 1);
+    pushToast('Reloading AR camera…', 'info');
+  }, [pushToast]);
 
   useEffect(() => {
     void detectEnvironmentCapabilities().then((caps) => {
@@ -323,8 +342,10 @@ export default function ARLabPage() {
         showHorizon={showHorizon}
         isSummoning={isSummoning}
         recenterNonce={recenterNonce}
+        cameraRestartNonce={cameraRestartNonce}
         externalCollectedPinIds={collectedIds}
         simulatorInputRef={simulatorInputRef}
+        alignmentRef={alignmentRef}
         onTelemetry={(t, nextAnchors) => {
           setTelemetry(t);
           setAnchors(nextAnchors);
@@ -338,6 +359,7 @@ export default function ARLabPage() {
           setResolvedMode(mode);
           if (reason) pushToast(reason, 'info');
         }}
+        onCameraFrozenChange={handleCameraFrozenChange}
       />
 
       <TrailheadARHud
@@ -352,6 +374,8 @@ export default function ARLabPage() {
         showHorizon={showHorizon}
         isSummoning={isSummoning}
         muted={muted}
+        cameraFrozen={cameraFrozen}
+        cameraFrozenReason={cameraFrozenReason}
         onSummonStart={() => setIsSummoning(true)}
         onSummonEnd={() => setIsSummoning(false)}
         onModeChange={(next) => {
@@ -366,10 +390,34 @@ export default function ARLabPage() {
             return !prev;
           });
         }}
-        onRecenter={() => {
-          setCollectedIds(new Set());
-          setRecenterNonce((n) => n + 1);
-          pushToast('Test pins reset & world recentered', 'info');
+        onRecenter={async () => {
+          if (alignmentRef.current) {
+            const res = await alignmentRef.current.realignToMap();
+            pushToast(
+              res.accuracyMeters !== null
+                ? `Re-aligned to map (GPS ±${res.accuracyMeters}m)`
+                : 'Map alignment refreshed!',
+              'ok'
+            );
+          } else {
+            setRecenterNonce((n) => n + 1);
+            pushToast('Map alignment refreshed!', 'info');
+          }
+        }}
+        onReloadCamera={handleReloadCamera}
+        onDismissCameraFrozen={() => {
+          setCameraFrozen(false);
+          setCameraFrozenReason(null);
+        }}
+        onNudgeYaw={(deltaDeg) => {
+          alignmentRef.current?.nudgeYawDeg(deltaDeg);
+        }}
+        onSetManualYawOffset={(offsetDeg) => {
+          alignmentRef.current?.setManualYawOffsetDeg(offsetDeg);
+        }}
+        onResetManualYawOffset={() => {
+          alignmentRef.current?.resetManualYawOffset();
+          pushToast('Manual alignment reset to compass', 'info');
         }}
         onExit={() => setStarted(false)}
         simulatorInputRef={simulatorInputRef}

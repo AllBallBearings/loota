@@ -115,7 +115,13 @@ export class EighthWallProvider implements ARTrackingProvider {
   private xr8: XR8Global | null = null;
   private running = false;
   private lastFrameMs = 0;
+  private contextLost = false;
+  private cameraVideo: HTMLVideoElement | null = null;
+  private cameraStream: MediaStream | null = null;
+  private lastVideoTime = -1;
+  private lastVideoAdvanceMs = 0;
   private resizeCleanup: (() => void) | null = null;
+  private healthCleanup: (() => void) | null = null;
 
   public async start(params: {
     container: HTMLElement;
@@ -252,8 +258,76 @@ export class EighthWallProvider implements ARTrackingProvider {
       },
     };
 
+    const cleanups: Array<() => void> = [];
+    const watchedTracks = new Set<MediaStreamTrack>();
+
+    const attachTrackWatchers = (stream: MediaStream | null) => {
+      if (!stream || typeof stream.getVideoTracks !== 'function') return;
+      this.cameraStream = stream;
+      for (const track of stream.getVideoTracks()) {
+        if (watchedTracks.has(track)) continue;
+        watchedTracks.add(track);
+        const onEnded = () => {
+          if (!this.running) return;
+          callbacks.onCameraInterrupted?.('Camera stream paused after screen lock.');
+        };
+        const onMute = () => {
+          if (!this.running) return;
+          if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+            callbacks.onCameraInterrupted?.('Camera feed was paused by your device.');
+          }
+        };
+        track.addEventListener('ended', onEnded);
+        track.addEventListener('mute', onMute);
+        cleanups.push(() => {
+          track.removeEventListener('ended', onEnded);
+          track.removeEventListener('mute', onMute);
+        });
+      }
+    };
+
+    const onContextLost = (e: Event) => {
+      e.preventDefault();
+      this.contextLost = true;
+      if (this.running) {
+        callbacks.onCameraInterrupted?.('AR camera graphics paused after screen lock.');
+      }
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost, false);
+    cleanups.push(() => canvas.removeEventListener('webglcontextlost', onContextLost, false));
+
+    this.healthCleanup = () => {
+      for (const fn of cleanups) fn();
+      cleanups.length = 0;
+      watchedTracks.clear();
+    };
+
     const customLootaModule = {
       name: 'loota-world-tracking',
+      onCameraStatusChange: ({
+        status,
+        stream,
+        video,
+      }: {
+        status?: string;
+        stream?: MediaStream;
+        video?: HTMLVideoElement;
+      }) => {
+        if (stream) {
+          attachTrackWatchers(stream);
+        }
+        if (video) {
+          this.cameraVideo = video;
+          this.lastVideoTime = video.currentTime;
+          this.lastVideoAdvanceMs = performance.now();
+          if (video.srcObject && typeof (video.srcObject as MediaStream).getVideoTracks === 'function') {
+            attachTrackWatchers(video.srcObject as MediaStream);
+          }
+        }
+        if (status === 'failed' && this.running) {
+          callbacks.onCameraInterrupted?.('Camera feed could not restart automatically.');
+        }
+      },
       onStart: () => {
         // XR8.Threejs.onStart calls renderer.setSize(w, h) with updateStyle=true,
         // writing physical pixel dimensions onto canvas.style — restore 100% CSS fill.
@@ -292,6 +366,10 @@ export class EighthWallProvider implements ARTrackingProvider {
         const now = performance.now();
         const dt = Math.min(0.1, Math.max(0.001, (now - this.lastFrameMs) / 1000));
         this.lastFrameMs = now;
+        if (this.cameraVideo && this.cameraVideo.currentTime !== this.lastVideoTime) {
+          this.lastVideoTime = this.cameraVideo.currentTime;
+          this.lastVideoAdvanceMs = now;
+        }
         callbacks.onFrame(dt, xrScene.camera, xrScene.scene);
       },
       onException: (err: unknown) => {
@@ -315,6 +393,7 @@ export class EighthWallProvider implements ARTrackingProvider {
     ]);
 
     this.running = true;
+    this.contextLost = false;
 
     // Wait for either onStart or a startup failure timeout so callers can gracefully fall back
     await new Promise<void>((resolve, reject) => {
@@ -343,6 +422,34 @@ export class EighthWallProvider implements ARTrackingProvider {
     });
   }
 
+  public isCameraHealthy(): boolean {
+    if (!this.running || this.contextLost) return false;
+    const now = performance.now();
+    if (this.lastFrameMs > 0 && now - this.lastFrameMs > 2200) return false;
+
+    const stream =
+      this.cameraStream ??
+      (this.cameraVideo?.srcObject &&
+      typeof (this.cameraVideo.srcObject as MediaStream).getVideoTracks === 'function'
+        ? (this.cameraVideo.srcObject as MediaStream)
+        : null);
+    if (stream) {
+      const tracks = stream.getVideoTracks();
+      if (tracks.length > 0 && tracks.every((t) => t.readyState !== 'live' || t.muted)) {
+        return false;
+      }
+    }
+
+    if (this.cameraVideo) {
+      if (this.cameraVideo.paused || this.cameraVideo.ended) return false;
+      if (this.lastVideoAdvanceMs > 0 && now - this.lastVideoAdvanceMs > 2200) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   public recenter(): void {
     this.xr8?.XrController.recenter();
   }
@@ -351,6 +458,12 @@ export class EighthWallProvider implements ARTrackingProvider {
     this.running = false;
     this.resizeCleanup?.();
     this.resizeCleanup = null;
+    this.healthCleanup?.();
+    this.healthCleanup = null;
+    this.cameraVideo = null;
+    this.cameraStream = null;
+    this.lastVideoTime = -1;
+    this.lastVideoAdvanceMs = 0;
     if (this.xr8) {
       try {
         this.xr8.stop();

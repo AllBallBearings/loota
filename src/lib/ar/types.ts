@@ -73,12 +73,15 @@ export interface ARTelemetry {
   isSummoning: boolean;
   summonProgress: number; // 0..1
   cameraPosition: WorldVec3;
+  cameraSlamYawRad?: number;
+  manualYawOffsetDeg?: number;
   effectiveFocusRangeMeters: number;
 }
 
 export interface ARTrackingProviderCallbacks {
   onFrame: (dtSec: number, camera: THREE.PerspectiveCamera, scene: THREE.Scene) => void;
   onStatusChange?: (status: ARTrackingStatus, detail: string) => void;
+  onCameraInterrupted?: (reason: string) => void;
 }
 
 export interface ARTrackingProvider {
@@ -96,4 +99,12 @@ export interface ARTrackingProvider {
   stop(): void;
   recenter(): void;
   setSimulatorInput?(input: SimulatorInput): void;
+  isCameraHealthy?(): boolean;
+}
+
+export interface ARAlignmentController {
+  realignToMap(): Promise<{ usedFreshGps: boolean; accuracyMeters: number | null }>;
+  nudgeYawDeg(deltaDeg: number): void;
+  setManualYawOffsetDeg(offsetDeg: number): void;
+  resetManualYawOffset(): void;
 }

@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { Icons } from '@/components/Icons';
 import { AR_GAMEPLAY_CONFIG, DESIGN_TOKENS, type CoinStyle } from '@/lib/ar/experienceConfig';
-import { formatDistanceFeet } from '@/lib/ar/geoMath';
+import { degreesToRadians, formatDistanceFeet } from '@/lib/ar/geoMath';
 import type {
   ARPinAnchorState,
   ARTelemetry,
@@ -29,13 +29,20 @@ interface TrailheadARHudProps {
   showHorizon: boolean;
   isSummoning: boolean;
   muted: boolean;
+  cameraFrozen?: boolean;
+  cameraFrozenReason?: string | null;
   onSummonStart: () => void;
   onSummonEnd: () => void;
   onModeChange: (mode: ARTrackingMode) => void;
   onCoinStyleChange: (style: CoinStyle) => void;
   onToggleHorizon: () => void;
   onToggleMute: () => void;
-  onRecenter: () => void;
+  onRecenter: () => void | Promise<void>;
+  onReloadCamera?: () => void;
+  onDismissCameraFrozen?: () => void;
+  onNudgeYaw?: (deltaDeg: number) => void;
+  onSetManualYawOffset?: (offsetDeg: number) => void;
+  onResetManualYawOffset?: () => void;
   onExit: () => void;
   simulatorInputRef?: React.MutableRefObject<SimulatorInput>;
 }
@@ -46,6 +53,12 @@ const PROVIDER_LABELS: Record<ARTrackingMode, string> = {
   'sensor-fusion': 'Gyro Fusion',
   simulator: '3D Simulator',
 };
+
+function formatSignedDegrees(deg: number): string {
+  const rounded = Math.round(deg);
+  if (rounded === 0) return '0°';
+  return rounded > 0 ? `+${rounded}°` : `${rounded}°`;
+}
 
 export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
   huntName,
@@ -59,6 +72,8 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
   showHorizon,
   isSummoning,
   muted,
+  cameraFrozen = false,
+  cameraFrozenReason = null,
   onSummonStart,
   onSummonEnd,
   onModeChange,
@@ -66,10 +81,17 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
   onToggleHorizon,
   onToggleMute,
   onRecenter,
+  onReloadCamera,
+  onDismissCameraFrozen,
+  onNudgeYaw,
+  onSetManualYawOffset,
+  onResetManualYawOffset,
   onExit,
   simulatorInputRef,
 }) => {
   const [debugOpen, setDebugOpen] = useState(false);
+  const [alignOpen, setAlignOpen] = useState(false);
+  const [realigning, setRealigning] = useState(false);
   const [radarOpen, setRadarOpen] = useState(true);
 
   const focusedAnchor = telemetry?.focusedPinId
@@ -83,6 +105,9 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
   const summonDashOffset =
     ringCircumference * (1 - (telemetry?.summonProgress ?? 0));
 
+  const manualYawOffsetDeg = Math.round(telemetry?.manualYawOffsetDeg ?? 0);
+  const hasManualOffset = Math.abs(manualYawOffsetDeg) >= 1;
+
   const setSimKey = (patch: Partial<SimulatorInput>) => {
     if (!simulatorInputRef) return;
     simulatorInputRef.current = {
@@ -90,6 +115,37 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
       ...patch,
     };
   };
+
+  const handleSyncMap = async () => {
+    if (realigning) return;
+    setRealigning(true);
+    try {
+      await onRecenter();
+    } finally {
+      setRealigning(false);
+    }
+  };
+
+  // Heading-up radar geometry (top of dish = camera look direction)
+  const activeAnchors = anchors.filter((a) => !a.collected);
+  const camYawRad = telemetry?.cameraSlamYawRad ?? 0;
+  const cosCam = Math.cos(camYawRad);
+  const sinCam = Math.sin(camYawRad);
+  const maxPinDist = activeAnchors.reduce((acc, a) => {
+    if (!telemetry) return acc;
+    const d = Math.hypot(
+      a.worldPos.x - telemetry.cameraPosition.x,
+      a.worldPos.z - telemetry.cameraPosition.z
+    );
+    return Math.max(acc, d);
+  }, 0);
+  const radarMaxRange = Math.max(25, Math.min(140, maxPinDist * 1.15));
+
+  const effectiveYawRad = degreesToRadians(telemetry?.yawOffsetDeg ?? 0);
+  const northRight = -Math.sin(effectiveYawRad + camYawRad);
+  const northFwd = Math.cos(effectiveYawRad + camYawRad);
+  const northX = 50 + northRight * 39;
+  const northY = 50 - northFwd * 39;
 
   return (
     <>
@@ -109,44 +165,69 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
         <span className="ar-reticle__corner ar-reticle__corner--br" />
       </div>
 
-      {/* Collapsible Mini Sonar Radar (great for long-range geolocation walks) */}
+      {/* Collapsible Heading-Up Mini Sonar Radar */}
       {radarOpen && telemetry && (
         <div className="ar-miniradar" aria-label="Mini Loot Sonar">
           <div className="ar-miniradar__dish">
-            {/* Concentric rings */}
             <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
+              {/* Forward camera FOV cone */}
+              <path
+                d="M50,50 L26,12 A44,44 0 0,1 74,12 Z"
+                fill="rgba(220,247,231,0.12)"
+              />
+              {/* Concentric rings */}
               <circle cx="50" cy="50" r="24" fill="none" stroke="rgba(220,247,231,0.22)" strokeDasharray="3 3" />
               <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(220,247,231,0.24)" />
               <line x1="50" y1="4" x2="50" y2="96" stroke="rgba(220,247,231,0.16)" />
               <line x1="4" y1="50" x2="96" y2="50" stroke="rgba(220,247,231,0.16)" />
 
-              {/* Pin dots relative to player camera */}
-              {anchors
-                .filter((a) => !a.collected)
-                .map((a) => {
-                  const dx = a.worldPos.x - telemetry.cameraPosition.x;
-                  const dz = a.worldPos.z - telemetry.cameraPosition.z;
-                  const maxRange = 25;
-                  const nx = Math.max(-1, Math.min(1, dx / maxRange));
-                  const ny = Math.max(-1, Math.min(1, dz / maxRange));
-                  const cx = 50 + nx * 42;
-                  const cy = 50 + ny * 42;
-                  const fill =
-                    a.objectType === 'giftCard'
-                      ? DESIGN_TOKENS.colors.epicBright
-                      : DESIGN_TOKENS.colors.gold;
-                  return (
-                    <circle
-                      key={a.pinId}
-                      cx={cx}
-                      cy={cy}
-                      r={a.pinId === telemetry.focusedPinId ? 5.5 : 4.2}
-                      fill={fill}
-                      stroke={DESIGN_TOKENS.colors.ink}
-                      strokeWidth="1.5"
-                    />
-                  );
-                })}
+              {/* Rotating True North marker */}
+              <circle
+                cx={northX}
+                cy={northY}
+                r="6.5"
+                fill="rgba(22,38,29,0.82)"
+                stroke="rgba(255,253,248,0.75)"
+                strokeWidth="1.2"
+              />
+              <text
+                x={northX}
+                y={northY + 2.8}
+                textAnchor="middle"
+                fontSize="8"
+                fontWeight="900"
+                fill={DESIGN_TOKENS.colors.blazeBright}
+                fontFamily="var(--font-jetbrains-mono, monospace)"
+              >
+                N
+              </text>
+
+              {/* Heading-up pin dots relative to live camera look direction */}
+              {activeAnchors.map((a) => {
+                const dx = a.worldPos.x - telemetry.cameraPosition.x;
+                const dz = a.worldPos.z - telemetry.cameraPosition.z;
+                const rightMeters = dx * cosCam + dz * sinCam;
+                const fwdMeters = dx * sinCam - dz * cosCam;
+                const horizDist = Math.hypot(rightMeters, fwdMeters);
+                const clampScale = horizDist > radarMaxRange ? radarMaxRange / horizDist : 1;
+                const cx = 50 + ((rightMeters * clampScale) / radarMaxRange) * 40;
+                const cy = 50 - ((fwdMeters * clampScale) / radarMaxRange) * 40;
+                const fill =
+                  a.objectType === 'giftCard'
+                    ? DESIGN_TOKENS.colors.epicBright
+                    : DESIGN_TOKENS.colors.gold;
+                return (
+                  <circle
+                    key={a.pinId}
+                    cx={cx}
+                    cy={cy}
+                    r={a.pinId === telemetry.focusedPinId ? 5.5 : 4.2}
+                    fill={fill}
+                    stroke={DESIGN_TOKENS.colors.ink}
+                    strokeWidth="1.5"
+                  />
+                );
+              })}
 
               {/* Center player beacon */}
               <circle
@@ -257,15 +338,22 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
                   fontSize: 10.5,
                   fontFamily: 'var(--font-jetbrains-mono, monospace)',
                   fontWeight: 800,
-                  background: 'rgba(255, 253, 248, 0.9)',
+                  background: hasManualOffset
+                    ? DESIGN_TOKENS.colors.goldSoft
+                    : 'rgba(255, 253, 248, 0.9)',
                   color: DESIGN_TOKENS.colors.ink,
                   border: `1.5px solid ${DESIGN_TOKENS.colors.ink}`,
                   borderRadius: 999,
                   padding: '2px 8px',
                 }}
+                data-testid="ar-gps-status-chip"
               >
                 GPS ±{Math.round(telemetry.gpsFix.accuracy)}m ·{' '}
-                {telemetry.walkCalibrated ? 'North Locked' : 'Compass'}
+                {hasManualOffset
+                  ? `Manual ${formatSignedDegrees(manualYawOffsetDeg)}`
+                  : telemetry.walkCalibrated
+                    ? 'North Locked'
+                    : 'Compass'}
               </div>
             )}
           </div>
@@ -278,7 +366,10 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
             <button
               type="button"
               className="ar-pill-btn"
-              onClick={() => setDebugOpen((v) => !v)}
+              onClick={() => {
+                setDebugOpen((v) => !v);
+                setAlignOpen(false);
+              }}
               data-testid="ar-debug-toggle"
             >
               <Icons.Sliders size={15} />
@@ -385,24 +476,35 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
             )}
           </div>
 
-          {/* Right spacer / quick recenter */}
+          {/* Right on-screen Map Alignment control */}
           <div className="ar-hud__interactive">
             <button
               type="button"
-              className="ar-pill-btn"
-              onClick={onRecenter}
-              title="Re-align North & World Origin"
+              className={`ar-pill-btn ${
+                alignOpen ? 'ar-pill-btn--live' : hasManualOffset ? 'ar-pill-btn--warn' : ''
+              }`}
+              onClick={() => {
+                setAlignOpen((v) => !v);
+                setDebugOpen(false);
+              }}
+              title="Re-align AR objects with the map without refreshing"
               data-testid="ar-recenter-btn"
             >
               <Icons.Locate size={15} />
-              <span>Align</span>
+              <span>
+                {alignOpen
+                  ? 'Done'
+                  : hasManualOffset
+                    ? `Align ${formatSignedDegrees(manualYawOffsetDeg)}`
+                    : 'Align'}
+              </span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Simulator Virtual D-Pad Controls (when in Simulator mode) */}
-      {activeMode === 'simulator' && simulatorInputRef && (
+      {/* Simulator Virtual D-Pad Controls (when in Simulator mode and Align panel closed) */}
+      {activeMode === 'simulator' && simulatorInputRef && !alignOpen && (
         <div className="ar-sim-controls" aria-label="Simulator Movement Controls">
           <button
             type="button"
@@ -465,6 +567,162 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
           >
             →
           </button>
+        </div>
+      )}
+
+      {/* On-Screen Map Alignment Popover (No Refresh Needed) */}
+      {alignOpen && (
+        <div className="ar-card ar-align-panel" data-testid="ar-align-panel">
+          <div className="ar-align-header">
+            <div>
+              <div className="ar-align-title">
+                <Icons.Locate size={15} weight="bold" color={DESIGN_TOKENS.colors.blaze} />
+                <span>Align AR with Map</span>
+              </div>
+              <div className="ar-align-sub">
+                {telemetry?.gpsFix ? `GPS ±${Math.round(telemetry.gpsFix.accuracy)}m` : 'GPS ready'} ·{' '}
+                {hasManualOffset
+                  ? `Manual ${formatSignedDegrees(manualYawOffsetDeg)}`
+                  : telemetry?.walkCalibrated
+                    ? 'North Locked'
+                    : 'Compass'}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="ar-pill-btn"
+              style={{ padding: '4px 7px' }}
+              onClick={() => setAlignOpen(false)}
+              aria-label="Close alignment panel"
+            >
+              <Icons.Close size={13} weight="bold" />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              type="button"
+              className="ar-cta ar-cta--blaze"
+              style={{ padding: '9px 10px', fontSize: 12.5, flex: 1.4 }}
+              disabled={realigning}
+              onClick={() => void handleSyncMap()}
+              data-testid="ar-realign-snap-btn"
+            >
+              <Icons.Locate size={15} weight="bold" />
+              <span>{realigning ? 'Syncing GPS…' : 'Re-Sync GPS & Map'}</span>
+            </button>
+
+            <button
+              type="button"
+              className="ar-cta ar-cta--gold"
+              style={{ padding: '9px 10px', fontSize: 12.5, flex: 1 }}
+              onClick={() => onNudgeYaw?.(180)}
+              data-testid="ar-align-flip-180"
+            >
+              <span>Flip 180°</span>
+            </button>
+          </div>
+
+          <div className="ar-align-nudge-row">
+            <button
+              type="button"
+              className="ar-align-nudge-btn"
+              onClick={() => onNudgeYaw?.(-15)}
+              data-testid="ar-align-nudge-left-15"
+              title="Rotate AR objects 15° left"
+            >
+              ↶ 15°
+            </button>
+            <button
+              type="button"
+              className="ar-align-nudge-btn"
+              onClick={() => onNudgeYaw?.(-5)}
+              data-testid="ar-align-nudge-left-5"
+              title="Rotate AR objects 5° left"
+            >
+              -5°
+            </button>
+            <button
+              type="button"
+              className="ar-align-nudge-btn"
+              onClick={() => onResetManualYawOffset?.()}
+              data-testid="ar-align-reset-yaw"
+              title="Reset manual rotation offset to 0°"
+            >
+              0°
+            </button>
+            <button
+              type="button"
+              className="ar-align-nudge-btn"
+              onClick={() => onNudgeYaw?.(5)}
+              data-testid="ar-align-nudge-right-5"
+              title="Rotate AR objects 5° right"
+            >
+              +5°
+            </button>
+            <button
+              type="button"
+              className="ar-align-nudge-btn"
+              onClick={() => onNudgeYaw?.(15)}
+              data-testid="ar-align-nudge-right-15"
+              title="Rotate AR objects 15° right"
+            >
+              15° ↷
+            </button>
+          </div>
+
+          <div className="ar-align-slider-row">
+            <input
+              type="range"
+              min={-180}
+              max={180}
+              step={1}
+              value={manualYawOffsetDeg}
+              onChange={(e) => onSetManualYawOffset?.(Number(e.target.value))}
+              className="ar-align-slider"
+              aria-label="Rotate AR map alignment in degrees"
+              data-testid="ar-align-yaw-slider"
+            />
+            <span className="ar-align-deg-readout" data-testid="ar-align-deg-readout">
+              {formatSignedDegrees(manualYawOffsetDeg)}
+            </span>
+          </div>
+
+          <div
+            style={{
+              marginTop: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: 10.5,
+                color: DESIGN_TOKENS.colors.ink3,
+                lineHeight: 1.35,
+              }}
+            >
+              Line up the radar &amp; loot without reloading the page.
+            </p>
+            {activeMode !== 'simulator' && onReloadCamera && (
+              <button
+                type="button"
+                className="ar-pill-btn"
+                style={{ padding: '4px 8px', fontSize: 10.5, flexShrink: 0 }}
+                onClick={() => {
+                  setAlignOpen(false);
+                  onReloadCamera();
+                }}
+                data-testid="ar-align-reload-camera-btn"
+              >
+                <Icons.Sync size={12} weight="bold" />
+                <span>Reload Camera</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -556,11 +814,29 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
               type="button"
               className="ar-pill-btn"
               style={{ flex: 1, fontSize: 11 }}
-              onClick={onRecenter}
+              onClick={() => void handleSyncMap()}
             >
-              Recenter World
+              Re-Sync Map
             </button>
           </div>
+
+          {activeMode !== 'simulator' && onReloadCamera && (
+            <div style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="ar-cta ar-cta--gold"
+                style={{ padding: '8px 10px', fontSize: 12 }}
+                onClick={() => {
+                  setDebugOpen(false);
+                  onReloadCamera();
+                }}
+                data-testid="ar-tools-reload-camera-btn"
+              >
+                <Icons.Sync size={15} weight="bold" />
+                <span>Reload Frozen Camera</span>
+              </button>
+            </div>
+          )}
 
           <p
             style={{
@@ -573,6 +849,56 @@ export const TrailheadARHud: React.FC<TrailheadARHudProps> = ({
             6DoF Web SLAM powered by 8th Wall Engine Binary (Niantic Spatial, Inc.) with automatic
             Gyro Sensor Fusion &amp; 3D Simulator fallbacks.
           </p>
+        </div>
+      )}
+
+      {/* Front-and-center Camera Frozen Recovery Prompt (when screen returns from lock/off) */}
+      {cameraFrozen && activeMode !== 'simulator' && onReloadCamera && (
+        <div
+          className="ar-camera-frozen-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Camera paused"
+          data-testid="ar-camera-frozen-banner"
+        >
+          <div className="ar-card ar-camera-frozen-card">
+            <div className="ar-camera-frozen-badge">
+              <Icons.Sync size={28} weight="bold" />
+            </div>
+            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 800 }}>
+              Camera Feed Paused
+            </h2>
+            <p
+              style={{
+                margin: '0 0 16px',
+                fontSize: 13.5,
+                color: DESIGN_TOKENS.colors.ink2,
+                lineHeight: 1.45,
+              }}
+            >
+              {cameraFrozenReason ||
+                'Your camera froze when the screen turned off. Reload the camera to jump right back in without losing your loot.'}
+            </p>
+            <button
+              type="button"
+              className="ar-cta ar-cta--blaze"
+              onClick={onReloadCamera}
+              data-testid="ar-reload-camera-btn"
+            >
+              <Icons.Sync size={18} weight="bold" />
+              <span>Reload Camera</span>
+            </button>
+            {onDismissCameraFrozen && (
+              <button
+                type="button"
+                className="ar-camera-frozen-dismiss"
+                onClick={onDismissCameraFrozen}
+                data-testid="ar-dismiss-frozen-btn"
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
         </div>
       )}
     </>

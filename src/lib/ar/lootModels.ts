@@ -398,11 +398,13 @@ export function createFarDistanceLabelSprite(isEpic: boolean): {
   updateText: (text: string) => void;
 } {
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 96;
+  canvas.width = 512;
+  canvas.height = 192;
   const ctx = canvas.getContext('2d');
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
 
   let lastText = '';
 
@@ -412,41 +414,55 @@ export function createFarDistanceLabelSprite(isEpic: boolean): {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const padX = 18;
-    const padY = 16;
+    const padX = 32;
+    const padY = 28;
     const pillW = canvas.width - padX * 2;
     const pillH = canvas.height - padY * 2;
+    const radius = pillH / 2;
+    const accentColor = isEpic ? DESIGN_TOKENS.colors.epicBright : DESIGN_TOKENS.colors.gold;
 
-    // Soft outer glow behind pill
+    // Deep grounding shadow + high-contrast Deep Pine fill so the pill pops over bright glow & sky
     ctx.save();
-    ctx.shadowColor = isEpic ? 'rgba(139, 92, 246, 0.55)' : 'rgba(255, 194, 26, 0.65)';
-    ctx.shadowBlur = 18;
-    drawRoundedRect(ctx, padX, padY, pillW, pillH, pillH / 2);
-    ctx.fillStyle = 'rgba(255, 253, 248, 0.92)';
+    ctx.shadowColor = 'rgba(10, 20, 14, 0.65)';
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 6;
+    drawRoundedRect(ctx, padX, padY, pillW, pillH, radius);
+    ctx.fillStyle = 'rgba(22, 38, 29, 0.95)';
     ctx.fill();
     ctx.restore();
 
-    // Trailhead crisp Deep Pine keyline
-    drawRoundedRect(ctx, padX, padY, pillW, pillH, pillH / 2);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = DESIGN_TOKENS.colors.ink;
+    // Crisp outer accent keyline matching Trailhead Arcade rarity
+    drawRoundedRect(ctx, padX, padY, pillW, pillH, radius);
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = accentColor;
     ctx.stroke();
 
-    // Accent dot on left
+    // Subtle sunlit inner rim for tactile depth
+    drawRoundedRect(ctx, padX + 5, padY + 5, pillW - 10, pillH - 10, radius - 5);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 253, 248, 0.22)';
+    ctx.stroke();
+
+    // Vibrant loot accent dot on left
     ctx.beginPath();
-    ctx.arc(padX + 28, canvas.height / 2, 8, 0, Math.PI * 2);
-    ctx.fillStyle = isEpic ? DESIGN_TOKENS.colors.epic : DESIGN_TOKENS.colors.gold;
+    ctx.arc(padX + 54, canvas.height / 2, 16, 0, Math.PI * 2);
+    ctx.fillStyle = accentColor;
     ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = DESIGN_TOKENS.colors.ink;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = DESIGN_TOKENS.colors.surface;
     ctx.stroke();
 
-    // Crisp monospace distance label
-    ctx.fillStyle = DESIGN_TOKENS.colors.ink;
-    ctx.font = '800 32px "JetBrains Mono", ui-monospace, SFMono-Regular, monospace';
+    // High-contrast crisp monospace distance readout
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+    ctx.fillStyle = DESIGN_TOKENS.colors.surface;
+    ctx.font = '800 62px "JetBrains Mono", ui-monospace, SFMono-Regular, monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, canvas.width / 2 + 12, canvas.height / 2 + 1);
+    ctx.fillText(text, canvas.width / 2 + 24, canvas.height / 2 + 2);
+    ctx.restore();
 
     tex.needsUpdate = true;
   };
@@ -459,8 +475,11 @@ export function createFarDistanceLabelSprite(isEpic: boolean): {
     opacity: 0,
     depthWrite: false,
     depthTest: false,
+    toneMapped: false,
   });
   const sprite = new THREE.Sprite(mat);
+  // Always draw strictly above farBeacon (renderOrder = 10) so additive glow never bleeds over the text
+  sprite.renderOrder = 20;
   sprite.visible = false;
   return { sprite, updateText };
 }
@@ -551,6 +570,7 @@ export function createLootEntityBundle(
       depthWrite: false,
     })
   );
+  farBeacon.renderOrder = 10;
   farBeacon.visible = false;
   root.add(farBeacon);
 

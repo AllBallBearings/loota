@@ -23,6 +23,7 @@ import { SensorFusionProvider } from '@/lib/ar/providers/sensorFusionProvider';
 import { SimulatorProvider } from '@/lib/ar/providers/simulatorProvider';
 import { WebXRProvider } from '@/lib/ar/providers/webxrProvider';
 import type {
+  ARAlignmentController,
   ARPinAnchorState,
   ARTelemetry,
   ARTrackingMode,
@@ -39,12 +40,15 @@ export interface ARViewportProps {
   showHorizon: boolean;
   isSummoning: boolean;
   recenterNonce: number;
+  cameraRestartNonce?: number;
   externalCollectedPinIds: Set<string>;
   simulatorInputRef?: React.MutableRefObject<SimulatorInput>;
+  alignmentRef?: React.MutableRefObject<ARAlignmentController | null>;
   onTelemetry: (telemetry: ARTelemetry, anchors: ARPinAnchorState[]) => void;
   onPinCollected: (pinId: string, method: 'walkup' | 'summon') => void;
   onFocusChange?: (pinId: string | null) => void;
   onProviderResolved?: (mode: ARTrackingMode, fallbackReason?: string) => void;
+  onCameraFrozenChange?: (frozen: boolean, reason?: string) => void;
 }
 
 interface ActiveEntityRecord {
@@ -65,12 +69,15 @@ export const ARViewport: React.FC<ARViewportProps> = ({
   showHorizon,
   isSummoning,
   recenterNonce,
+  cameraRestartNonce = 0,
   externalCollectedPinIds,
   simulatorInputRef,
+  alignmentRef,
   onTelemetry,
   onPinCollected,
   onFocusChange,
   onProviderResolved,
+  onCameraFrozenChange,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -82,6 +89,7 @@ export const ARViewport: React.FC<ARViewportProps> = ({
   const onPinCollectedRef = useRef(onPinCollected);
   const onFocusChangeRef = useRef(onFocusChange);
   const onProviderResolvedRef = useRef(onProviderResolved);
+  const onCameraFrozenChangeRef = useRef(onCameraFrozenChange);
   const externalCollectedRef = useRef(externalCollectedPinIds);
 
   useEffect(() => {
@@ -97,11 +105,14 @@ export const ARViewport: React.FC<ARViewportProps> = ({
     onPinCollectedRef.current = onPinCollected;
     onFocusChangeRef.current = onFocusChange;
     onProviderResolvedRef.current = onProviderResolved;
-  }, [onTelemetry, onPinCollected, onFocusChange, onProviderResolved]);
+    onCameraFrozenChangeRef.current = onCameraFrozenChange;
+  }, [onTelemetry, onPinCollected, onFocusChange, onProviderResolved, onCameraFrozenChange]);
 
   const engineRef = useRef<GeoAnchorEngine | null>(null);
   const providerRef = useRef<ARTrackingProvider | null>(null);
+  const activeModeRef = useRef<ARTrackingMode>(preferredMode);
   const lastCameraPosRef = useRef(new THREE.Vector3(0, 1.6, 0));
+  const lastCameraFwdRef = useRef(new THREE.Vector3(0, 0, -1));
   const pinsRef = useRef(hunt.pins);
   useEffect(() => {
     pinsRef.current = hunt.pins;
@@ -113,14 +124,60 @@ export const ARViewport: React.FC<ARViewportProps> = ({
     engineRef.current?.syncExternalCollections(externalCollectedPinIds);
   }, [externalCollectedPinIds]);
 
-  // Handle manual recenter trigger
+  // Imperative zero-refresh map alignment controller exposed to HUD
+  useEffect(() => {
+    if (!alignmentRef) return;
+    alignmentRef.current = {
+      realignToMap: async () => {
+        const isSim = activeModeRef.current === 'simulator';
+        const freshGps = isSim
+          ? sensorHub.getLatestRawGpsFix() ?? sensorHub.getWeightedGpsFix()
+          : await sensorHub.requestFreshGpsFix(2500);
+        const gpsToUse = freshGps ?? sensorHub.getWeightedGpsFix();
+        engineRef.current?.realignToMap({
+          cameraPosition: lastCameraPosRef.current,
+          cameraForward: lastCameraFwdRef.current,
+          gpsFix: gpsToUse,
+          headingDeg: sensorHub.getSmoothedHeadingDeg(),
+          resetManualOffset: true,
+        });
+        return {
+          usedFreshGps: Boolean(freshGps),
+          accuracyMeters: gpsToUse ? Math.round(gpsToUse.accuracy) : null,
+        };
+      },
+      nudgeYawDeg: (deltaDeg: number) => {
+        engineRef.current?.nudgeYawDeg(deltaDeg, lastCameraPosRef.current);
+      },
+      setManualYawOffsetDeg: (offsetDeg: number) => {
+        engineRef.current?.setManualYawOffsetDeg(offsetDeg, lastCameraPosRef.current);
+      },
+      resetManualYawOffset: () => {
+        engineRef.current?.resetManualYawOffset(lastCameraPosRef.current);
+      },
+    };
+    return () => {
+      alignmentRef.current = null;
+    };
+  }, [alignmentRef, sensorHub]);
+
+  // Handle legacy recenterNonce trigger via zero-refresh map realignment
   useEffect(() => {
     if (recenterNonce === 0) return;
-    providerRef.current?.recenter();
-    engineRef.current?.recenter(
-      lastCameraPosRef.current,
-      sensorHub.getSmoothedHeadingDeg()
-    );
+    const run = async () => {
+      const isSim = activeModeRef.current === 'simulator';
+      const freshGps = isSim
+        ? sensorHub.getLatestRawGpsFix() ?? sensorHub.getWeightedGpsFix()
+        : await sensorHub.requestFreshGpsFix(2500);
+      engineRef.current?.realignToMap({
+        cameraPosition: lastCameraPosRef.current,
+        cameraForward: lastCameraFwdRef.current,
+        gpsFix: freshGps ?? sensorHub.getWeightedGpsFix(),
+        headingDeg: sensorHub.getSmoothedHeadingDeg(),
+        resetManualOffset: true,
+      });
+    };
+    void run();
   }, [recenterNonce, sensorHub]);
 
   // Main AR provider + Three.js scene lifecycle
@@ -166,9 +223,37 @@ export const ARViewport: React.FC<ARViewportProps> = ({
 
     let elapsedSec = 0;
     let frameCount = 0;
+    let totalFrames = 0;
+    let lastFrameAtMs = 0;
     let fpsAccum = 0;
     let currentFps = 60;
     let lastTelemetryPush = 0;
+    let cameraFrozen = false;
+    let postStartReady = false;
+
+    const setCameraFrozen = (nextFrozen: boolean, reason?: string) => {
+      if (activeMode === 'simulator') return;
+      if (nextFrozen === cameraFrozen) return;
+      cameraFrozen = nextFrozen;
+      onCameraFrozenChangeRef.current?.(nextFrozen, reason);
+    };
+
+    const hasBrokenDomCameraVideo = (): boolean => {
+      if (typeof document === 'undefined') return false;
+      const videos = Array.from(document.querySelectorAll('video'));
+      for (const video of videos) {
+        const src = video.srcObject as MediaStream | null;
+        if (!src || typeof src.getVideoTracks !== 'function') continue;
+        const tracks = src.getVideoTracks();
+        if (tracks.length > 0 && tracks.every((t) => t.readyState !== 'live' || t.muted)) {
+          return true;
+        }
+        if (video.paused || video.ended) {
+          return true;
+        }
+      }
+      return false;
+    };
 
     const camForward = new THREE.Vector3();
     const camRight = new THREE.Vector3();
@@ -224,6 +309,18 @@ export const ARViewport: React.FC<ARViewportProps> = ({
 
       elapsedSec += dt;
       frameCount += 1;
+      totalFrames += 1;
+      lastFrameAtMs = performance.now();
+      postStartReady = true;
+
+      if (
+        cameraFrozen &&
+        providerRef.current?.isCameraHealthy?.() !== false &&
+        !hasBrokenDomCameraVideo()
+      ) {
+        setCameraFrozen(false);
+      }
+
       fpsAccum += dt;
       if (fpsAccum >= 0.5) {
         currentFps = Math.round(frameCount / fpsAccum);
@@ -238,6 +335,7 @@ export const ARViewport: React.FC<ARViewportProps> = ({
 
       lastCameraPosRef.current.copy(camera.position);
       camera.getWorldDirection(camForward);
+      lastCameraFwdRef.current.copy(camForward);
       camRight.crossVectors(camForward, camera.up).normalize();
 
       // Update debug horizon ring
@@ -247,11 +345,13 @@ export const ARViewport: React.FC<ARViewportProps> = ({
       }
 
       const gpsFix = sensorHub.getWeightedGpsFix();
+      const rawGpsFix = sensorHub.getLatestRawGpsFix();
       const headingDeg = sensorHub.getSmoothedHeadingDeg();
       const anchors = engine.update({
         cameraPosition: camera.position,
         cameraForward: camForward,
         gpsFix,
+        rawGpsFix,
         headingDeg,
       });
 
@@ -396,12 +496,12 @@ export const ARViewport: React.FC<ARViewportProps> = ({
           rec.bundle.farBeacon.rotation.set(0, yawToCam, 0);
           beaconMat.opacity = rec.farBeaconOpacity;
 
-          // Distance readout centered cleanly inside the glowing core
+          // Distance readout layered cleanly above the glowing core
           const labelW = Math.max(1.8, dist * 0.095);
           rec.bundle.farDistanceSprite.scale.set(labelW, labelW * (96 / 256), 1);
           rec.bundle.farDistanceSprite.position.y = scaledWidth * 0.45;
           rec.bundle.updateFarDistanceText(formatDistanceFeet(dist));
-          labelMat.opacity = Math.min(1, rec.farBeaconOpacity * 1.25);
+          labelMat.opacity = Math.min(1, rec.farBeaconOpacity * 1.45);
         } else {
           beaconMat.opacity = 0;
           labelMat.opacity = 0;
@@ -564,42 +664,174 @@ export const ARViewport: React.FC<ARViewportProps> = ({
         const activeAnchors = anchors.filter(
           (a) => !a.collected && !localCollected.has(a.pinId)
         );
-        onTelemetryRef.current(
-          {
-            provider: activeMode,
-            status,
-            statusDetail,
-            fps: currentFps,
-            gpsFix,
-            headingDeg,
-            yawOffsetDeg: engine.getSlamToNorthYawDeg(),
-            walkCalibrated: engine.isWalkCalibrated(),
-            lockedPinCount: activeAnchors.filter((a) => a.phase === 'locked').length,
-            totalActivePins: activeAnchors.length,
-            nearestPinId,
-            nearestDistanceMeters: Number.isFinite(nearestDist) ? nearestDist : null,
-            nearestBearingRad: smoothedBearingRad,
-            focusedPinId,
-            focusedDistanceMeters,
-            isSummoning: Boolean(summoningPinId && isSummoningRef.current),
-            summonProgress: activeSummonProgress,
-            cameraPosition: {
-              x: camera.position.x,
-              y: camera.position.y,
-              z: camera.position.z,
-            },
-            effectiveFocusRangeMeters: effectiveFocusRange,
+        const flatFwdLenSq = camForward.x * camForward.x + camForward.z * camForward.z;
+        const cameraSlamYawRad =
+          flatFwdLenSq > 1e-4 ? Math.atan2(camForward.x, -camForward.z) : 0;
+
+        const telemetryPayload: ARTelemetry = {
+          provider: activeMode,
+          status,
+          statusDetail,
+          fps: currentFps,
+          gpsFix,
+          headingDeg,
+          yawOffsetDeg: engine.getSlamToNorthYawDeg(),
+          walkCalibrated: engine.isWalkCalibrated(),
+          lockedPinCount: activeAnchors.filter((a) => a.phase === 'locked').length,
+          totalActivePins: activeAnchors.length,
+          nearestPinId,
+          nearestDistanceMeters: Number.isFinite(nearestDist) ? nearestDist : null,
+          nearestBearingRad: smoothedBearingRad,
+          focusedPinId,
+          focusedDistanceMeters,
+          isSummoning: Boolean(summoningPinId && isSummoningRef.current),
+          summonProgress: activeSummonProgress,
+          cameraPosition: {
+            x: camera.position.x,
+            y: camera.position.y,
+            z: camera.position.z,
           },
-          anchors
+          cameraSlamYawRad,
+          manualYawOffsetDeg: engine.getManualYawOffsetDeg(),
+          effectiveFocusRangeMeters: effectiveFocusRange,
+        };
+
+        if (typeof window !== 'undefined') {
+          (
+            window as unknown as {
+              __LOOTA_AR_DEBUG__?: {
+                telemetry: ARTelemetry;
+                anchors: Array<{
+                  pinId: string;
+                  phase: 'far' | 'locked';
+                  worldPos: { x: number; y: number; z: number };
+                  realDistanceMeters: number;
+                }>;
+              };
+            }
+          ).__LOOTA_AR_DEBUG__ = {
+            telemetry: telemetryPayload,
+            anchors: anchors.map((a) => ({
+              pinId: a.pinId,
+              phase: a.phase,
+              worldPos: { ...a.worldPos },
+              realDistanceMeters: a.realDistanceMeters,
+            })),
+          };
+        }
+
+        onTelemetryRef.current(telemetryPayload, anchors);
+      }
+    };
+
+    // Clear any stale frozen banner when starting or reloading the camera
+    onCameraFrozenChangeRef.current?.(false);
+
+    let wasHidden = false;
+    let resumeEarlyTimer: number | null = null;
+    let resumeLateTimer: number | null = null;
+
+    const clearResumeTimers = () => {
+      if (resumeEarlyTimer !== null) {
+        window.clearTimeout(resumeEarlyTimer);
+        resumeEarlyTimer = null;
+      }
+      if (resumeLateTimer !== null) {
+        window.clearTimeout(resumeLateTimer);
+        resumeLateTimer = null;
+      }
+    };
+
+    const evaluateCameraHealth = (framesBeforeCheck?: number, reason?: string) => {
+      if (disposed || activeMode === 'simulator') return;
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+
+      const providerUnhealthy = providerRef.current?.isCameraHealthy?.() === false;
+      const domVideoBroken = hasBrokenDomCameraVideo();
+      const renderStalled =
+        framesBeforeCheck !== undefined
+          ? totalFrames === framesBeforeCheck
+          : postStartReady && lastFrameAtMs > 0 && performance.now() - lastFrameAtMs > 2500;
+
+      if (providerUnhealthy || domVideoBroken || renderStalled) {
+        setCameraFrozen(
+          true,
+          reason ?? 'Your camera paused after the screen turned off. Tap below to reload it.'
         );
       }
     };
 
+    const schedulePostResumeCheck = () => {
+      clearResumeTimers();
+      if (disposed || activeMode === 'simulator') return;
+      const framesAtReturn = totalFrames;
+      // Fast check catches immediately-ended MediaStreamTracks or lost WebGL contexts
+      resumeEarlyTimer = window.setTimeout(() => {
+        resumeEarlyTimer = null;
+        if (disposed || activeMode === 'simulator') return;
+        if (document.visibilityState !== 'visible') return;
+        if (providerRef.current?.isCameraHealthy?.() === false || hasBrokenDomCameraVideo()) {
+          setCameraFrozen(
+            true,
+            'Your camera paused when the screen locked. Tap below to reload the live feed.'
+          );
+        }
+      }, 350);
+
+      // Second check catches a frozen render loop or stalled video element after waking up
+      resumeLateTimer = window.setTimeout(() => {
+        resumeLateTimer = null;
+        evaluateCameraHealth(
+          framesAtReturn,
+          'Camera feed appears frozen after waking your screen. Tap below to reload it.'
+        );
+      }, 1200);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        wasHidden = true;
+        clearResumeTimers();
+      } else if (document.visibilityState === 'visible' && wasHidden) {
+        wasHidden = false;
+        schedulePostResumeCheck();
+      }
+    };
+
+    const onPageHide = () => {
+      wasHidden = true;
+      clearResumeTimers();
+    };
+
+    const onPageShow = () => {
+      if (wasHidden) {
+        wasHidden = false;
+        schedulePostResumeCheck();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
+
+    // Periodic watchdog catches mid-session camera freezes (e.g. phone call or iOS Control Center)
+    const watchdogInterval = window.setInterval(() => {
+      if (!postStartReady || activeMode === 'simulator') return;
+      evaluateCameraHealth();
+    }, 2000);
+
     const startWithFallback = async () => {
+      // Give mobile browsers a brief moment to release camera hardware when reloading
+      if (cameraRestartNonce > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, 60));
+        if (disposed) return;
+      }
+
       const attemptStart = async (mode: ARTrackingMode): Promise<boolean> => {
         const provider = createProvider(mode);
         providerRef.current = provider;
         activeMode = mode;
+        activeModeRef.current = mode;
 
         try {
           await provider.start({
@@ -610,6 +842,9 @@ export const ARViewport: React.FC<ARViewportProps> = ({
               onStatusChange: (nextStatus, detail) => {
                 status = nextStatus;
                 statusDetail = detail;
+              },
+              onCameraInterrupted: (reason) => {
+                setCameraFrozen(true, reason);
               },
             },
             onSceneReady: ({ scene, renderer }) => {
@@ -663,17 +898,30 @@ export const ARViewport: React.FC<ARViewportProps> = ({
 
     return () => {
       disposed = true;
+      clearResumeTimers();
+      window.clearInterval(watchdogInterval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
       providerRef.current?.stop();
       providerRef.current = null;
       entities.clear();
       horizonRing = null;
       sceneRef = null;
     };
-  }, [hunt.id, hunt.type, preferredMode, coinStyle, sensorHub, simulatorInputRef]);
+  }, [
+    hunt.id,
+    hunt.type,
+    preferredMode,
+    coinStyle,
+    sensorHub,
+    simulatorInputRef,
+    cameraRestartNonce,
+  ]);
 
   return (
     <div ref={containerRef} className="ar-canvas-wrap" data-testid="ar-viewport">
-      <canvas ref={canvasRef} className="ar-canvas" />
+      <canvas key={cameraRestartNonce} ref={canvasRef} className="ar-canvas" />
     </div>
   );
 };

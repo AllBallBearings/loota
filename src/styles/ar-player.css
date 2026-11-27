@@ -633,3 +633,138 @@
   box-shadow: 0 1px 0 var(--loota-ar-ink);
   background: var(--loota-ar-gold-soft);
 }
+
+/* On-screen Map Alignment Popover (zero-refresh GPS re-sync & manual rotation) */
+.ar-align-panel {
+  position: absolute;
+  right: 12px;
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 56px);
+  z-index: 26;
+  transform: translateZ(0);
+  width: min(332px, calc(100vw - 24px));
+  padding: 13px;
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.ar-align-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ar-align-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--loota-ar-ink);
+}
+
+.ar-align-sub {
+  font-family: var(--font-jetbrains-mono, monospace);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--loota-ar-ink3);
+  margin-top: 2px;
+}
+
+.ar-align-nudge-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.ar-align-nudge-btn {
+  padding: 7px 4px;
+  font-family: var(--font-jetbrains-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--loota-ar-surface-alt);
+  color: var(--loota-ar-ink);
+  border: 2px solid var(--loota-ar-ink);
+  border-radius: 10px;
+  box-shadow: 0 2.5px 0 var(--loota-ar-ink);
+  cursor: pointer;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+
+.ar-align-nudge-btn:active {
+  transform: translateY(1.5px);
+  box-shadow: 0 1px 0 var(--loota-ar-ink);
+  background: var(--loota-ar-gold-soft);
+}
+
+.ar-align-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.ar-align-slider {
+  flex: 1;
+  accent-color: var(--loota-ar-blaze);
+  height: 6px;
+  cursor: pointer;
+}
+
+.ar-align-deg-readout {
+  min-width: 48px;
+  text-align: right;
+  font-family: var(--font-jetbrains-mono, monospace);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--loota-ar-ink);
+}
+
+/* Front-and-center Camera Frozen Recovery Overlay (after phone screen lock / backgrounding) */
+.ar-camera-frozen-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 32;
+  transform: translateZ(0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(22, 38, 29, 0.58);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  pointer-events: auto;
+}
+
+.ar-camera-frozen-card {
+  width: min(340px, 100%);
+  padding: 20px 18px 16px;
+  text-align: center;
+}
+
+.ar-camera-frozen-badge {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  background: var(--loota-ar-gold-soft);
+  border: 2.5px solid var(--loota-ar-ink);
+  box-shadow: 0 3.5px 0 var(--loota-ar-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--loota-ar-blaze);
+}
+
+.ar-camera-frozen-dismiss {
+  margin-top: 10px;
+  background: transparent;
+  border: none;
+  color: var(--loota-ar-ink3);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 10px;
+}

@@ -49,6 +49,11 @@ export class SensorFusionProvider implements ARTrackingProvider {
   private rafId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private unsubStep: (() => void) | null = null;
+  private healthCleanup: (() => void) | null = null;
+  private lastFrameMs = 0;
+  private lastVideoTime = -1;
+  private lastVideoAdvanceMs = 0;
+  private contextLost = false;
 
   private smoothedQuat = new THREE.Quaternion();
   private hasQuatInit = false;
@@ -73,6 +78,16 @@ export class SensorFusionProvider implements ARTrackingProvider {
     const { container, canvas, callbacks, onSceneReady } = params;
     callbacks.onStatusChange?.('initializing', 'Starting camera & sensor fusion…');
 
+    const cleanups: Array<() => void> = [];
+    this.contextLost = false;
+    const onContextLost = (e: Event) => {
+      e.preventDefault();
+      this.contextLost = true;
+      callbacks.onCameraInterrupted?.('AR camera graphics paused after screen lock.');
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost, false);
+    cleanups.push(() => canvas.removeEventListener('webglcontextlost', onContextLost, false));
+
     // 1. Mount rear camera feed behind the transparent WebGL canvas
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
@@ -84,6 +99,22 @@ export class SensorFusionProvider implements ARTrackingProvider {
             height: { ideal: 720 },
           },
         });
+        for (const track of this.stream.getVideoTracks()) {
+          const onEnded = () => {
+            callbacks.onCameraInterrupted?.('Camera stream paused after screen lock.');
+          };
+          const onMute = () => {
+            if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+              callbacks.onCameraInterrupted?.('Camera feed was paused by your device.');
+            }
+          };
+          track.addEventListener('ended', onEnded);
+          track.addEventListener('mute', onMute);
+          cleanups.push(() => {
+            track.removeEventListener('ended', onEnded);
+            track.removeEventListener('mute', onMute);
+          });
+        }
         const video = document.createElement('video');
         video.srcObject = this.stream;
         video.setAttribute('playsinline', 'true');
@@ -98,11 +129,18 @@ export class SensorFusionProvider implements ARTrackingProvider {
         video.style.zIndex = '0';
         container.insertBefore(video, container.firstChild);
         this.videoEl = video;
+        this.lastVideoTime = video.currentTime;
+        this.lastVideoAdvanceMs = performance.now();
         await video.play().catch(() => {});
       } catch (err) {
         console.warn('[SensorFusionProvider] Camera feed unavailable, continuing in compass mode:', err);
       }
     }
+
+    this.healthCleanup = () => {
+      for (const fn of cleanups) fn();
+      cleanups.length = 0;
+    };
 
     // 2. Setup Three.js transparent overlay
     const width = container.clientWidth || window.innerWidth;
@@ -154,6 +192,7 @@ export class SensorFusionProvider implements ARTrackingProvider {
 
     // 3. Render loop with gyro-first smoothing + low-gain compass correction
     let lastTime = performance.now();
+    this.lastFrameMs = lastTime;
     const rawQuat = new THREE.Quaternion();
     const yawFixQuat = new THREE.Quaternion();
     const upAxis = new THREE.Vector3(0, 1, 0);
@@ -162,6 +201,11 @@ export class SensorFusionProvider implements ARTrackingProvider {
       this.rafId = window.requestAnimationFrame(tick);
       const dt = Math.min(0.1, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
+      this.lastFrameMs = now;
+      if (this.videoEl && this.videoEl.currentTime !== this.lastVideoTime) {
+        this.lastVideoTime = this.videoEl.currentTime;
+        this.lastVideoAdvanceMs = now;
+      }
 
       const orient = this.sensorHub.getLatestOrientation();
       if (orient) {
@@ -215,6 +259,25 @@ export class SensorFusionProvider implements ARTrackingProvider {
     this.rafId = window.requestAnimationFrame(tick);
   }
 
+  public isCameraHealthy(): boolean {
+    if (this.contextLost || this.rafId === null) return false;
+    const now = performance.now();
+    if (this.lastFrameMs > 0 && now - this.lastFrameMs > 2200) return false;
+    if (this.stream) {
+      const tracks = this.stream.getVideoTracks();
+      if (tracks.length > 0 && tracks.every((t) => t.readyState !== 'live' || t.muted)) {
+        return false;
+      }
+    }
+    if (this.videoEl) {
+      if (this.videoEl.paused || this.videoEl.ended) return false;
+      if (this.lastVideoAdvanceMs > 0 && now - this.lastVideoAdvanceMs > 2200) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   public recenter(): void {
     this.cameraPos.set(0, 1.6, 0);
     this.targetCameraPos.set(0, 1.6, 0);
@@ -225,6 +288,8 @@ export class SensorFusionProvider implements ARTrackingProvider {
       window.cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
+    this.healthCleanup?.();
+    this.healthCleanup = null;
     this.unsubStep?.();
     this.unsubStep = null;
     this.resizeObserver?.disconnect();
